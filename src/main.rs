@@ -4,6 +4,7 @@
 extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;
+extern crate semver;
 #[macro_use] extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
@@ -11,10 +12,13 @@ extern crate serde_json;
 extern crate slog_json;
 extern crate tokio_core;
 extern crate tokio_service;
+extern crate toml;
 
 mod models;
-mod robots;
-mod serve;
+mod parsers;
+mod interactors;
+mod engine;
+mod api;
 
 use std::net::SocketAddr;
 use std::sync::Mutex;
@@ -26,7 +30,8 @@ use hyper_tls::HttpsConnector;
 use slog::Drain;
 use tokio_core::reactor::Core;
 
-use self::serve::Serve;
+use self::api::Api;
+use self::engine::Engine;
 
 fn main() {
     let logger = slog::Logger::root(
@@ -51,12 +56,13 @@ fn main() {
 
     let http = Http::new();
 
-    let serve_logger = logger.clone();
+    let engine = Engine {
+        client: client.clone(),
+        logger: logger.clone()
+    };
+
     let serve = http.serve_addr_handle(&addr, &handle, move || {
-        Ok(Serve {
-            client: client.clone(),
-            logger: serve_logger.clone()
-        })
+        Ok(Api { engine: engine.clone() })
     }).expect("failed to bind server");
 
     let serving = serve.for_each(move |conn| {
