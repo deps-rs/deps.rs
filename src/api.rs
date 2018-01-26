@@ -1,10 +1,8 @@
 use std::collections::BTreeMap;
 
 use futures::{Future, future};
-use hyper::{Client, Error as HyperError, Request, Response, StatusCode};
-use hyper::client::HttpConnector;
+use hyper::{Error as HyperError, Request, Response, StatusCode};
 use hyper::header::ContentType;
-use hyper_tls::HttpsConnector;
 use semver::{Version, VersionReq};
 use serde_json;
 use slog::Logger;

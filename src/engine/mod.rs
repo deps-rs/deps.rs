@@ -1,7 +1,7 @@
 mod analyzer;
 
-use futures::{Future, Stream, future, stream};
-use hyper::{Client, Error as HyperError, Request, Response, StatusCode};
+use futures::{Future, Stream, stream};
+use hyper::Client;
 use hyper::client::HttpConnector;
 use hyper_tls::HttpsConnector;
 use slog::Logger;

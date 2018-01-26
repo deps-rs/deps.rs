@@ -1,9 +1,6 @@
-use std::collections::BTreeMap;
-use std::collections::btree_map::{Entry as BTreeMapEntry};
+use semver::Version;
 
-use semver::{Version, VersionReq};
-
-use ::models::crates::{CrateName, CrateDeps, CrateRelease, AnalyzedDependency, AnalyzedDependencies};
+use ::models::crates::{CrateDeps, CrateRelease, AnalyzedDependency, AnalyzedDependencies};
 
 pub struct DependencyAnalyzer {
     deps: AnalyzedDependencies
