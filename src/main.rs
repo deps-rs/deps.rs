@@ -1,5 +1,6 @@
 #![feature(ascii_ctype)]
 #![feature(conservative_impl_trait)]
+#![feature(ip_constructors)]
 #![feature(proc_macro)]
 
 extern crate futures;
@@ -23,7 +24,8 @@ mod interactors;
 mod engine;
 mod server;
 
-use std::net::SocketAddr;
+use std::env;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Mutex;
 
 use futures::{Future, Stream};
@@ -54,8 +56,10 @@ fn main() {
         .connector(connector)
         .build(&core.handle());
 
-    let addr = "0.0.0.0:8080".parse::<SocketAddr>()
-        .expect("failed to parse socket addr");
+    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string()).parse()
+        .expect("could not read port");
+
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::unspecified()), port);
 
     let http = Http::new();
 
@@ -79,6 +83,8 @@ fn main() {
         }));
         Ok(())
     });
+
+    println!("Server running on port {}", port);
 
     core.run(serving).expect("server failed");
 }
