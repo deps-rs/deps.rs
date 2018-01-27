@@ -43,6 +43,12 @@ h1 code {
     letter-spacing: -0.02em;
 }
 
+h3 span.summary {
+    font-weight: normal;
+    font-style: italic;
+    font-size: .9em;
+}
+
 table {
     width: 100%;
     border: 0;

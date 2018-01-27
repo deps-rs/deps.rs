@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use hyper::Response;
 use hyper::header::ContentType;
 use maud::{Markup, html};
@@ -8,8 +10,22 @@ use ::models::repo::RepoPath;
 
 const SELF_BASE_URL: &'static str = "https://shiny-robots.herokuapp.com";
 
-fn dependency_table<I: IntoIterator<Item=(CrateName, AnalyzedDependency)>>(deps: I) -> Markup {
+fn dependency_table(title: &str, deps: BTreeMap<CrateName, AnalyzedDependency>) -> Markup {
+    let count_total = deps.len();
+    let count_outdated = deps.iter().filter(|&(_, dep)| dep.is_outdated()).count();
+
     html! {
+        h3 {
+            (title)
+            span class="summary" {
+                @if count_outdated > 0 {
+                    (format!(" ({} total, {} up-to-date, {} outdated)", count_total, count_total - count_outdated, count_outdated))
+                } @else {
+                    (format!(" ({} total, all up-to-date)", count_total))
+                }
+            }
+        }
+
         table {
             tr {
                 th "Crate"
@@ -62,7 +78,7 @@ pub fn status_html(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: Repo
                             code (format!("{}/{}", repo_path.qual.as_ref(), repo_path.name.as_ref()))
                         }
                     }
-                    
+
                     img src=(format!("/{}/status.svg", self_path));
 
                     pre {
@@ -75,18 +91,15 @@ pub fn status_html(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: Repo
                     }
 
                     @if !analysis_outcome.deps.main.is_empty() {
-                        h3 "Dependencies"
-                        (dependency_table(analysis_outcome.deps.main))
+                        (dependency_table("Dependencies", analysis_outcome.deps.main))
                     }
 
                     @if !analysis_outcome.deps.dev.is_empty() {
-                        h3 "Dev dependencies"
-                        (dependency_table(analysis_outcome.deps.dev))
+                        (dependency_table("Dev dependencies", analysis_outcome.deps.dev))
                     }
 
                     @if !analysis_outcome.deps.build.is_empty() {
-                        h3 "Build dependencies"
-                        (dependency_table(analysis_outcome.deps.build))
+                        (dependency_table("Build dependencies", analysis_outcome.deps.build))
                     }
                 }
             }
