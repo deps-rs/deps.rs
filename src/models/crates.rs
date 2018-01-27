@@ -92,6 +92,16 @@ impl AnalyzedDependencies {
         }).collect();
         AnalyzedDependencies { main, dev, build }
     }
+
+    pub fn any_outdated(&self) -> bool {
+        let main_any_outdated = self.main.iter()
+            .any(|(_, dep)| dep.is_outdated());
+        let dev_any_outdated = self.dev.iter()
+            .any(|(_, dep)| dep.is_outdated());
+        let build_any_outdated = self.build.iter()
+            .any(|(_, dep)| dep.is_outdated());
+        main_any_outdated || dev_any_outdated || build_any_outdated
+    }
 }
 
 #[derive(Debug)]

@@ -19,6 +19,7 @@ mod models;
 mod parsers;
 mod interactors;
 mod engine;
+mod assets;
 mod api;
 
 use std::net::SocketAddr;
