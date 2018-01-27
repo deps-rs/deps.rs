@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+#[derive(Clone)]
 pub struct RepoPath {
     pub site: RepoSite,
     pub qual: RepoQualifier,
@@ -19,6 +20,7 @@ impl RepoPath {
 #[derive(Debug)]
 pub struct RepoValidationError;
 
+#[derive(Clone)]
 pub struct RepoSite(String);
 
 impl FromStr for RepoSite {
@@ -43,6 +45,7 @@ impl AsRef<str> for RepoSite {
     }
 }
 
+#[derive(Clone)]
 pub struct RepoQualifier(String);
 
 impl FromStr for RepoQualifier {
@@ -67,6 +70,7 @@ impl AsRef<str> for RepoQualifier {
     }
 }
 
+#[derive(Clone)]
 pub struct RepoName(String);
 
 impl FromStr for RepoName {

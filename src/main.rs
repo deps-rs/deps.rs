@@ -1,9 +1,11 @@
 #![feature(ascii_ctype)]
 #![feature(conservative_impl_trait)]
+#![feature(proc_macro)]
 
 extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;
+extern crate maud;
 extern crate route_recognizer;
 extern crate semver;
 #[macro_use] extern crate serde_derive;
@@ -19,8 +21,7 @@ mod models;
 mod parsers;
 mod interactors;
 mod engine;
-mod assets;
-mod api;
+mod server;
 
 use std::net::SocketAddr;
 use std::sync::Mutex;
@@ -32,7 +33,7 @@ use hyper_tls::HttpsConnector;
 use slog::Drain;
 use tokio_core::reactor::Core;
 
-use self::api::Api;
+use self::server::Server;
 use self::engine::Engine;
 
 fn main() {
@@ -63,9 +64,9 @@ fn main() {
         logger: logger.clone()
     };
 
-    let api = Api::new(engine);
+    let server = Server::new(engine);
 
-    let serve = http.serve_addr_handle(&addr, &handle, move || Ok(api.clone()))
+    let serve = http.serve_addr_handle(&addr, &handle, move || Ok(server.clone()))
         .expect("failed to bind server");
 
     let serving = serve.for_each(move |conn| {
