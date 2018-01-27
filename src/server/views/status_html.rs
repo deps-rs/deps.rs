@@ -6,7 +6,7 @@ use ::engine::AnalyzeDependenciesOutcome;
 use ::models::crates::{CrateName, AnalyzedDependency};
 use ::models::repo::RepoPath;
 
-const SELF_BASE_URL: &'static str = "http://example.com";
+const SELF_BASE_URL: &'static str = "https://shiny-robots.herokuapp.com";
 
 fn dependency_table<I: IntoIterator<Item=(CrateName, AnalyzedDependency)>>(deps: I) -> Markup {
     html! {
