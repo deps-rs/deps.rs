@@ -4,6 +4,7 @@
 extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;
+extern crate route_recognizer;
 extern crate semver;
 #[macro_use] extern crate serde_derive;
 extern crate serde;
@@ -61,9 +62,10 @@ fn main() {
         logger: logger.clone()
     };
 
-    let serve = http.serve_addr_handle(&addr, &handle, move || {
-        Ok(Api { engine: engine.clone() })
-    }).expect("failed to bind server");
+    let api = Api::new(engine);
+
+    let serve = http.serve_addr_handle(&addr, &handle, move || Ok(api.clone()))
+        .expect("failed to bind server");
 
     let serving = serve.for_each(move |conn| {
         let conn_logger = logger.clone();
