@@ -58,7 +58,9 @@ pub fn status_html(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: Repo
                 header {
                     h1 {
                         "Dependency status for "
-                        code (format!("{}/{}", repo_path.qual.as_ref(), repo_path.name.as_ref()))
+                        a href=(format!("{}/{}/{}", repo_path.site.to_base_uri(), repo_path.qual.as_ref(), repo_path.name.as_ref())) {
+                            code (format!("{}/{}", repo_path.qual.as_ref(), repo_path.name.as_ref()))
+                        }
                     }
                     
                     img src=(format!("/{}/status.svg", self_path));

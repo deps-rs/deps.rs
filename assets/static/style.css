@@ -35,6 +35,10 @@ code {
     color: #555;
 }
 
+h1 a {
+    text-decoration: none;
+}
+
 h1 code {
     letter-spacing: -0.02em;
 }

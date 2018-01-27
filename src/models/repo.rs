@@ -20,28 +20,35 @@ impl RepoPath {
 #[derive(Debug)]
 pub struct RepoValidationError;
 
-#[derive(Clone)]
-pub struct RepoSite(String);
+#[derive(Clone, Copy)]
+pub enum RepoSite {
+    Github
+}
+
+impl RepoSite {
+    pub fn to_base_uri(&self) -> &'static str {
+        match self {
+            &RepoSite::Github => "https://github.com"
+        }
+    }
+}
 
 impl FromStr for RepoSite {
     type Err = RepoValidationError;
 
     fn from_str(input: &str) -> Result<RepoSite, RepoValidationError> {
-        let is_valid = input.chars().all(|c| {
-            c.is_ascii_alphanumeric() || c == '.'
-        });
-
-        if !is_valid {
-            Err(RepoValidationError)
-        } else {
-            Ok(RepoSite(input.to_string()))
+        match input {
+            "github" => Ok(RepoSite::Github),
+            _ => Err(RepoValidationError)
         }
     }
 }
 
 impl AsRef<str> for RepoSite {
     fn as_ref(&self) -> &str {
-        self.0.as_ref()
+        match self {
+            &RepoSite::Github => "github"
+        }
     }
 }
 
