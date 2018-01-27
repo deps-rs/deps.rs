@@ -85,7 +85,7 @@ impl Service for Api {
 }
 
 impl Api {
-    fn status<'r>(&self, _req: Request, params: Params, format: StatusFormat) ->
+    fn status(&self, _req: Request, params: Params, format: StatusFormat) ->
         impl Future<Item=Response, Error=HyperError>
     {
         let engine = self.engine.clone();
