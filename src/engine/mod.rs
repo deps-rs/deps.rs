@@ -31,15 +31,20 @@ pub enum AnalyzeDependenciesError {
 
 const FETCH_RELEASES_CONCURRENCY: usize = 10;
 
+pub struct AnalyzeDependenciesOutcome {
+    pub name: CrateName,
+    pub deps: AnalyzedDependencies
+} 
+
 impl Engine {
     pub fn analyze_dependencies(&self, repo_path: RepoPath) ->
-        impl Future<Item=AnalyzedDependencies, Error=AnalyzeDependenciesError>
+        impl Future<Item=AnalyzeDependenciesOutcome, Error=AnalyzeDependenciesError>
     {
         let manifest_future = self.retrieve_manifest(&repo_path);
 
         let engine = self.clone();
         manifest_future.and_then(move |manifest| {
-            let CrateManifest::Crate(deps) = manifest;
+            let CrateManifest::Crate(crate_name, deps) = manifest;
             let analyzer = DependencyAnalyzer::new(&deps);
 
             let main_deps = deps.main.into_iter().map(|(name, _)| name);
@@ -48,10 +53,17 @@ impl Engine {
 
             let release_futures = engine.fetch_releases(main_deps.chain(dev_deps).chain(build_deps));
 
-            stream::iter_ok(release_futures)
+            let analyzed_deps_future = stream::iter_ok(release_futures)
                 .buffer_unordered(FETCH_RELEASES_CONCURRENCY)
                 .fold(analyzer, |mut analyzer, releases| { analyzer.process(releases); Ok(analyzer) })
-                .map(|analyzer| analyzer.finalize())
+                .map(|analyzer| analyzer.finalize());
+
+            analyzed_deps_future.map(move |analyzed_deps| {
+                AnalyzeDependenciesOutcome {
+                    name: crate_name,
+                    deps: analyzed_deps
+                }
+            })
         })
     }
 

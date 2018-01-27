@@ -26,7 +26,7 @@ pub struct Api {
 impl Api {
     pub fn new(engine: Engine) -> Api {
         let mut router = Router::new();
-        router.add("/api/v1/analyze/:site/:qual/:name", Route::AnalyzeDependencies);
+        router.add("/repo/:site/:qual/:name/dependencies.json", Route::AnalyzeDependencies);
 
         Api { engine, router: Arc::new(router) }
     }
@@ -40,12 +40,17 @@ struct AnalyzeDependenciesResponseDetail {
 }
 
 #[derive(Debug, Serialize)]
-struct AnalyzeDependenciesResponse {
+struct AnalyzeDependenciesResponseSingle {
     dependencies: BTreeMap<String, AnalyzeDependenciesResponseDetail>,
     #[serde(rename="dev-dependencies")]
     dev_dependencies: BTreeMap<String, AnalyzeDependenciesResponseDetail>,
     #[serde(rename="build-dependencies")]
     build_dependencies: BTreeMap<String, AnalyzeDependenciesResponseDetail>
+}
+
+#[derive(Debug, Serialize)]
+struct AnalyzeDependenciesResponse {
+    crates: BTreeMap<String, AnalyzeDependenciesResponseSingle>
 }
 
 impl Service for Api {
@@ -96,30 +101,33 @@ impl Api {
                                 response.set_body(format!("{:?}", err));
                                 future::Either::A(future::ok(response))
                             },
-                            Ok(dependencies) => {
-                                let response_struct = AnalyzeDependenciesResponse {
-                                    dependencies: dependencies.main.into_iter()
+                            Ok(analysis_outcome) => {
+                                let single = AnalyzeDependenciesResponseSingle {
+                                    dependencies: analysis_outcome.deps.main.into_iter()
                                         .map(|(name, analyzed)| (name.into(), AnalyzeDependenciesResponseDetail {
                                             outdated: analyzed.is_outdated(),
                                             required: analyzed.required,
                                             latest: analyzed.latest
                                         })).collect(),
-                                    dev_dependencies: dependencies.dev.into_iter()
+                                    dev_dependencies: analysis_outcome.deps.dev.into_iter()
                                         .map(|(name, analyzed)| (name.into(), AnalyzeDependenciesResponseDetail {
                                             outdated: analyzed.is_outdated(),
                                             required: analyzed.required,
                                             latest: analyzed.latest
                                         })).collect(),
-                                    build_dependencies: dependencies.build.into_iter()
+                                    build_dependencies: analysis_outcome.deps.build.into_iter()
                                         .map(|(name, analyzed)| (name.into(), AnalyzeDependenciesResponseDetail {
                                             outdated: analyzed.is_outdated(),
                                             required: analyzed.required,
                                             latest: analyzed.latest
                                         })).collect()
                                 };
+                                let multi = AnalyzeDependenciesResponse {
+                                    crates: vec![(analysis_outcome.name.into(), single)].into_iter().collect()
+                                };
                                 let mut response = Response::new()
                                     .with_header(ContentType::json())
-                                    .with_body(serde_json::to_string(&response_struct).unwrap());
+                                    .with_body(serde_json::to_string(&multi).unwrap());
                                 future::Either::B(future::ok(response))
                             }
                         }

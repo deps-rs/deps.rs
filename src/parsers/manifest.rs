@@ -27,7 +27,13 @@ enum CargoTomlDependency {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+struct CargoTomlPackage {
+    name: String
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 struct CargoToml {
+    package: CargoTomlPackage,
     #[serde(default)]
     dependencies: BTreeMap<String, CargoTomlDependency>,
     #[serde(rename = "dev-dependencies")]
@@ -65,6 +71,9 @@ pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, ManifestParseEr
     let cargo_toml = toml::de::from_str::<CargoToml>(input)
         .map_err(ManifestParseError::Serde)?;
 
+    let crate_name = cargo_toml.package.name.parse()
+        .map_err(ManifestParseError::Name)?;
+
     let dependencies = cargo_toml.dependencies
         .into_iter().filter_map(convert_dependency).collect::<Result<BTreeMap<_, _>, _>>()?;
     let dev_dependencies = cargo_toml.dev_dependencies
@@ -78,5 +87,5 @@ pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, ManifestParseEr
         build: build_dependencies
     };
 
-    Ok(CrateManifest::Crate(deps))
+    Ok(CrateManifest::Crate(crate_name, deps))
 }

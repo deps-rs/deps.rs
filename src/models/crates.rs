@@ -96,5 +96,5 @@ impl AnalyzedDependencies {
 
 #[derive(Debug)]
 pub enum CrateManifest {
-    Crate(CrateDeps)
+    Crate(CrateName, CrateDeps)
 }
