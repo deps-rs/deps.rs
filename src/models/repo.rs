@@ -60,7 +60,7 @@ impl FromStr for RepoQualifier {
 
     fn from_str(input: &str) -> Result<RepoQualifier, RepoValidationError> {
         let is_valid = input.chars().all(|c| {
-            c.is_ascii_alphanumeric() || c == '-' || c == '_'
+            c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_'
         });
 
         if !is_valid {
@@ -85,7 +85,7 @@ impl FromStr for RepoName {
 
     fn from_str(input: &str) -> Result<RepoName, RepoValidationError> {
         let is_valid = input.chars().all(|c| {
-            c.is_ascii_alphanumeric() || c == '-' || c == '_'
+            c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_'
         });
 
         if !is_valid {
