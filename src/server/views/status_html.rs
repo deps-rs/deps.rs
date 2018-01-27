@@ -61,15 +61,15 @@ pub fn status_html(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: Repo
                         code (format!("{}/{}", repo_path.qual.as_ref(), repo_path.name.as_ref()))
                     }
                     
-                    h2 {
-                        "Crate "
-                        code (analysis_outcome.name.as_ref())
-                    }
-
                     img src=(format!("/{}/status.svg", self_path));
 
                     pre {
                         (format!("[![dependency status]({}/status.svg)]({})", status_base_url, status_base_url))
+                    }
+
+                    h2 {
+                        "Crate "
+                        code (analysis_outcome.name.as_ref())
                     }
 
                     @if !analysis_outcome.deps.main.is_empty() {
