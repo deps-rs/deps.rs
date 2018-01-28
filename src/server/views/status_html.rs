@@ -86,10 +86,10 @@ pub fn status_html(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: Repo
                 section class=(format!("hero {}", hero_class)) {
                     div class="hero-body" {
                         div class="container" {
-                            h1 class="title is-2" {
-                                "Dependency status for "
+                            h1 class="title is-1" {
                                 a href=(format!("{}/{}/{}", repo_path.site.to_base_uri(), repo_path.qual.as_ref(), repo_path.name.as_ref())) {
-                                    code (format!("{}/{}", repo_path.qual.as_ref(), repo_path.name.as_ref()))
+                                    i class="fa fa-github" ""
+                                    (format!(" {}/{}", repo_path.qual.as_ref(), repo_path.name.as_ref()))
                                 }
                             }
 
