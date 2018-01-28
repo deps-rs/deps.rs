@@ -4,7 +4,7 @@
 html {
     padding: 0;
     margin: 0;
-    background: #eee;
+    background: #f3f3f3;
     font-family: "Fira Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
@@ -12,8 +12,8 @@ body {
     padding: 30px 40px;
     margin: 0 auto;
     background: #fff;
-    border-left: 5px solid #aaa;
-    border-right: 5px solid #aaa;
+    border-left: 5px solid #eee;
+    border-right: 5px solid #eee;
     width: 800px;
 }
 
