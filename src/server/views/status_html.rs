@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::env;
 
 use base64::display::Base64Display;
 use hyper::Response;
@@ -10,7 +11,12 @@ use ::models::crates::{CrateName, AnalyzedDependency};
 use ::models::repo::RepoPath;
 use ::server::assets;
 
-const SELF_BASE_URL: &'static str = "https://shiny-robots.herokuapp.com";
+lazy_static! {
+    static ref SELF_BASE_URL: String = {
+        env::var("BASE_URL")
+            .unwrap_or_else(|_| "http://localhost:8080".to_string())
+    };
+}
 
 fn dependency_table(title: &str, deps: BTreeMap<CrateName, AnalyzedDependency>) -> Markup {
     let count_total = deps.len();
@@ -65,7 +71,7 @@ fn dependency_table(title: &str, deps: BTreeMap<CrateName, AnalyzedDependency>) 
 
 pub fn status_html(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoPath) -> Response {
     let self_path = format!("repo/{}/{}/{}", repo_path.site.as_ref(), repo_path.qual.as_ref(), repo_path.name.as_ref());
-    let status_base_url = format!("{}/{}", SELF_BASE_URL, self_path);
+    let status_base_url = format!("{}/{}", &SELF_BASE_URL as &str, self_path);
     let title = format!("{} / {} - Dependency Status", repo_path.qual.as_ref(), repo_path.name.as_ref());
 
     let (hero_class, status_asset) = if analysis_outcome.deps.any_outdated() {

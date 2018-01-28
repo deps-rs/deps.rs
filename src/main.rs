@@ -7,6 +7,7 @@ extern crate base64;
 extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;
+#[macro_use] extern crate lazy_static;
 extern crate maud;
 extern crate route_recognizer;
 extern crate semver;
