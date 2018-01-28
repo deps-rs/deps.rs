@@ -3,6 +3,7 @@
 #![feature(ip_constructors)]
 #![feature(proc_macro)]
 
+extern crate base64;
 extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;
