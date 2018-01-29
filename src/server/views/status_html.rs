@@ -36,9 +36,9 @@ fn dependency_table(title: &str, deps: BTreeMap<CrateName, AnalyzedDependency>) 
             thead {
                 tr {
                     th "Crate"
-                    th "Required"
-                    th "Latest"
-                    th "Status"
+                    th class="has-text-right" "Required"
+                    th class="has-text-right" "Latest"
+                    th class="has-text-right" "Status"
                 }
             }
             tbody {
@@ -47,15 +47,15 @@ fn dependency_table(title: &str, deps: BTreeMap<CrateName, AnalyzedDependency>) 
                         td {
                             a href=(format!("https://crates.io/crates/{}", name.as_ref())) (name.as_ref())
                         }
-                        td code (dep.required.to_string())
-                        td {
+                        td class="has-text-right" code (dep.required.to_string())
+                        td class="has-text-right" {
                             @if let Some(ref latest) = dep.latest {
                                 code (latest.to_string())
                             } @else {
                                 "N/A"
                             }
                         }
-                        td {
+                        td class="has-text-right" {
                             @if dep.is_outdated() {
                                 span class="tag is-warning" "out of date"
                             } @else {
