@@ -24,7 +24,7 @@ fn dependency_table(title: &str, deps: BTreeMap<CrateName, AnalyzedDependency>) 
 
     html! {
         h3 class="title is-4" (title)
-        p class="subtitle is-4" {
+        p class="subtitle is-5" {
             @if count_outdated > 0 {
                 (format!(" ({} total, {} up-to-date, {} outdated)", count_total, count_total - count_outdated, count_outdated))
             } @else {
