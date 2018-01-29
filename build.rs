@@ -8,7 +8,6 @@ use std::path::Path;
 fn build_style() -> String {
     let options = sass::Options {
         output_style: sass::OutputStyle::Compressed,
-        include_paths: vec!["./assets/styles/bulma/sass/".to_string()],
         ..Default::default()
     };
 
