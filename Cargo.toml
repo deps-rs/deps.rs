@@ -20,3 +20,6 @@ slog-json = "2.2.0"
 tokio-core = "0.1.12"
 tokio-service = "0.1.0"
 toml = "0.4.5"
+
+[build-dependencies]
+sass-rs = "0.2.1"
