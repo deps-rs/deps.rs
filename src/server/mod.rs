@@ -124,7 +124,7 @@ impl Server {
             StatusFormat::Svg =>
                 views::status_svg(analysis_outcome),
             StatusFormat::Html =>
-                views::status_html(analysis_outcome, repo_path)
+                views::html::status::render(analysis_outcome, repo_path)
         }
     }
 
