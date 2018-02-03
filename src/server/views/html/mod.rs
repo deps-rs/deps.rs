@@ -2,8 +2,9 @@ use std::env;
 
 use hyper::Response;
 use hyper::header::ContentType;
-use maud::{Render, html};
+use maud::{Markup, Render, html};
 
+pub mod index;
 pub mod status;
 
 lazy_static! {
@@ -34,4 +35,18 @@ fn render_html<B: Render>(title: &str, body: B) -> Response {
     Response::new()
         .with_header(ContentType::html())
         .with_body(rendered.0)
+}
+
+fn render_navbar() -> Markup {
+    html! {
+        header class="navbar" {
+            div class="container" {
+                div class="navbar-brand" {
+                    a class="navbar-item is-dark" href=(SELF_BASE_URL) {
+                        h1 class="title is-3" "Deps.rs"
+                    }
+                }
+            }
+        }
+    }
 }

@@ -26,6 +26,7 @@ enum StaticFile {
 }
 
 enum Route {
+    Index,
     Static(StaticFile),
     Status(StatusFormat)
 }
@@ -39,6 +40,8 @@ pub struct Server {
 impl Server {
     pub fn new(engine: Engine) -> Server {
         let mut router = Router::new();
+
+        router.add("/", Route::Index);
 
         router.add("/static/style.css", Route::Static(StaticFile::StyleCss));
 
@@ -59,6 +62,11 @@ impl Service for Server {
     fn call(&self, req: Request) -> Self::Future {
         if let Ok(route_match) = self.router.recognize(req.uri().path()) {
             match route_match.handler {
+                &Route::Index => {
+                    if *req.method() == Method::Get {
+                        return Box::new(self.index(req, route_match.params));
+                    }
+                },
                 &Route::Status(format) => {
                     if *req.method() == Method::Get {
                         return Box::new(self.status(req, route_match.params, format));
@@ -80,6 +88,23 @@ impl Service for Server {
 }
 
 impl Server {
+    fn index(&self, _req: Request, _params: Params) ->
+        impl Future<Item=Response, Error=HyperError>
+    {
+        self.engine.get_popular_repos().then(|popular_result| {
+            match popular_result {
+                Err(err) => {
+                    let mut response = Response::new();
+                    response.set_status(StatusCode::BadRequest);
+                    response.set_body(format!("{:?}", err));
+                    future::ok(response)
+                },
+                Ok(popular) =>
+                    future::ok(views::html::index::render(popular))
+            }
+        })
+    }
+
     fn status(&self, _req: Request, params: Params, format: StatusFormat) ->
         impl Future<Item=Response, Error=HyperError>
     {

@@ -6,13 +6,15 @@ use hyper::client::HttpConnector;
 use hyper_tls::HttpsConnector;
 use slog::Logger;
 
-use ::models::repo::RepoPath;
+use ::models::repo::{Repository, RepoPath};
 use ::models::crates::{CrateName, CrateRelease, CrateManifest, AnalyzedDependencies};
 
 use ::parsers::manifest::{ManifestParseError, parse_manifest_toml};
 
 use ::interactors::crates::{QueryCrateError, query_crate};
 use ::interactors::github::{RetrieveFileAtPathError, retrieve_file_at_path};
+use ::interactors::github::get_popular_repos;
+pub use ::interactors::github::GetPopularReposError;
 
 use self::analyzer::DependencyAnalyzer;
 
@@ -37,6 +39,12 @@ pub struct AnalyzeDependenciesOutcome {
 } 
 
 impl Engine {
+    pub fn get_popular_repos(&self) ->
+        impl Future<Item=Vec<Repository>, Error=GetPopularReposError>
+    {
+        get_popular_repos(self.client.clone())
+    }
+
     pub fn analyze_dependencies(&self, repo_path: RepoPath) ->
         impl Future<Item=AnalyzeDependenciesOutcome, Error=AnalyzeDependenciesError>
     {

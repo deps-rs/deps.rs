@@ -1,6 +1,12 @@
 use std::str::FromStr;
 
 #[derive(Clone)]
+pub struct Repository {
+    pub path: RepoPath,
+    pub description: String
+}
+
+#[derive(Clone)]
 pub struct RepoPath {
     pub site: RepoSite,
     pub qual: RepoQualifier,
