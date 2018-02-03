@@ -13,7 +13,7 @@ mod views;
 use ::engine::{Engine, AnalyzeDependenciesOutcome};
 use ::models::repo::RepoPath;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 enum StatusFormat {
     Html,
     Json,
@@ -101,10 +101,14 @@ impl Server {
                     future::Either::B(server.engine.analyze_dependencies(repo_path.clone()).then(move |analyze_result| {
                         match analyze_result {
                             Err(err) => {
-                                let mut response = Response::new();
-                                response.set_status(StatusCode::InternalServerError);
-                                response.set_body(format!("{:?}", err));
-                                future::Either::A(future::ok(response))
+                                if format != StatusFormat::Svg {
+                                    let mut response = Response::new();
+                                    response.set_status(StatusCode::BadRequest);
+                                    response.set_body(format!("{:?}", err));
+                                    future::Either::A(future::ok(response))
+                                } else {
+                                    future::Either::A(future::ok(views::status_svg(None)))
+                                }
                             },
                             Ok(analysis_outcome) => {
                                 let response = Server::status_format_analysis(analysis_outcome, format, repo_path);
@@ -122,7 +126,7 @@ impl Server {
             StatusFormat::Json =>
                 views::status_json(analysis_outcome),
             StatusFormat::Svg =>
-                views::status_svg(analysis_outcome),
+                views::status_svg(Some(analysis_outcome)),
             StatusFormat::Html =>
                 views::html::status::render(analysis_outcome, repo_path)
         }
