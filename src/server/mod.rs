@@ -22,7 +22,8 @@ enum StatusFormat {
 
 #[derive(Clone, Copy)]
 enum StaticFile {
-    StyleCss
+    StyleCss,
+    FaviconPng
 }
 
 enum Route {
@@ -44,6 +45,7 @@ impl Server {
         router.add("/", Route::Index);
 
         router.add("/static/style.css", Route::Static(StaticFile::StyleCss));
+        router.add("/static/favicon.png", Route::Static(StaticFile::FaviconPng));
 
         router.add("/repo/:site/:qual/:name", Route::Status(StatusFormat::Html));
         router.add("/repo/:site/:qual/:name/status.json", Route::Status(StatusFormat::Json));
@@ -163,6 +165,11 @@ impl Server {
                 Response::new()
                     .with_header(ContentType("text/css".parse().unwrap()))
                     .with_body(assets::STATIC_STYLE_CSS)
+            },
+            StaticFile::FaviconPng => {
+                Response::new()
+                    .with_header(ContentType("image/png".parse().unwrap()))
+                    .with_body(assets::STATIC_FAVICON_PNG.to_vec())
             }
         }
     }
