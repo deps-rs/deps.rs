@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
@@ -12,14 +13,20 @@ impl Into<String> for CrateName {
     }
 }
 
-#[derive(Debug)]
-pub struct CrateNameValidationError;
+impl Borrow<str> for CrateName {
+    fn borrow(&self) -> &str {
+        &self.0
+    }
+}
 
 impl AsRef<str> for CrateName {
     fn as_ref(&self) -> &str {
         self.0.as_ref()
     }
 }
+
+#[derive(Debug)]
+pub struct CrateNameValidationError;
 
 impl FromStr for CrateName {
     type Err = CrateNameValidationError;
@@ -44,7 +51,7 @@ pub struct CrateRelease {
     pub yanked: bool
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct CrateDeps {
     pub main: BTreeMap<CrateName, VersionReq>,
     pub dev: BTreeMap<CrateName, VersionReq>,
