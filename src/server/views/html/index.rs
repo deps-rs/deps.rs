@@ -5,7 +5,7 @@ use ::models::repo::Repository;
 
 fn popular_table(popular: Vec<Repository>) -> Markup {
     html! {
-        h2 class="title is-3" "Popular"
+        h2 class="title is-3" "Popular Repositories"
 
         table class="table is-fullwidth is-striped is-hoverable" {
             thead {
