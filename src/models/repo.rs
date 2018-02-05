@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Repository {
     pub path: RepoPath,
     pub description: String
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RepoPath {
     pub site: RepoSite,
     pub qual: RepoQualifier,
@@ -26,7 +26,7 @@ impl RepoPath {
 #[derive(Debug)]
 pub struct RepoValidationError;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum RepoSite {
     Github
 }
@@ -58,7 +58,7 @@ impl AsRef<str> for RepoSite {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RepoQualifier(String);
 
 impl FromStr for RepoQualifier {
@@ -83,7 +83,7 @@ impl AsRef<str> for RepoQualifier {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RepoName(String);
 
 impl FromStr for RepoName {

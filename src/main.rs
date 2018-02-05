@@ -20,6 +20,7 @@ extern crate tokio_core;
 extern crate tokio_service;
 extern crate toml;
 
+mod utils;
 mod models;
 mod parsers;
 mod interactors;
@@ -65,10 +66,7 @@ fn main() {
 
     let http = Http::new();
 
-    let engine = Engine {
-        client: client.clone(),
-        logger: logger.clone()
-    };
+    let engine = Engine::new(client.clone(), logger.clone());
 
     let server = Server::new(engine);
 

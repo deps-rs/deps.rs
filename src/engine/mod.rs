@@ -1,10 +1,16 @@
-mod analyzer;
+use std::sync::Arc;
+use std::time::Duration;
 
 use futures::{Future, Stream, stream};
 use hyper::Client;
 use hyper::client::HttpConnector;
 use hyper_tls::HttpsConnector;
 use slog::Logger;
+use tokio_service::Service;
+
+mod analyzer;
+
+use ::utils::throttle::{Throttle, ThrottledError};
 
 use ::models::repo::{Repository, RepoPath};
 use ::models::crates::{CrateName, CrateRelease, CrateManifest, AnalyzedDependencies};
@@ -13,16 +19,30 @@ use ::parsers::manifest::{ManifestParseError, parse_manifest_toml};
 
 use ::interactors::crates::{QueryCrateError, query_crate};
 use ::interactors::github::{RetrieveFileAtPathError, retrieve_file_at_path};
-use ::interactors::github::get_popular_repos;
-pub use ::interactors::github::GetPopularReposError;
+use ::interactors::github::GetPopularRepos;
 
 use self::analyzer::DependencyAnalyzer;
 
 #[derive(Clone, Debug)]
 pub struct Engine {
-    pub client: Client<HttpsConnector<HttpConnector>>,
-    pub logger: Logger
+    client: Client<HttpsConnector<HttpConnector>>,
+    logger: Logger,
+
+    get_popular_repos: Arc<Throttle<GetPopularRepos<Client<HttpsConnector<HttpConnector>>>>>
 }
+
+impl Engine {
+    pub fn new(client: Client<HttpsConnector<HttpConnector>>, logger: Logger) -> Engine {
+        Engine {
+            client: client.clone(), logger,
+
+            get_popular_repos: Arc::new(Throttle::new(GetPopularRepos(client), Duration::from_secs(10)))
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct GetPopularReposError(ThrottledError<::interactors::github::GetPopularReposError>);
 
 #[derive(Debug)]
 pub enum AnalyzeDependenciesError {
@@ -42,7 +62,9 @@ impl Engine {
     pub fn get_popular_repos(&self) ->
         impl Future<Item=Vec<Repository>, Error=GetPopularReposError>
     {
-        get_popular_repos(self.client.clone())
+        self.get_popular_repos.call(())
+            .map_err(GetPopularReposError)
+            .map(|repos| repos.clone())
     }
 
     pub fn analyze_dependencies(&self, repo_path: RepoPath) ->

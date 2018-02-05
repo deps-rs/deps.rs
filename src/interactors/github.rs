@@ -74,33 +74,46 @@ struct GithubOwner {
     login: String
 }
 
-pub fn get_popular_repos<S>(service: S) ->
-    impl Future<Item=Vec<Repository>, Error=GetPopularReposError>
-    where S: Service<Request=Request, Response=Response, Error=HyperError>
+#[derive(Debug, Clone)]
+pub struct GetPopularRepos<S>(pub S);
+
+impl<S> Service for GetPopularRepos<S>
+    where S: Service<Request=Request, Response=Response, Error=HyperError> + Clone + 'static,
+          S::Future: 'static
 {
-    let uri_future = format!("{}/search/repositories?q=language:rust&sort=stars", GITHUB_API_BASE_URI)
-        .parse().into_future().map_err(GetPopularReposError::Uri);
+    type Request = ();
+    type Response = Vec<Repository>;
+    type Error = GetPopularReposError;
+    type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
 
-    uri_future.and_then(move |uri| {
-        let mut request = Request::new(Method::Get, uri);
-        request.headers_mut().set(UserAgent::new("deps.rs"));
+    fn call(&self, _req: ()) -> Self::Future {
+        println!("call api");
+        let service = self.0.clone();
 
-        service.call(request).map_err(GetPopularReposError::Transport).and_then(|response| {
-            let status = response.status();
-            if !status.is_success() {
-                future::Either::A(future::err(GetPopularReposError::Status(status)))
-            } else {
-                let body_future = response.body().concat2().map_err(GetPopularReposError::Transport);
-                let decode_future = body_future
-                    .and_then(|body| serde_json::from_slice(body.as_ref()).map_err(GetPopularReposError::Decode));
-                future::Either::B(decode_future.and_then(|search_response: GithubSearchResponse| {
-                    search_response.items.into_iter().map(|item| {
-                        let path = RepoPath::from_parts("github", &item.owner.login, &item.name)
-                            .map_err(GetPopularReposError::Validate)?;
-                        Ok(Repository { path, description: item.description })
-                    }).collect::<Result<Vec<_>, _>>()
-                }))
-            }
-        })
-    })
+        let uri_future = format!("{}/search/repositories?q=language:rust&sort=stars", GITHUB_API_BASE_URI)
+            .parse().into_future().map_err(GetPopularReposError::Uri);
+
+        Box::new(uri_future.and_then(move |uri| {
+            let mut request = Request::new(Method::Get, uri);
+            request.headers_mut().set(UserAgent::new("deps.rs"));
+
+            service.call(request).map_err(GetPopularReposError::Transport).and_then(|response| {
+                let status = response.status();
+                if !status.is_success() {
+                    future::Either::A(future::err(GetPopularReposError::Status(status)))
+                } else {
+                    let body_future = response.body().concat2().map_err(GetPopularReposError::Transport);
+                    let decode_future = body_future
+                        .and_then(|body| serde_json::from_slice(body.as_ref()).map_err(GetPopularReposError::Decode));
+                    future::Either::B(decode_future.and_then(|search_response: GithubSearchResponse| {
+                        search_response.items.into_iter().map(|item| {
+                            let path = RepoPath::from_parts("github", &item.owner.login, &item.name)
+                                .map_err(GetPopularReposError::Validate)?;
+                            Ok(Repository { path, description: item.description })
+                        }).collect::<Result<Vec<_>, _>>()
+                    }))
+                }
+            })
+        }))
+    }
 }
