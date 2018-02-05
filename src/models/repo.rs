@@ -1,5 +1,7 @@
 use std::str::FromStr;
 
+use failure::Error;
+
 #[derive(Clone, Debug)]
 pub struct Repository {
     pub path: RepoPath,
@@ -14,7 +16,7 @@ pub struct RepoPath {
 }
 
 impl RepoPath {
-    pub fn from_parts(site: &str, qual: &str, name: &str) -> Result<RepoPath, RepoValidationError> {
+    pub fn from_parts(site: &str, qual: &str, name: &str) -> Result<RepoPath, Error> {
         Ok(RepoPath {
             site: site.parse()?,
             qual: qual.parse()?,
@@ -22,9 +24,6 @@ impl RepoPath {
         })
     }
 }
-
-#[derive(Debug)]
-pub struct RepoValidationError;
 
 #[derive(Clone, Copy, Debug)]
 pub enum RepoSite {
@@ -40,12 +39,12 @@ impl RepoSite {
 }
 
 impl FromStr for RepoSite {
-    type Err = RepoValidationError;
+    type Err = Error;
 
-    fn from_str(input: &str) -> Result<RepoSite, RepoValidationError> {
+    fn from_str(input: &str) -> Result<RepoSite, Error> {
         match input {
             "github" => Ok(RepoSite::Github),
-            _ => Err(RepoValidationError)
+            _ => Err(format_err!("unknown repo site identifier"))
         }
     }
 }
@@ -62,18 +61,15 @@ impl AsRef<str> for RepoSite {
 pub struct RepoQualifier(String);
 
 impl FromStr for RepoQualifier {
-    type Err = RepoValidationError;
+    type Err = Error;
 
-    fn from_str(input: &str) -> Result<RepoQualifier, RepoValidationError> {
+    fn from_str(input: &str) -> Result<RepoQualifier, Error> {
         let is_valid = input.chars().all(|c| {
             c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_'
         });
 
-        if !is_valid {
-            Err(RepoValidationError)
-        } else {
-            Ok(RepoQualifier(input.to_string()))
-        }
+        ensure!(is_valid, "invalid repo qualifier");
+        Ok(RepoQualifier(input.to_string()))
     }
 }
 
@@ -87,18 +83,15 @@ impl AsRef<str> for RepoQualifier {
 pub struct RepoName(String);
 
 impl FromStr for RepoName {
-    type Err = RepoValidationError;
+    type Err = Error;
 
-    fn from_str(input: &str) -> Result<RepoName, RepoValidationError> {
+    fn from_str(input: &str) -> Result<RepoName, Error> {
         let is_valid = input.chars().all(|c| {
             c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_'
         });
 
-        if !is_valid {
-            Err(RepoValidationError)
-        } else {
-            Ok(RepoName(input.to_string()))
-        }
+        ensure!(is_valid, "invalid repo name");
+        Ok(RepoName(input.to_string()))
     }
 }
 

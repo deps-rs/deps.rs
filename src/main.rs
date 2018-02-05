@@ -4,6 +4,7 @@
 #![feature(proc_macro)]
 
 extern crate base64;
+#[macro_use] extern crate failure;
 extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;

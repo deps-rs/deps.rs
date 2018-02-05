@@ -1,21 +1,23 @@
-use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::time::{Duration, Instant};
 use std::ops::Deref;
 use std::sync::Mutex;
 
+use failure::{Error, Fail};
 use futures::{Future, Poll};
 use futures::future::{Shared, SharedError, SharedItem};
 use tokio_service::Service;
 
-pub struct Throttle<S: Service<Request=()>> {
+pub struct Throttle<S>
+    where S: Service<Request=(), Error=Error>
+{
     inner: S,
     duration: Duration,
     current: Mutex<Option<(Instant, Shared<S::Future>)>>
 }
 
 impl<S> Debug for Throttle<S>
-    where S: Service<Request=()> + Debug,
+    where S: Service<Request=(), Error=Error> + Debug
 {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
         fmt.debug_struct("Throttle")
@@ -25,7 +27,9 @@ impl<S> Debug for Throttle<S>
     }
 }
 
-impl<S: Service<Request=()>> Throttle<S> {
+impl<S> Throttle<S> 
+    where S: Service<Request=(), Error=Error>
+{
     pub fn new(service: S, duration: Duration) -> Throttle<S> {
         Throttle {
             inner: service,
@@ -35,10 +39,12 @@ impl<S: Service<Request=()>> Throttle<S> {
     }
 }
 
-impl<S: Service<Request=()>> Service for Throttle<S> {
+impl<S> Service for Throttle<S>
+    where S: Service<Request=(), Error=Error>
+{
     type Request = ();
     type Response = ThrottledItem<S::Response>;
-    type Error = ThrottledError<S::Error>;
+    type Error = ThrottledError;
     type Future = Throttled<S::Future>;
 
     fn call(&self, _: ()) -> Self::Future {
@@ -69,9 +75,9 @@ impl<F> Debug for Throttled<F>
     }
 }
 
-impl<F: Future> Future for Throttled<F> {
+impl<F: Future<Error=Error>> Future for Throttled<F> {
     type Item = ThrottledItem<F::Item>;
-    type Error = ThrottledError<F::Error>;
+    type Error = ThrottledError;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         self.0.poll()
@@ -92,32 +98,24 @@ impl<T> Deref for ThrottledItem<T> {
 }
 
 #[derive(Debug)]
-pub struct ThrottledError<E>(SharedError<E>);
+pub struct ThrottledError(SharedError<Error>);
 
-impl<E> Deref for ThrottledError<E> {
-    type Target = E;
+impl Fail for ThrottledError {
+    fn cause(&self) -> Option<&Fail> {
+        Some(self.0.cause())
+    }
 
-    fn deref(&self) -> &E {
-        &self.0.deref()
+    fn backtrace(&self) -> Option<&::failure::Backtrace> {
+        Some(self.0.backtrace())
+    }
+
+    fn causes(&self) -> ::failure::Causes {
+        self.0.causes()
     }
 }
 
-impl<E> Display for ThrottledError<E>
-    where E: Display,
-{
+impl Display for ThrottledError {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
-        self.0.fmt(f)
-    }
-}
-
-impl<E> Error for ThrottledError<E>
-    where E: Error,
-{
-    fn description(&self) -> &str {
-        self.0.description()
-    }
-
-    fn cause(&self) -> Option<&Error> {
-        self.0.cause()
+        Display::fmt(&self.0, f)
     }
 }

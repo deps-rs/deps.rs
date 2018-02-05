@@ -98,7 +98,7 @@ impl Server {
                 Err(err) => {
                     let mut response = Response::new();
                     response.set_status(StatusCode::BadRequest);
-                    response.set_body(format!("{:?}", err));
+                    response.set_body(format!("Error: {}", err));
                     future::ok(response)
                 },
                 Ok(popular) =>
@@ -121,7 +121,7 @@ impl Server {
                 Err(err) => {
                     let mut response = Response::new();
                     response.set_status(StatusCode::BadRequest);
-                    response.set_body(format!("{:?}", err));
+                    response.set_body(format!("Error: {}", err));
                     future::Either::A(future::ok(response))
                 },
                 Ok(repo_path) => {
@@ -131,7 +131,7 @@ impl Server {
                                 if format != StatusFormat::Svg {
                                     let mut response = Response::new();
                                     response.set_status(StatusCode::BadRequest);
-                                    response.set_body(format!("{:?}", err));
+                                    response.set_body(format!("Error: {}", err));
                                     future::Either::A(future::ok(response))
                                 } else {
                                     future::Either::A(future::ok(views::status_svg(None)))

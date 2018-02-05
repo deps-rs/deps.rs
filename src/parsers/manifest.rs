@@ -1,16 +1,10 @@
 use std::collections::BTreeMap;
 
-use semver::{ReqParseError, VersionReq};
+use failure::Error;
+use semver::VersionReq;
 use toml;
 
-use ::models::crates::{CrateName, CrateDeps, CrateManifest, CrateNameValidationError};
-
-#[derive(Debug)]
-pub enum ManifestParseError {
-    Serde(toml::de::Error),
-    Name(CrateNameValidationError),
-    Version(ReqParseError)
-}
+use ::models::crates::{CrateName, CrateDeps, CrateManifest};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct CargoTomlComplexDependency {
@@ -44,11 +38,11 @@ struct CargoToml {
     build_dependencies: BTreeMap<String, CargoTomlDependency>
 }
 
-fn convert_dependency(cargo_dep: (String, CargoTomlDependency)) -> Option<Result<(CrateName, VersionReq), ManifestParseError>> {
+fn convert_dependency(cargo_dep: (String, CargoTomlDependency)) -> Option<Result<(CrateName, VersionReq), Error>> {
     match cargo_dep {
         (name, CargoTomlDependency::Simple(string)) => {
-            Some(name.parse().map_err(ManifestParseError::Name).and_then(|parsed_name| {
-                string.parse().map_err(ManifestParseError::Version)
+            Some(name.parse::<CrateName>().map_err(|err| err.into()).and_then(|parsed_name| {
+                string.parse::<VersionReq>().map_err(|err| err.into())
                     .map(|version| (parsed_name, version))
             }))
         }
@@ -57,8 +51,8 @@ fn convert_dependency(cargo_dep: (String, CargoTomlDependency)) -> Option<Result
                 None
             } else {
                 cplx.version.map(|string| {
-                    name.parse().map_err(ManifestParseError::Name).and_then(|parsed_name| {
-                        string.parse().map_err(ManifestParseError::Version)
+                    name.parse::<CrateName>().map_err(|err| err.into()).and_then(|parsed_name| {
+                        string.parse::<VersionReq>().map_err(|err| err.into())
                             .map(|version| (parsed_name, version))
                     })
                 })
@@ -67,12 +61,10 @@ fn convert_dependency(cargo_dep: (String, CargoTomlDependency)) -> Option<Result
     }
 }
 
-pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, ManifestParseError> {
-    let cargo_toml = toml::de::from_str::<CargoToml>(input)
-        .map_err(ManifestParseError::Serde)?;
+pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, Error> {
+    let cargo_toml = toml::de::from_str::<CargoToml>(input)?;
 
-    let crate_name = cargo_toml.package.name.parse()
-        .map_err(ManifestParseError::Name)?;
+    let crate_name = cargo_toml.package.name.parse::<CrateName>()?;
 
     let dependencies = cargo_toml.dependencies
         .into_iter().filter_map(convert_dependency).collect::<Result<BTreeMap<_, _>, _>>()?;

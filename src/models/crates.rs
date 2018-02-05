@@ -2,6 +2,7 @@ use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
+use failure::Error;
 use semver::{Version, VersionReq};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -25,19 +26,16 @@ impl AsRef<str> for CrateName {
     }
 }
 
-#[derive(Debug)]
-pub struct CrateNameValidationError;
-
 impl FromStr for CrateName {
-    type Err = CrateNameValidationError;
+    type Err = Error;
 
-    fn from_str(input: &str) -> Result<CrateName, CrateNameValidationError> {
+    fn from_str(input: &str) -> Result<CrateName, Error> {
         let is_valid = input.chars().all(|c| {
             c.is_ascii_alphanumeric() || c == '_' || c == '-'
         });
 
         if !is_valid {
-            Err(CrateNameValidationError)
+            Err(format_err!("failed to validate crate name: {}", input))
         } else {
             Ok(CrateName(input.to_string()))
         }
