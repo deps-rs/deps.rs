@@ -68,7 +68,6 @@ impl<S> Service for GetPopularRepos<S>
     type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
 
     fn call(&self, _req: ()) -> Self::Future {
-        println!("call api");
         let service = self.0.clone();
 
         let uri_future = format!("{}/search/repositories?q=language:rust&sort=stars", GITHUB_API_BASE_URI)
