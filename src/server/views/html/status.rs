@@ -63,7 +63,7 @@ fn dependency_table(title: &str, deps: BTreeMap<CrateName, AnalyzedDependency>) 
 pub fn render(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoPath) -> Response {
     let self_path = format!("repo/{}/{}/{}", repo_path.site.as_ref(), repo_path.qual.as_ref(), repo_path.name.as_ref());
     let status_base_url = format!("{}/{}", &super::SELF_BASE_URL as &str, self_path);
-    let title = format!("{} / {} - Deps.rs", repo_path.qual.as_ref(), repo_path.name.as_ref());
+    let title = format!("{} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref());
 
     let (hero_class, status_asset) = if analysis_outcome.deps.any_outdated() {
         ("is-warning", assets::BADGE_OUTDATED_SVG.as_ref())

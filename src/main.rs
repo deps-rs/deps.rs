@@ -69,7 +69,7 @@ fn main() {
 
     let engine = Engine::new(client.clone(), logger.clone());
 
-    let server = Server::new(engine);
+    let server = Server::new(logger.clone(), engine);
 
     let serve = http.serve_addr_handle(&addr, &handle, move || Ok(server.clone()))
         .expect("failed to bind server");

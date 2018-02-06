@@ -33,7 +33,7 @@ fn popular_table(popular: Vec<Repository>) -> Markup {
 }
 
 pub fn render(popular: Vec<Repository>) -> Response {
-    super::render_html("Keep your dependencies up-to-date - Deps.rs", html! {
+    super::render_html("Keep your dependencies up-to-date", html! {
         section class="hero is-light" {
             div class="hero-head" (super::render_navbar())
             div class="hero-body" {

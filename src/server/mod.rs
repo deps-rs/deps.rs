@@ -34,12 +34,13 @@ enum Route {
 
 #[derive(Clone)]
 pub struct Server {
+    logger: Logger,
     engine: Engine,
     router: Arc<Router<Route>>
 }
 
 impl Server {
-    pub fn new(engine: Engine) -> Server {
+    pub fn new(logger: Logger, engine: Engine) -> Server {
         let mut router = Router::new();
 
         router.add("/", Route::Index);
@@ -51,7 +52,7 @@ impl Server {
         router.add("/repo/:site/:qual/:name/status.json", Route::Status(StatusFormat::Json));
         router.add("/repo/:site/:qual/:name/status.svg", Route::Status(StatusFormat::Svg));
 
-        Server { engine, router: Arc::new(router) }
+        Server { logger, engine, router: Arc::new(router) }
     }
 }
 
@@ -62,16 +63,18 @@ impl Service for Server {
     type Future = Box<Future<Item=Response, Error=HyperError>>;
 
     fn call(&self, req: Request) -> Self::Future {
+        let logger = self.logger.new(o!("http_path" => req.uri().path().to_owned()));
+
         if let Ok(route_match) = self.router.recognize(req.uri().path()) {
             match route_match.handler {
                 &Route::Index => {
                     if *req.method() == Method::Get {
-                        return Box::new(self.index(req, route_match.params));
+                        return Box::new(self.index(req, route_match.params, logger));
                     }
                 },
                 &Route::Status(format) => {
                     if *req.method() == Method::Get {
-                        return Box::new(self.status(req, route_match.params, format));
+                        return Box::new(self.status(req, route_match.params, logger, format));
                     }
                 },
                 &Route::Static(file) => {
@@ -90,15 +93,15 @@ impl Service for Server {
 }
 
 impl Server {
-    fn index(&self, _req: Request, _params: Params) ->
+    fn index(&self, _req: Request, _params: Params, logger: Logger) ->
         impl Future<Item=Response, Error=HyperError>
     {
-        self.engine.get_popular_repos().then(|popular_result| {
+        self.engine.get_popular_repos().then(move |popular_result| {
             match popular_result {
                 Err(err) => {
-                    let mut response = Response::new();
-                    response.set_status(StatusCode::BadRequest);
-                    response.set_body(format!("Error: {}", err));
+                    error!(logger, "error: {}", err);
+                    let mut response = views::html::error::render("Could not retrieve popular repositories", "");
+                    response.set_status(StatusCode::InternalServerError);
                     future::ok(response)
                 },
                 Ok(popular) =>
@@ -107,7 +110,7 @@ impl Server {
         })
     }
 
-    fn status(&self, _req: Request, params: Params, format: StatusFormat) ->
+    fn status(&self, _req: Request, params: Params, logger: Logger, format: StatusFormat) ->
         impl Future<Item=Response, Error=HyperError>
     {
         let server = self.clone();
@@ -119,9 +122,9 @@ impl Server {
         RepoPath::from_parts(site, qual, name).into_future().then(move |repo_path_result| {
             match repo_path_result {
                 Err(err) => {
-                    let mut response = Response::new();
+                    error!(logger, "error: {}", err);
+                    let mut response = views::html::error::render("Could not parse repository URL", "");
                     response.set_status(StatusCode::BadRequest);
-                    response.set_body(format!("Error: {}", err));
                     future::Either::A(future::ok(response))
                 },
                 Ok(repo_path) => {
@@ -129,9 +132,10 @@ impl Server {
                         match analyze_result {
                             Err(err) => {
                                 if format != StatusFormat::Svg {
-                                    let mut response = Response::new();
-                                    response.set_status(StatusCode::BadRequest);
-                                    response.set_body(format!("Error: {}", err));
+                                    error!(logger, "error: {}", err);
+                                    let mut response = views::html::error::render("Failed to analyze repository",
+                                        "The repository you requested might be structured in an uncommon way that is not yet supported.");
+                                    response.set_status(StatusCode::InternalServerError);
                                     future::Either::A(future::ok(response))
                                 } else {
                                     future::Either::A(future::ok(views::status_svg(None)))

@@ -5,6 +5,7 @@ use hyper::header::ContentType;
 use maud::{Markup, Render, html};
 
 pub mod index;
+pub mod error;
 pub mod status;
 
 lazy_static! {
@@ -20,7 +21,7 @@ fn render_html<B: Render>(title: &str, body: B) -> Response {
             head {
                 meta charset="utf-8";
                 meta name="viewport" content="width=device-width, initial-scale=1";
-                title (title)
+                title (format!("{} - Deps.rs", title))
                 link rel="icon" type="image/png" href="/static/favicon.png";
                 link rel="stylesheet" type="text/css" href="/static/style.css";
                 link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600";
