@@ -42,13 +42,17 @@ impl ManifestCrawler {
             },
             CrateManifest::Workspace { members } => {
                 for mut member in members {
-                    output.paths_of_interest.push(path.clone().join(member));
+                    if !member.ends_with("*") {
+                        output.paths_of_interest.push(path.clone().join(member));
+                    }
                 }
             },
             CrateManifest::Mixed { name, deps, members } => {
                 self.leaf_crates.insert(name, deps);
                 for mut member in members {
-                    output.paths_of_interest.push(path.clone().join(member));
+                    if !member.ends_with("*") {
+                        output.paths_of_interest.push(path.clone().join(member));
+                    }
                 }
             }
         }
@@ -132,6 +136,21 @@ members = [
         assert_eq!(step_output.paths_of_interest[0].to_str().unwrap(), "/lib/");
         assert_eq!(step_output.paths_of_interest[1].to_str().unwrap(), "/codegen/");
         assert_eq!(step_output.paths_of_interest[2].to_str().unwrap(), "/contrib/");
+    }
+
+    #[test]
+    fn glob_workspace_manifest() {
+        let manifest = r#"
+[workspace]
+members = [
+  "lib/",
+  "tests/*",
+]
+"#;
+        let mut crawler = ManifestCrawler::new();
+        let step_output = crawler.step("/".into(), manifest.to_string()).unwrap();
+        assert_eq!(step_output.paths_of_interest.len(), 1);
+        assert_eq!(step_output.paths_of_interest[0].to_str().unwrap(), "/lib/");
     }
 
     #[test]

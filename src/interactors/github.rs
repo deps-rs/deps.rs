@@ -2,7 +2,7 @@ use std::path::Path;
 
 use failure::Error;
 use futures::{Future, IntoFuture, Stream, future};
-use hyper::{Error as HyperError, Method, Request, Response};
+use hyper::{Error as HyperError, Method, Request, Response, Uri};
 use hyper::header::UserAgent;
 use tokio_service::Service;
 use serde_json;
@@ -22,15 +22,15 @@ pub fn retrieve_file_at_path<S, P: AsRef<Path>>(service: S, repo_path: &RepoPath
         repo_path.qual.as_ref(),
         repo_path.name.as_ref(),
         path_str
-    ).parse().into_future().from_err();
+    ).parse::<Uri>().into_future().from_err();
 
     uri_future.and_then(move |uri| {
-        let request = Request::new(Method::Get, uri);
+        let request = Request::new(Method::Get, uri.clone());
 
-        service.call(request).from_err().and_then(|response| {
+        service.call(request).from_err().and_then(move |response| {
             let status = response.status();
             if !status.is_success() {
-                future::Either::A(future::err(format_err!("Status code: {}", status)))
+                future::Either::A(future::err(format_err!("Status code {} for URI {}", status, uri)))
             } else {
                 let body_future = response.body().concat2().from_err();
                 let decode_future = body_future
