@@ -1,4 +1,5 @@
 use std::env;
+use std::time::Duration;
 
 use hyper::Response;
 use hyper::header::ContentType;
@@ -53,7 +54,9 @@ fn render_navbar() -> Markup {
     }
 }
 
-fn render_footer() -> Markup {
+fn render_footer(duration: Option<Duration>) -> Markup {
+    let duration_millis = duration.map(|d| d.as_secs() * 1000 + (d.subsec_nanos() / 1000 / 1000) as u64);
+
     html! {
         footer class="footer" {
             div class="container" {
@@ -68,6 +71,9 @@ fn render_footer() -> Markup {
                         "Please report any issues on the "
                         a href="https://github.com/srijs/deps.rs/issues" "issue tracker"
                         "."
+                    }
+                    @if let Some(millis) = duration_millis {
+                        p class="has-text-grey is-size-7" (format!("(rendered in {} ms)", millis))
                     }
                 }
             }

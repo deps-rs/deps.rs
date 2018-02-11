@@ -107,7 +107,7 @@ fn render_failure(repo_path: RepoPath) -> Markup {
                 }
             }
         }
-        (super::render_footer())
+        (super::render_footer(None))
     }
 }
 
@@ -153,7 +153,7 @@ fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoP
                 }
             }
         }
-        (super::render_footer())
+        (super::render_footer(Some(analysis_outcome.duration)))
     }
 }
 

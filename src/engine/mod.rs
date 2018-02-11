@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use failure::Error;
 use futures::Future;
@@ -46,7 +46,8 @@ impl Engine {
 }
 
 pub struct AnalyzeDependenciesOutcome {
-    pub crates: Vec<(CrateName, AnalyzedDependencies)>
+    pub crates: Vec<(CrateName, AnalyzedDependencies)>,
+    pub duration: Duration
 }
 
 impl AnalyzeDependenciesOutcome {
@@ -70,6 +71,8 @@ impl Engine {
     pub fn analyze_dependencies(&self, repo_path: RepoPath) ->
         impl Future<Item=AnalyzeDependenciesOutcome, Error=Error>
     {
+        let start = Instant::now();
+
         let entry_point = RelativePath::new("/").to_relative_path_buf();
         let manifest_future = CrawlManifestFuture::new(self, repo_path, entry_point);
 
@@ -81,7 +84,13 @@ impl Engine {
                 analyzed_deps_future.map(move |analyzed_deps| (crate_name, analyzed_deps))
             });
 
-            join_all(futures).map(|crates| AnalyzeDependenciesOutcome { crates })
+            join_all(futures).map(move |crates| {
+                let duration = start.elapsed();
+
+                AnalyzeDependenciesOutcome {
+                    crates, duration
+                }
+            })
         })
     }
 

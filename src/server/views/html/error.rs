@@ -14,6 +14,6 @@ pub fn render(title: &str, descr: &str) -> Response {
                 }
             }
         }
-        (super::render_footer())
+        (super::render_footer(None))
     })
 }

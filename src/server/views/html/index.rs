@@ -50,6 +50,6 @@ pub fn render(popular: Vec<Repository>) -> Response {
         section class="section" {
             div class="container" (popular_table(popular))
         }
-        (super::render_footer())
+        (super::render_footer(None))
     })
 }
