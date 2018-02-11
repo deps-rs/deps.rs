@@ -140,6 +140,33 @@ codegen = "0.0.1"
     }
 
     #[test]
+    fn package_manifest_with_internal_dependencies() {
+        let manifest = r#"
+[package]
+name = "piston"
+
+[dependencies.pistoncore-input]
+path = "src/input"
+version = "0.20.0"
+
+[dependencies.pistoncore-window]
+path = "src/window"
+version = "0.30.0"
+
+[dependencies.pistoncore-event_loop]
+path = "src/event_loop"
+version = "0.35.0"
+"#;
+
+        let mut crawler = ManifestCrawler::new();
+        let step_output = crawler.step("".into(), manifest.to_string()).unwrap();
+        assert_eq!(step_output.paths_of_interest.len(), 3);
+        assert_eq!(step_output.paths_of_interest[0].as_str(), "src/input");
+        assert_eq!(step_output.paths_of_interest[1].as_str(), "src/window");
+        assert_eq!(step_output.paths_of_interest[2].as_str(), "src/event_loop");
+    }
+
+    #[test]
     fn simple_workspace_manifest() {
         let manifest = r#"
 [workspace]
