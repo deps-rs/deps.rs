@@ -16,7 +16,6 @@ use ::models::repo::RepoPath;
 #[derive(Clone, Copy, PartialEq)]
 enum StatusFormat {
     Html,
-    Json,
     Svg
 }
 
@@ -49,7 +48,6 @@ impl Server {
         router.add("/static/favicon.png", Route::Static(StaticFile::FaviconPng));
 
         router.add("/repo/:site/:qual/:name", Route::Status(StatusFormat::Html));
-        router.add("/repo/:site/:qual/:name/status.json", Route::Status(StatusFormat::Json));
         router.add("/repo/:site/:qual/:name/status.svg", Route::Status(StatusFormat::Svg));
 
         Server { logger, engine, router: Arc::new(router) }
@@ -131,19 +129,13 @@ impl Server {
                     future::Either::B(server.engine.analyze_dependencies(repo_path.clone()).then(move |analyze_result| {
                         match analyze_result {
                             Err(err) => {
-                                if format != StatusFormat::Svg {
-                                    error!(logger, "error: {}", err);
-                                    let mut response = views::html::error::render("Failed to analyze repository",
-                                        "The repository you requested might be structured in an uncommon way that is not yet supported.");
-                                    response.set_status(StatusCode::InternalServerError);
-                                    future::Either::A(future::ok(response))
-                                } else {
-                                    future::Either::A(future::ok(views::status_svg(None)))
-                                }
+                                error!(logger, "error: {}", err);
+                                let response = Server::status_format_analysis(None, format, repo_path);
+                                future::ok(response)
                             },
                             Ok(analysis_outcome) => {
-                                let response = Server::status_format_analysis(analysis_outcome, format, repo_path);
-                                future::Either::B(future::ok(response))
+                                let response = Server::status_format_analysis(Some(analysis_outcome), format, repo_path);
+                                future::ok(response)
                             }
                         }
                     }))
@@ -152,12 +144,10 @@ impl Server {
         })
     }
 
-    fn status_format_analysis(analysis_outcome: AnalyzeDependenciesOutcome, format: StatusFormat, repo_path: RepoPath) -> Response {
+    fn status_format_analysis(analysis_outcome: Option<AnalyzeDependenciesOutcome>, format: StatusFormat, repo_path: RepoPath) -> Response {
         match format {
-            StatusFormat::Json =>
-                views::status_json(analysis_outcome),
             StatusFormat::Svg =>
-                views::status_svg(Some(analysis_outcome)),
+                views::status_svg(analysis_outcome),
             StatusFormat::Html =>
                 views::html::status::render(analysis_outcome, repo_path)
         }

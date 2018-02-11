@@ -85,10 +85,35 @@ fn dependency_table(title: &str, deps: BTreeMap<CrateName, AnalyzedDependency>) 
     }
 }
 
-pub fn render(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoPath) -> Response {
+fn render_failure(repo_path: RepoPath) -> Markup {
+    html! {
+        section class="hero is-light" {
+            div class="hero-head" (super::render_navbar())
+            div class="hero-body" {
+                div class="container" {
+                    h1 class="title is-1" {
+                        a href=(format!("{}/{}/{}", repo_path.site.to_base_uri(), repo_path.qual.as_ref(), repo_path.name.as_ref())) {
+                            i class="fa fa-github" ""
+                            (format!(" {} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref()))
+                        }
+                    }
+                }
+            }
+        }
+        section class="section" {
+            div class="container" {
+                div class="notification is-danger" {
+                    h2 class="title is-3" "Failed to analyze repository"
+                    p "The repository you requested might be structured in an uncommon way that is not yet supported."
+                }
+            }
+        }
+    }
+}
+
+fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoPath) -> Markup {
     let self_path = format!("repo/{}/{}/{}", repo_path.site.as_ref(), repo_path.qual.as_ref(), repo_path.name.as_ref());
     let status_base_url = format!("{}/{}", &super::SELF_BASE_URL as &str, self_path);
-    let title = format!("{} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref());
 
     let (hero_class, status_asset) = if analysis_outcome.any_outdated() {
         ("is-warning", assets::BADGE_OUTDATED_SVG.as_ref())
@@ -98,7 +123,7 @@ pub fn render(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoPath)
 
     let status_data_url = format!("data:image/svg+xml;base64,{}", Base64Display::standard(status_asset));
 
-    super::render_html(&title, html! {
+    html! {
         section class=(format!("hero {}", hero_class)) {
             div class="hero-head" (super::render_navbar())
             div class="hero-body" {
@@ -128,5 +153,15 @@ pub fn render(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoPath)
                 }
             }
         }
-    })
+    }
+}
+
+pub fn render(analysis_outcome: Option<AnalyzeDependenciesOutcome>, repo_path: RepoPath) -> Response {
+    let title = format!("{} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref());
+
+    if let Some(outcome) = analysis_outcome {
+        super::render_html(&title, render_success(outcome, repo_path))
+    } else {
+        super::render_html(&title, render_failure(repo_path))
+    }
 }
