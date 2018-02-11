@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -59,7 +60,11 @@ impl Engine {
         impl Future<Item=Vec<Repository>, Error=Error>
     {
         self.get_popular_repos.call(())
-            .from_err().map(|repos| repos.clone())
+            .from_err().map(|repos| {
+                repos.iter()
+                    .filter(|repo| !POPULAR_REPOS_BLACKLIST.contains(&repo.path))
+                    .cloned().collect()
+            })
     }
 
     pub fn analyze_dependencies(&self, repo_path: RepoPath) ->
@@ -95,4 +100,16 @@ impl Engine {
     {
         retrieve_file_at_path(self.client.clone(), &repo_path, &path.as_ref().join("Cargo.toml")).from_err()
     }
+}
+
+lazy_static! {
+    static ref POPULAR_REPOS_BLACKLIST: HashSet<RepoPath> = {
+        vec![
+            RepoPath::from_parts("github", "rust-lang", "rust"),
+            RepoPath::from_parts("github", "google", "xi-editor"),
+            RepoPath::from_parts("github", "lk-geimfari", "awesomo"),
+            RepoPath::from_parts("github", "redox-os", "tfs"),
+            RepoPath::from_parts("github", "carols10cents", "rustlings")
+        ].into_iter().collect::<Result<HashSet<_>, _>>().unwrap()
+    };
 }

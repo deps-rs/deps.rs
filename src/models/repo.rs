@@ -8,7 +8,7 @@ pub struct Repository {
     pub description: String
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct RepoPath {
     pub site: RepoSite,
     pub qual: RepoQualifier,
@@ -25,7 +25,7 @@ impl RepoPath {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum RepoSite {
     Github
 }
@@ -57,7 +57,7 @@ impl AsRef<str> for RepoSite {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct RepoQualifier(String);
 
 impl FromStr for RepoQualifier {
@@ -79,7 +79,7 @@ impl AsRef<str> for RepoQualifier {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct RepoName(String);
 
 impl FromStr for RepoName {
