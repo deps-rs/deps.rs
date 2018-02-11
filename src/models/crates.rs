@@ -6,7 +6,7 @@ use std::str::FromStr;
 use failure::Error;
 use semver::{Version, VersionReq};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CrateName(String);
 
 impl Into<String> for CrateName {

@@ -2,12 +2,13 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use failure::Error;
+use ordermap::map::OrderMap;
 
 use ::parsers::manifest::parse_manifest_toml;
 use ::models::crates::{CrateDeps, CrateName, CrateManifest};
 
 pub struct ManifestCrawlerOutput {
-    pub crates: Vec<(CrateName, CrateDeps)>
+    pub crates: OrderMap<CrateName, CrateDeps>
 }
 
 pub struct ManifestCrawlerStepOutput {
@@ -16,14 +17,14 @@ pub struct ManifestCrawlerStepOutput {
 
 pub struct ManifestCrawler {
     manifests: HashMap<PathBuf, CrateManifest>,
-    leaf_crates: Vec<(CrateName, CrateDeps)>
+    leaf_crates: OrderMap<CrateName, CrateDeps>
 }
 
 impl ManifestCrawler {
     pub fn new() -> ManifestCrawler {
         ManifestCrawler {
             manifests: HashMap::new(),
-            leaf_crates: vec![]
+            leaf_crates: OrderMap::new()
         }
     }
 
@@ -37,7 +38,7 @@ impl ManifestCrawler {
 
         match manifest {
             CrateManifest::Package(name, deps) => {
-                self.leaf_crates.push((name, deps));
+                self.leaf_crates.insert(name, deps);
             },
             CrateManifest::Workspace { members } => {
                 for mut member in members {
@@ -45,7 +46,7 @@ impl ManifestCrawler {
                 }
             },
             CrateManifest::Mixed { name, deps, members } => {
-                self.leaf_crates.push((name, deps));
+                self.leaf_crates.insert(name, deps);
                 for mut member in members {
                     output.paths_of_interest.push(path.clone().join(member));
                 }
