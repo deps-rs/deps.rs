@@ -121,7 +121,8 @@ impl Server {
             match repo_path_result {
                 Err(err) => {
                     error!(logger, "error: {}", err);
-                    let mut response = views::html::error::render("Could not parse repository URL", "");
+                    let mut response = views::html::error::render("Could not parse repository path",
+                        "Please make sure to provide a valid repository path.");
                     response.set_status(StatusCode::BadRequest);
                     future::Either::A(future::ok(response))
                 },
