@@ -17,7 +17,7 @@ fn dependency_tables(crate_name: CrateName, deps: AnalyzedDependencies) -> Marku
         }
 
         @if deps.main.is_empty() && deps.dev.is_empty() && deps.build.is_empty() {
-            p class="notification has-text-centered" "No dependencies! 🎉"
+            p class="notification has-text-centered" "No dependencies! 🙌"
         }
 
         @if !deps.main.is_empty() {
