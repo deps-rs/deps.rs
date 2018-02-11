@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/srijs/deps.rs.svg?branch=master)](https://travis-ci.org/srijs/deps.rs)
 [![dependency status](https://deps.rs/repo/github/srijs/deps.rs/status.svg)](https://deps.rs/repo/github/srijs/deps.rs)
+[![GitHub license](https://img.shields.io/github/license/srijs/deps.rs.svg)](https://github.com/srijs/deps.rs/blob/master/LICENSE)
 
 ## Copyright and License
 
