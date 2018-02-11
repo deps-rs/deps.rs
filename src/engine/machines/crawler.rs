@@ -80,10 +80,9 @@ name = "simpleton"
         assert_eq!(step_output.paths_of_interest.len(), 0);
         let output = crawler.finalize();
         assert_eq!(output.crates.len(), 1);
-        assert_eq!(output.crates[0].0.as_ref(), "simpleton");
-        assert_eq!(output.crates[0].1.main.len(), 0);
-        assert_eq!(output.crates[0].1.dev.len(), 0);
-        assert_eq!(output.crates[0].1.build.len(), 0);
+        assert_eq!(output.crates["simpleton"].main.len(), 0);
+        assert_eq!(output.crates["simpleton"].dev.len(), 0);
+        assert_eq!(output.crates["simpleton"].build.len(), 0);
     }
 
     #[test]
@@ -104,17 +103,16 @@ codegen = "0.0.1"
         assert_eq!(step_output.paths_of_interest.len(), 0);
         let output = crawler.finalize();
         assert_eq!(output.crates.len(), 1);
-        assert_eq!(output.crates[0].0.as_ref(), "more-complex");
-        assert_eq!(output.crates[0].1.main.len(), 2);
-        assert_eq!(output.crates[0].1.main.get("foo").unwrap(),
+        assert_eq!(output.crates["more-complex"].main.len(), 2);
+        assert_eq!(output.crates["more-complex"].main.get("foo").unwrap(),
             &VersionReq::parse("0.30.0").unwrap());
-        assert_eq!(output.crates[0].1.main.get("bar").unwrap(),
+        assert_eq!(output.crates["more-complex"].main.get("bar").unwrap(),
             &VersionReq::parse("1.2.0").unwrap());
-        assert_eq!(output.crates[0].1.dev.len(), 1);
-        assert_eq!(output.crates[0].1.dev.get("quickcheck").unwrap(),
+        assert_eq!(output.crates["more-complex"].dev.len(), 1);
+        assert_eq!(output.crates["more-complex"].dev.get("quickcheck").unwrap(),
             &VersionReq::parse("0.5").unwrap());
-        assert_eq!(output.crates[0].1.build.len(), 1);
-        assert_eq!(output.crates[0].1.build.get("codegen").unwrap(),
+        assert_eq!(output.crates["more-complex"].build.len(), 1);
+        assert_eq!(output.crates["more-complex"].build.get("codegen").unwrap(),
             &VersionReq::parse("0.0.1").unwrap());
     }
 
@@ -170,15 +168,13 @@ features = ["use_std"]
         assert_eq!(step_output.paths_of_interest.len(), 0);
         let output = crawler.finalize();
         assert_eq!(output.crates.len(), 2);
-        assert_eq!(output.crates[0].0.as_ref(), "futures");
-        assert_eq!(output.crates[0].1.main.len(), 0);
-        assert_eq!(output.crates[0].1.dev.len(), 0);
-        assert_eq!(output.crates[0].1.build.len(), 0);
-        assert_eq!(output.crates[1].0.as_ref(), "futures-cpupool");
-        assert_eq!(output.crates[1].1.main.len(), 1);
-        assert_eq!(output.crates[1].1.main.get("num_cpus").unwrap(),
+        assert_eq!(output.crates["futures"].main.len(), 0);
+        assert_eq!(output.crates["futures"].dev.len(), 0);
+        assert_eq!(output.crates["futures"].build.len(), 0);
+        assert_eq!(output.crates["futures-cpupool"].main.len(), 1);
+        assert_eq!(output.crates["futures-cpupool"].main.get("num_cpus").unwrap(),
             &VersionReq::parse("1.0").unwrap());
-        assert_eq!(output.crates[1].1.dev.len(), 0);
-        assert_eq!(output.crates[1].1.build.len(), 0);
+        assert_eq!(output.crates["futures-cpupool"].dev.len(), 0);
+        assert_eq!(output.crates["futures-cpupool"].build.len(), 0);
     }
 }
