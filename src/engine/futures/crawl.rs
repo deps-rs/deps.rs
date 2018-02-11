@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use failure::Error;
 use futures::{Async, Future, Poll, Stream};
-use futures::stream::FuturesUnordered;
+use futures::stream::FuturesOrdered;
 
 use ::models::repo::RepoPath;
 
@@ -15,7 +15,7 @@ pub struct CrawlManifestFuture {
     repo_path: RepoPath,
     engine: Engine,
     crawler: ManifestCrawler,
-    unordered: FuturesUnordered<Box<Future<Item=(PathBuf, String), Error=Error>>>
+    futures: FuturesOrdered<Box<Future<Item=(PathBuf, String), Error=Error>>>
 }
 
 impl CrawlManifestFuture {
@@ -24,11 +24,11 @@ impl CrawlManifestFuture {
             .map(move |contents| (entry_point, contents)));
         let engine = engine.clone();
         let crawler = ManifestCrawler::new();
-        let mut unordered = FuturesUnordered::new();
-        unordered.push(future);
+        let mut futures = FuturesOrdered::new();
+        futures.push(future);
 
         CrawlManifestFuture {
-            repo_path, engine, crawler, unordered
+            repo_path, engine, crawler, futures
         }
     }
 }
@@ -38,7 +38,7 @@ impl Future for CrawlManifestFuture {
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        match try_ready!(self.unordered.poll()) {
+        match try_ready!(self.futures.poll()) {
             None => {
                 let crawler = mem::replace(&mut self.crawler, ManifestCrawler::new());
                 Ok(Async::Ready(crawler.finalize()))
@@ -48,7 +48,7 @@ impl Future for CrawlManifestFuture {
                 for path in output.paths_of_interest.into_iter() {
                     let future: Box<Future<Item=_, Error=_>> = Box::new(self.engine.retrieve_manifest_at_path(&self.repo_path, &path)
                         .map(move |contents| (path, contents)));
-                    self.unordered.push(future);
+                    self.futures.push(future);
                 }
                 self.poll()
             }
