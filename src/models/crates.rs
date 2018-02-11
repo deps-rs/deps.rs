@@ -1,5 +1,6 @@
 use std::borrow::Borrow;
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use failure::Error;
@@ -111,5 +112,7 @@ impl AnalyzedDependencies {
 
 #[derive(Clone, Debug)]
 pub enum CrateManifest {
-    Crate(CrateName, CrateDeps)
+    Package(CrateName, CrateDeps),
+    Workspace { members: Vec<PathBuf> },
+    Mixed { name: CrateName, deps: CrateDeps, members: Vec<PathBuf> }
 }

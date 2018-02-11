@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use failure::Error;
 use futures::{Future, IntoFuture, Stream, future};
 use hyper::{Error as HyperError, Method, Request, Response};
@@ -10,15 +12,16 @@ use ::models::repo::{Repository, RepoPath};
 const GITHUB_API_BASE_URI: &'static str = "https://api.github.com";
 const GITHUB_USER_CONTENT_BASE_URI: &'static str = "https://raw.githubusercontent.com";
 
-pub fn retrieve_file_at_path<S>(service: S, repo_path: &RepoPath, file_path: &str) ->
+pub fn retrieve_file_at_path<S, P: AsRef<Path>>(service: S, repo_path: &RepoPath, path: &P) ->
     impl Future<Item=String, Error=Error>
     where S: Service<Request=Request, Response=Response, Error=HyperError>
 {
+    let path_str = path.as_ref().to_str().expect("failed to convert path to str");
     let uri_future = format!("{}/{}/{}/master/{}",
         GITHUB_USER_CONTENT_BASE_URI,
         repo_path.qual.as_ref(),
         repo_path.name.as_ref(),
-        file_path
+        path_str
     ).parse().into_future().from_err();
 
     uri_future.and_then(move |uri| {

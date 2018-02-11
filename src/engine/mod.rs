@@ -1,3 +1,4 @@
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -64,7 +65,8 @@ impl Engine {
     pub fn analyze_dependencies(&self, repo_path: RepoPath) ->
         impl Future<Item=AnalyzeDependenciesOutcome, Error=Error>
     {
-        let manifest_future = CrawlManifestFuture::new(self, repo_path, "Cargo.toml".to_string());
+        let entry_point = PathBuf::from("/");
+        let manifest_future = CrawlManifestFuture::new(self, repo_path, entry_point);
 
         let engine = self.clone();
         manifest_future.and_then(move |manifest_output| {
@@ -88,9 +90,9 @@ impl Engine {
         })
     }
 
-    fn retrieve_file_at_path(&self, repo_path: &RepoPath, path: &str) ->
+    fn retrieve_manifest_at_path<P: AsRef<Path>>(&self, repo_path: &RepoPath, path: &P) ->
         impl Future<Item=String, Error=Error>
     {
-        retrieve_file_at_path(self.client.clone(), &repo_path, path).from_err()
+        retrieve_file_at_path(self.client.clone(), &repo_path, &path.as_ref().join("Cargo.toml")).from_err()
     }
 }

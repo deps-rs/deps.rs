@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 
 use failure::Error;
 use semver::VersionReq;
@@ -26,8 +27,16 @@ struct CargoTomlPackage {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+struct CargoTomlWorkspace {
+    members: Vec<PathBuf>
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 struct CargoToml {
-    package: CargoTomlPackage,
+    #[serde(default)]
+    package: Option<CargoTomlPackage>,
+    #[serde(default)]
+    workspace: Option<CargoTomlWorkspace>,
     #[serde(default)]
     dependencies: BTreeMap<String, CargoTomlDependency>,
     #[serde(rename = "dev-dependencies")]
@@ -64,20 +73,40 @@ fn convert_dependency(cargo_dep: (String, CargoTomlDependency)) -> Option<Result
 pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, Error> {
     let cargo_toml = toml::de::from_str::<CargoToml>(input)?;
 
-    let crate_name = cargo_toml.package.name.parse::<CrateName>()?;
+    let mut package_part = None;
+    let mut workspace_part = None;
 
-    let dependencies = cargo_toml.dependencies
-        .into_iter().filter_map(convert_dependency).collect::<Result<BTreeMap<_, _>, _>>()?;
-    let dev_dependencies = cargo_toml.dev_dependencies
-        .into_iter().filter_map(convert_dependency).collect::<Result<BTreeMap<_, _>, _>>()?;
-    let build_dependencies = cargo_toml.build_dependencies
-        .into_iter().filter_map(convert_dependency).collect::<Result<BTreeMap<_, _>, _>>()?;
+    if let Some(package) =  cargo_toml.package {
+        let crate_name = package.name.parse::<CrateName>()?;
 
-    let deps = CrateDeps {
-        main: dependencies,
-        dev: dev_dependencies,
-        build: build_dependencies
-    };
+        let dependencies = cargo_toml.dependencies
+            .into_iter().filter_map(convert_dependency).collect::<Result<BTreeMap<_, _>, _>>()?;
+        let dev_dependencies = cargo_toml.dev_dependencies
+            .into_iter().filter_map(convert_dependency).collect::<Result<BTreeMap<_, _>, _>>()?;
+        let build_dependencies = cargo_toml.build_dependencies
+            .into_iter().filter_map(convert_dependency).collect::<Result<BTreeMap<_, _>, _>>()?;
 
-    Ok(CrateManifest::Crate(crate_name, deps))
+        let deps = CrateDeps {
+            main: dependencies,
+            dev: dev_dependencies,
+            build: build_dependencies
+        };
+
+        package_part = Some((crate_name, deps));
+    }
+
+    if let Some(workspace) = cargo_toml.workspace {
+        workspace_part = Some(workspace.members);
+    }
+
+    match (package_part, workspace_part) {
+        (Some((name, deps)), None) =>
+            Ok(CrateManifest::Package(name, deps)),
+        (None, Some(members)) =>
+            Ok(CrateManifest::Workspace { members }),
+        (Some((name, deps)), Some(members)) =>
+            Ok(CrateManifest::Mixed { name, deps, members }),
+        (None, None) =>
+            Err(format_err!("neither workspace nor package found in manifest"))
+    }
 }
