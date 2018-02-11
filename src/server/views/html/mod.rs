@@ -14,6 +14,10 @@ lazy_static! {
         env::var("BASE_URL")
             .unwrap_or_else(|_| "http://localhost:8080".to_string())
     };
+
+    static ref GAUGES_SITE_ID: Option<String> = {
+        env::var("GAUGES_SITE_ID").ok().map(|s| s.to_string())
+    };
 }
 
 fn render_html<B: Render>(title: &str, body: B) -> Response {
@@ -31,6 +35,22 @@ fn render_html<B: Render>(title: &str, body: B) -> Response {
             }
             body {
                 (body)
+                @if let Some(site_id) = GAUGES_SITE_ID.as_ref() {
+                    script type="text/javascript" {
+                        (format!("var _gauges = _gauges || [];
+(function() {{
+    var t   = document.createElement('script');
+    t.type  = 'text/javascript';
+    t.async = true;
+    t.id    = 'gauges-tracker';
+    t.setAttribute('data-site-id', '{}');
+    t.setAttribute('data-track-path', 'https://track.gaug.es/track.gif');
+    t.src = 'https://d2fuc4clr7gvcn.cloudfront.net/track.js';
+    var s = document.getElementsByTagName('script')[0];
+    s.parentNode.insertBefore(t, s);
+}})();", site_id))
+                    }
+                }
             }
         }
     };
