@@ -1,6 +1,5 @@
-use std::collections::BTreeMap;
-
 use failure::Error;
+use ordermap::OrderMap;
 use relative_path::RelativePathBuf;
 use semver::VersionReq;
 use toml;
@@ -38,13 +37,13 @@ struct CargoToml {
     #[serde(default)]
     workspace: Option<CargoTomlWorkspace>,
     #[serde(default)]
-    dependencies: BTreeMap<String, CargoTomlDependency>,
+    dependencies: OrderMap<String, CargoTomlDependency>,
     #[serde(rename = "dev-dependencies")]
     #[serde(default)]
-    dev_dependencies: BTreeMap<String, CargoTomlDependency>,
+    dev_dependencies: OrderMap<String, CargoTomlDependency>,
     #[serde(rename = "build-dependencies")]
     #[serde(default)]
-    build_dependencies: BTreeMap<String, CargoTomlDependency>
+    build_dependencies: OrderMap<String, CargoTomlDependency>
 }
 
 fn convert_dependency(cargo_dep: (String, CargoTomlDependency)) -> Option<Result<(CrateName, CrateDep), Error>> {
@@ -86,11 +85,11 @@ pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, Error> {
         let crate_name = package.name.parse::<CrateName>()?;
 
         let dependencies = cargo_toml.dependencies
-            .into_iter().filter_map(convert_dependency).collect::<Result<BTreeMap<_, _>, _>>()?;
+            .into_iter().filter_map(convert_dependency).collect::<Result<OrderMap<_, _>, _>>()?;
         let dev_dependencies = cargo_toml.dev_dependencies
-            .into_iter().filter_map(convert_dependency).collect::<Result<BTreeMap<_, _>, _>>()?;
+            .into_iter().filter_map(convert_dependency).collect::<Result<OrderMap<_, _>, _>>()?;
         let build_dependencies = cargo_toml.build_dependencies
-            .into_iter().filter_map(convert_dependency).collect::<Result<BTreeMap<_, _>, _>>()?;
+            .into_iter().filter_map(convert_dependency).collect::<Result<OrderMap<_, _>, _>>()?;
 
         let deps = CrateDeps {
             main: dependencies,

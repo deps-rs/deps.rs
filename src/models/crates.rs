@@ -1,8 +1,8 @@
 use std::borrow::Borrow;
-use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use failure::Error;
+use ordermap::OrderMap;
 use relative_path::RelativePathBuf;
 use semver::{Version, VersionReq};
 
@@ -68,9 +68,9 @@ impl CrateDep {
 
 #[derive(Clone, Debug, Default)]
 pub struct CrateDeps {
-    pub main: BTreeMap<CrateName, CrateDep>,
-    pub dev: BTreeMap<CrateName, CrateDep>,
-    pub build: BTreeMap<CrateName, CrateDep>
+    pub main: OrderMap<CrateName, CrateDep>,
+    pub dev: OrderMap<CrateName, CrateDep>,
+    pub build: OrderMap<CrateName, CrateDep>
 }
 
 #[derive(Debug)]
@@ -96,9 +96,9 @@ impl AnalyzedDependency {
 
 #[derive(Debug)]
 pub struct AnalyzedDependencies {
-    pub main: BTreeMap<CrateName, AnalyzedDependency>,
-    pub dev: BTreeMap<CrateName, AnalyzedDependency>,
-    pub build: BTreeMap<CrateName, AnalyzedDependency>
+    pub main: OrderMap<CrateName, AnalyzedDependency>,
+    pub dev: OrderMap<CrateName, AnalyzedDependency>,
+    pub build: OrderMap<CrateName, AnalyzedDependency>
 }
 
 impl AnalyzedDependencies {

@@ -1,8 +1,7 @@
-use std::collections::BTreeMap;
-
 use base64::display::Base64Display;
 use hyper::Response;
 use maud::{Markup, html};
+use ordermap::OrderMap;
 
 use ::engine::AnalyzeDependenciesOutcome;
 use ::models::crates::{CrateName, AnalyzedDependency, AnalyzedDependencies};
@@ -34,7 +33,7 @@ fn dependency_tables(crate_name: CrateName, deps: AnalyzedDependencies) -> Marku
     }
 }
 
-fn dependency_table(title: &str, deps: BTreeMap<CrateName, AnalyzedDependency>) -> Markup {
+fn dependency_table(title: &str, deps: OrderMap<CrateName, AnalyzedDependency>) -> Markup {
     let count_total = deps.len();
     let count_outdated = deps.iter().filter(|&(_, dep)| dep.is_outdated()).count();
 
