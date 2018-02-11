@@ -1,12 +1,11 @@
 use failure::Error;
-use futures::{Future, Poll, Stream, stream};
+use futures::{Future, Poll, Stream};
+use futures::stream::futures_unordered;
 
 use ::models::crates::{AnalyzedDependencies, CrateDeps};
 
 use super::super::Engine;
 use super::super::machines::analyzer::DependencyAnalyzer;
-
-const FETCH_RELEASES_CONCURRENCY: usize = 10;
 
 pub struct AnalyzeDependenciesFuture {
     inner: Box<Future<Item=AnalyzedDependencies, Error=Error>>
@@ -28,8 +27,7 @@ impl AnalyzeDependenciesFuture {
 
         let release_futures = engine.fetch_releases(main_deps.chain(dev_deps).chain(build_deps));
 
-        let analyzed_deps_future = stream::iter_ok::<_, Error>(release_futures)
-            .buffer_unordered(FETCH_RELEASES_CONCURRENCY)
+        let analyzed_deps_future = futures_unordered(release_futures)
             .fold(analyzer, |mut analyzer, releases| { analyzer.process(releases); Ok(analyzer) as Result<_, Error> })
             .map(|analyzer| analyzer.finalize());
 

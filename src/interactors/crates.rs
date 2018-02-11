@@ -1,3 +1,5 @@
+use std::str;
+
 use failure::Error;
 use futures::{Future, Stream, IntoFuture, future};
 use hyper::{Error as HyperError, Method, Request, Response, Uri};
@@ -7,25 +9,21 @@ use serde_json;
 
 use ::models::crates::{CrateName, CrateRelease};
 
-const CRATES_API_BASE_URI: &'static str = "https://crates.io/api/v1";
+const CRATES_INDEX_BASE_URI: &str = "https://raw.githubusercontent.com/rust-lang/crates.io-index";
 
-#[derive(Serialize, Deserialize, Debug)]
-struct CratesVersion {
-    num: Version,
+#[derive(Deserialize, Debug)]
+struct RegistryPackage {
+    vers: Version,
+    #[serde(default)]
     yanked: bool
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-struct QueryCratesVersionsBody {
-    versions: Vec<CratesVersion>
-}
-
-fn convert_body(name: &CrateName, body: QueryCratesVersionsBody) -> Result<QueryCrateResponse, Error> {
-    let releases = body.versions.into_iter().map(|version| {
+fn convert_pkgs(name: &CrateName, packages: Vec<RegistryPackage>) -> Result<QueryCrateResponse, Error> {
+    let releases = packages.into_iter().map(|package| {
         CrateRelease {
             name: name.clone(),
-            version: version.num,
-            yanked: version.yanked
+            version: package.vers,
+            yanked: package.yanked
         }
     }).collect();
 
@@ -42,7 +40,16 @@ pub fn query_crate<S>(service: S, crate_name: CrateName) ->
     impl Future<Item=QueryCrateResponse, Error=Error>
     where S: Service<Request=Request, Response=Response, Error=HyperError>
 {
-    let uri_future = format!("{}/crates/{}/versions", CRATES_API_BASE_URI, crate_name.as_ref())
+    let lower_name = crate_name.as_ref().to_lowercase();
+
+    let path = match lower_name.len() {
+        1 => format!("1/{}", lower_name),
+        2 => format!("2/{}", lower_name),
+        3 => format!("3/{}/{}", &lower_name[..1], lower_name),
+        _ => format!("{}/{}/{}", &lower_name[0..2], &lower_name[2..4], lower_name),
+    };
+
+    let uri_future = format!("{}/master/{}", CRATES_INDEX_BASE_URI, path)
         .parse::<Uri>().into_future().from_err();
 
     uri_future.and_then(move |uri| {
@@ -55,10 +62,15 @@ pub fn query_crate<S>(service: S, crate_name: CrateName) ->
             } else {
                 let body_future = response.body().concat2().from_err();
                 let decode_future = body_future.and_then(|body| {
-                        serde_json::from_slice::<QueryCratesVersionsBody>(&body)
-                            .map_err(|err| err.into())
-                    });
-                let convert_future = decode_future.and_then(move |body| convert_body(&crate_name, body));
+                    let string_body = str::from_utf8(body.as_ref())?;
+                    let packages = string_body.lines()
+                        .map(|s| s.trim())
+                        .filter(|s| !s.is_empty())
+                        .map(|s| serde_json::from_str::<RegistryPackage>(s))
+                        .collect::<Result<_, _>>()?;
+                    Ok(packages)
+                });
+                let convert_future = decode_future.and_then(move |pkgs| convert_pkgs(&crate_name, pkgs));
                 future::Either::B(convert_future)
             }
         })
