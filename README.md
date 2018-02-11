@@ -1,6 +1,6 @@
 # Deps.rs
 
-[![Build Status](https://travis-ci.com/srijs/deps.rs.svg?token=yrciRgubBGhgocqRMyGy&branch=master)](https://travis-ci.com/srijs/deps.rs)
+[![Build Status](https://travis-ci.org/srijs/deps.rs.svg?branch=master)](https://travis-ci.org/srijs/deps.rs)
 [![dependency status](https://deps.rs/repo/github/srijs/deps.rs/status.svg)](https://deps.rs/repo/github/srijs/deps.rs)
 
 ## Copyright and License
