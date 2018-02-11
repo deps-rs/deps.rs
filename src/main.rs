@@ -5,7 +5,7 @@
 
 extern crate base64;
 #[macro_use] extern crate failure;
-extern crate futures;
+#[macro_use] extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;
 #[macro_use] extern crate lazy_static;

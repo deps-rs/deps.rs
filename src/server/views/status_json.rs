@@ -29,29 +29,32 @@ struct AnalyzeDependenciesResponse {
 }
 
 pub fn status_json(analysis_outcome: AnalyzeDependenciesOutcome) -> Response {
-    let single = AnalyzeDependenciesResponseSingle {
-        dependencies: analysis_outcome.deps.main.into_iter()
-            .map(|(name, analyzed)| (name.into(), AnalyzeDependenciesResponseDetail {
-                outdated: analyzed.is_outdated(),
-                required: analyzed.required,
-                latest: analyzed.latest
-            })).collect(),
-        dev_dependencies: analysis_outcome.deps.dev.into_iter()
-            .map(|(name, analyzed)| (name.into(), AnalyzeDependenciesResponseDetail {
-                outdated: analyzed.is_outdated(),
-                required: analyzed.required,
-                latest: analyzed.latest
-            })).collect(),
-        build_dependencies: analysis_outcome.deps.build.into_iter()
-            .map(|(name, analyzed)| (name.into(), AnalyzeDependenciesResponseDetail {
-                outdated: analyzed.is_outdated(),
-                required: analyzed.required,
-                latest: analyzed.latest
-            })).collect()
-    };
+    let crates = analysis_outcome.crates.into_iter().map(|(crate_name, analyzed_deps)| {
+        let single = AnalyzeDependenciesResponseSingle {
+            dependencies: analyzed_deps.main.into_iter()
+                .map(|(name, analyzed)| (name.into(), AnalyzeDependenciesResponseDetail {
+                    outdated: analyzed.is_outdated(),
+                    required: analyzed.required,
+                    latest: analyzed.latest
+                })).collect(),
+            dev_dependencies: analyzed_deps.dev.into_iter()
+                .map(|(name, analyzed)| (name.into(), AnalyzeDependenciesResponseDetail {
+                    outdated: analyzed.is_outdated(),
+                    required: analyzed.required,
+                    latest: analyzed.latest
+                })).collect(),
+            build_dependencies: analyzed_deps.build.into_iter()
+                .map(|(name, analyzed)| (name.into(), AnalyzeDependenciesResponseDetail {
+                    outdated: analyzed.is_outdated(),
+                    required: analyzed.required,
+                    latest: analyzed.latest
+                })).collect()
+        };
+        (crate_name.into(), single)
+    });
 
     let multi = AnalyzeDependenciesResponse {
-        crates: vec![(analysis_outcome.name.into(), single)].into_iter().collect()
+        crates: crates.collect()
     };
 
     Response::new()

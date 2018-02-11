@@ -49,7 +49,7 @@ pub struct CrateRelease {
     pub yanked: bool
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct CrateDeps {
     pub main: BTreeMap<CrateName, VersionReq>,
     pub dev: BTreeMap<CrateName, VersionReq>,
@@ -109,7 +109,7 @@ impl AnalyzedDependencies {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum CrateManifest {
     Crate(CrateName, CrateDeps)
 }

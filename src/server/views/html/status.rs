@@ -5,9 +5,30 @@ use hyper::Response;
 use maud::{Markup, html};
 
 use ::engine::AnalyzeDependenciesOutcome;
-use ::models::crates::{CrateName, AnalyzedDependency};
+use ::models::crates::{CrateName, AnalyzedDependency, AnalyzedDependencies};
 use ::models::repo::RepoPath;
 use ::server::assets;
+
+fn dependency_tables(crate_name: CrateName, deps: AnalyzedDependencies) -> Markup {
+    html! {
+        h2 class="title is-3" {
+            "Crate "
+            code (crate_name.as_ref())
+        }
+
+        @if !deps.main.is_empty() {
+            (dependency_table("Dependencies", deps.main))
+        }
+
+        @if !deps.dev.is_empty() {
+            (dependency_table("Dev dependencies", deps.dev))
+        }
+
+        @if !deps.build.is_empty() {
+            (dependency_table("Build dependencies", deps.build))
+        }
+    }
+}
 
 fn dependency_table(title: &str, deps: BTreeMap<CrateName, AnalyzedDependency>) -> Markup {
     let count_total = deps.len();
@@ -65,7 +86,7 @@ pub fn render(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoPath)
     let status_base_url = format!("{}/{}", &super::SELF_BASE_URL as &str, self_path);
     let title = format!("{} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref());
 
-    let (hero_class, status_asset) = if analysis_outcome.deps.any_outdated() {
+    let (hero_class, status_asset) = if analysis_outcome.any_outdated() {
         ("is-warning", assets::BADGE_OUTDATED_SVG.as_ref())
     } else {
         ("is-success", assets::BADGE_UPTODATE_SVG.as_ref())
@@ -98,21 +119,8 @@ pub fn render(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoPath)
         }
         section class="section" {
             div class="container" {
-                h2 class="title is-3" {
-                    "Crate "
-                    code (analysis_outcome.name.as_ref())
-                }
-
-                @if !analysis_outcome.deps.main.is_empty() {
-                    (dependency_table("Dependencies", analysis_outcome.deps.main))
-                }
-
-                @if !analysis_outcome.deps.dev.is_empty() {
-                    (dependency_table("Dev dependencies", analysis_outcome.deps.dev))
-                }
-
-                @if !analysis_outcome.deps.build.is_empty() {
-                    (dependency_table("Build dependencies", analysis_outcome.deps.build))
+                @for (crate_name, deps) in analysis_outcome.crates {
+                    (dependency_tables(crate_name, deps))
                 }
             }
         }
