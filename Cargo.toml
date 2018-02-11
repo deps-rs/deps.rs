@@ -12,6 +12,7 @@ hyper-tls = "0.1.2"
 lazy_static = "1.0.0"
 maud = "0.17.2"
 ordermap = "0.4.0"
+relative-path = { version = "0.3.7", features = ["serde"] }
 route-recognizer = "0.1.12"
 semver = { version = "0.9.0", features = ["serde"] }
 serde = "1.0.27"

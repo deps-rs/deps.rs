@@ -55,12 +55,13 @@ impl DependencyAnalyzer {
 
 #[cfg(test)]
 mod tests {
-    use super::{CrateDeps, CrateRelease, DependencyAnalyzer};
+    use models::crates::{CrateDep, CrateDeps, CrateRelease};
+    use super::DependencyAnalyzer;
 
     #[test]
     fn tracks_latest_without_matching() {
         let mut deps = CrateDeps::default();
-        deps.main.insert("hyper".parse().unwrap(), "^0.11.0".parse().unwrap());
+        deps.main.insert("hyper".parse().unwrap(), CrateDep::External("^0.11.0".parse().unwrap()));
 
         let mut analyzer = DependencyAnalyzer::new(&deps);
         analyzer.process(vec![
@@ -77,7 +78,7 @@ mod tests {
     #[test]
     fn tracks_latest_that_matches() {
         let mut deps = CrateDeps::default();
-        deps.main.insert("hyper".parse().unwrap(), "^0.10.0".parse().unwrap());
+        deps.main.insert("hyper".parse().unwrap(), CrateDep::External("^0.10.0".parse().unwrap()));
 
         let mut analyzer = DependencyAnalyzer::new(&deps);
         analyzer.process(vec![
@@ -95,7 +96,7 @@ mod tests {
     #[test]
     fn skips_yanked_releases() {
         let mut deps = CrateDeps::default();
-        deps.main.insert("hyper".parse().unwrap(), "^0.10.0".parse().unwrap());
+        deps.main.insert("hyper".parse().unwrap(), CrateDep::External("^0.10.0".parse().unwrap()));
 
         let mut analyzer = DependencyAnalyzer::new(&deps);
         analyzer.process(vec![
@@ -112,7 +113,7 @@ mod tests {
     #[test]
     fn skips_prereleases() {
         let mut deps = CrateDeps::default();
-        deps.main.insert("hyper".parse().unwrap(), "^0.10.0".parse().unwrap());
+        deps.main.insert("hyper".parse().unwrap(), CrateDep::External("^0.10.0".parse().unwrap()));
 
         let mut analyzer = DependencyAnalyzer::new(&deps);
         analyzer.process(vec![

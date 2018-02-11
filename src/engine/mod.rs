@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -9,6 +8,7 @@ use futures::future::join_all;
 use hyper::Client;
 use hyper::client::HttpConnector;
 use hyper_tls::HttpsConnector;
+use relative_path::{RelativePath, RelativePathBuf};
 use slog::Logger;
 use tokio_service::Service;
 
@@ -70,7 +70,7 @@ impl Engine {
     pub fn analyze_dependencies(&self, repo_path: RepoPath) ->
         impl Future<Item=AnalyzeDependenciesOutcome, Error=Error>
     {
-        let entry_point = PathBuf::from("/");
+        let entry_point = RelativePath::new("/").to_relative_path_buf();
         let manifest_future = CrawlManifestFuture::new(self, repo_path, entry_point);
 
         let engine = self.clone();
@@ -95,10 +95,11 @@ impl Engine {
         })
     }
 
-    fn retrieve_manifest_at_path<P: AsRef<Path>>(&self, repo_path: &RepoPath, path: &P) ->
+    fn retrieve_manifest_at_path(&self, repo_path: &RepoPath, path: &RelativePathBuf) ->
         impl Future<Item=String, Error=Error>
     {
-        retrieve_file_at_path(self.client.clone(), &repo_path, &path.as_ref().join("Cargo.toml")).from_err()
+        let manifest_path = path.join(RelativePath::new("Cargo.toml"));
+        retrieve_file_at_path(self.client.clone(), &repo_path, &manifest_path).from_err()
     }
 }
 

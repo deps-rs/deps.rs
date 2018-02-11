@@ -11,6 +11,7 @@ extern crate hyper_tls;
 #[macro_use] extern crate lazy_static;
 extern crate maud;
 extern crate ordermap;
+extern crate relative_path;
 extern crate route_recognizer;
 extern crate semver;
 #[macro_use] extern crate serde_derive;

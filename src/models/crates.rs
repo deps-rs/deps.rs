@@ -1,9 +1,9 @@
 use std::borrow::Borrow;
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 use std::str::FromStr;
 
 use failure::Error;
+use relative_path::RelativePathBuf;
 use semver::{Version, VersionReq};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -50,11 +50,27 @@ pub struct CrateRelease {
     pub yanked: bool
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CrateDep {
+    External(VersionReq),
+    Internal(RelativePathBuf)
+}
+
+impl CrateDep {
+    pub fn is_external(&self) -> bool {
+        if let &CrateDep::External(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct CrateDeps {
-    pub main: BTreeMap<CrateName, VersionReq>,
-    pub dev: BTreeMap<CrateName, VersionReq>,
-    pub build: BTreeMap<CrateName, VersionReq>
+    pub main: BTreeMap<CrateName, CrateDep>,
+    pub dev: BTreeMap<CrateName, CrateDep>,
+    pub build: BTreeMap<CrateName, CrateDep>
 }
 
 #[derive(Debug)]
@@ -87,14 +103,26 @@ pub struct AnalyzedDependencies {
 
 impl AnalyzedDependencies {
     pub fn new(deps: &CrateDeps) -> AnalyzedDependencies {
-        let main = deps.main.iter().map(|(name, req)| {
-            (name.clone(), AnalyzedDependency::new(req.clone()))
+        let main = deps.main.iter().filter_map(|(name, dep)| {
+            if let &CrateDep::External(ref req) = dep {
+                Some((name.clone(), AnalyzedDependency::new(req.clone())))
+            } else {
+                None
+            }
         }).collect();
-        let dev = deps.dev.iter().map(|(name, req)| {
-            (name.clone(), AnalyzedDependency::new(req.clone()))
+        let dev = deps.dev.iter().filter_map(|(name, dep)| {
+            if let &CrateDep::External(ref req) = dep {
+                Some((name.clone(), AnalyzedDependency::new(req.clone())))
+            } else {
+                None
+            }
         }).collect();
-        let build = deps.build.iter().map(|(name, req)| {
-            (name.clone(), AnalyzedDependency::new(req.clone()))
+        let build = deps.build.iter().filter_map(|(name, dep)| {
+            if let &CrateDep::External(ref req) = dep {
+                Some((name.clone(), AnalyzedDependency::new(req.clone())))
+            } else {
+                None
+            }
         }).collect();
         AnalyzedDependencies { main, dev, build }
     }
@@ -113,6 +141,6 @@ impl AnalyzedDependencies {
 #[derive(Clone, Debug)]
 pub enum CrateManifest {
     Package(CrateName, CrateDeps),
-    Workspace { members: Vec<PathBuf> },
-    Mixed { name: CrateName, deps: CrateDeps, members: Vec<PathBuf> }
+    Workspace { members: Vec<RelativePathBuf> },
+    Mixed { name: CrateName, deps: CrateDeps, members: Vec<RelativePathBuf> }
 }

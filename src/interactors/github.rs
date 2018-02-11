@@ -1,9 +1,8 @@
-use std::path::Path;
-
 use failure::Error;
 use futures::{Future, IntoFuture, Stream, future};
 use hyper::{Error as HyperError, Method, Request, Response, Uri};
 use hyper::header::UserAgent;
+use relative_path::RelativePathBuf;
 use tokio_service::Service;
 use serde_json;
 
@@ -12,11 +11,11 @@ use ::models::repo::{Repository, RepoPath};
 const GITHUB_API_BASE_URI: &'static str = "https://api.github.com";
 const GITHUB_USER_CONTENT_BASE_URI: &'static str = "https://raw.githubusercontent.com";
 
-pub fn retrieve_file_at_path<S, P: AsRef<Path>>(service: S, repo_path: &RepoPath, path: &P) ->
+pub fn retrieve_file_at_path<S>(service: S, repo_path: &RepoPath, path: &RelativePathBuf) ->
     impl Future<Item=String, Error=Error>
     where S: Service<Request=Request, Response=Response, Error=HyperError>
 {
-    let path_str = path.as_ref().to_str().expect("failed to convert path to str");
+    let path_str: &str = path.as_ref();
     let uri_future = format!("{}/{}/{}/master/{}",
         GITHUB_USER_CONTENT_BASE_URI,
         repo_path.qual.as_ref(),
@@ -83,7 +82,7 @@ impl<S> Service for GetPopularRepos<S>
             service.call(request).from_err().and_then(|response| {
                 let status = response.status();
                 if !status.is_success() {
-                    future::Either::A(future::err(format_err!("Status code: {}", status)))
+                    future::Either::A(future::err(format_err!("Status code {} for popular repo search", status)))
                 } else {
                     let body_future = response.body().concat2().from_err();
                     let decode_future = body_future

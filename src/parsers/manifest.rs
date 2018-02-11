@@ -1,16 +1,16 @@
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 
 use failure::Error;
+use relative_path::RelativePathBuf;
 use semver::VersionReq;
 use toml;
 
-use ::models::crates::{CrateName, CrateDeps, CrateManifest};
+use ::models::crates::{CrateName, CrateDep, CrateDeps, CrateManifest};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct CargoTomlComplexDependency {
     git: Option<String>,
-    path: Option<String>,
+    path: Option<RelativePathBuf>,
     version: Option<String>
 }
 
@@ -28,7 +28,7 @@ struct CargoTomlPackage {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct CargoTomlWorkspace {
-    members: Vec<PathBuf>
+    members: Vec<RelativePathBuf>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -47,22 +47,28 @@ struct CargoToml {
     build_dependencies: BTreeMap<String, CargoTomlDependency>
 }
 
-fn convert_dependency(cargo_dep: (String, CargoTomlDependency)) -> Option<Result<(CrateName, VersionReq), Error>> {
+fn convert_dependency(cargo_dep: (String, CargoTomlDependency)) -> Option<Result<(CrateName, CrateDep), Error>> {
     match cargo_dep {
         (name, CargoTomlDependency::Simple(string)) => {
             Some(name.parse::<CrateName>().map_err(|err| err.into()).and_then(|parsed_name| {
                 string.parse::<VersionReq>().map_err(|err| err.into())
-                    .map(|version| (parsed_name, version))
+                    .map(|version| (parsed_name, CrateDep::External(version)))
             }))
         }
         (name, CargoTomlDependency::Complex(cplx)) => {
-            if cplx.git.is_some() || cplx.path.is_some() {
+            if cplx.git.is_some() {
                 None
+            } else if cplx.path.is_some() {
+                cplx.path.map(|path| {
+                    name.parse::<CrateName>().map_err(|err| err.into()).map(|parsed_name| {
+                        (parsed_name, CrateDep::Internal(path))
+                    })
+                })
             } else {
                 cplx.version.map(|string| {
                     name.parse::<CrateName>().map_err(|err| err.into()).and_then(|parsed_name| {
                         string.parse::<VersionReq>().map_err(|err| err.into())
-                            .map(|version| (parsed_name, version))
+                            .map(|version| (parsed_name, CrateDep::External(version)))
                     })
                 })
             }

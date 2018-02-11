@@ -1,9 +1,9 @@
 use std::mem;
-use std::path::PathBuf;
 
 use failure::Error;
 use futures::{Async, Future, Poll, Stream};
 use futures::stream::FuturesOrdered;
+use relative_path::RelativePathBuf;
 
 use ::models::repo::RepoPath;
 
@@ -15,11 +15,11 @@ pub struct CrawlManifestFuture {
     repo_path: RepoPath,
     engine: Engine,
     crawler: ManifestCrawler,
-    futures: FuturesOrdered<Box<Future<Item=(PathBuf, String), Error=Error>>>
+    futures: FuturesOrdered<Box<Future<Item=(RelativePathBuf, String), Error=Error>>>
 }
 
 impl CrawlManifestFuture {
-    pub fn new(engine: &Engine, repo_path: RepoPath, entry_point: PathBuf) -> Self {
+    pub fn new(engine: &Engine, repo_path: RepoPath, entry_point: RelativePathBuf) -> Self {
         let future: Box<Future<Item=_, Error=_>> = Box::new(engine.retrieve_manifest_at_path(&repo_path, &entry_point)
             .map(move |contents| (entry_point, contents)));
         let engine = engine.clone();

@@ -1,6 +1,6 @@
 use failure::Error;
 use futures::{Future, Stream, IntoFuture, future};
-use hyper::{Error as HyperError, Method, Request, Response};
+use hyper::{Error as HyperError, Method, Request, Response, Uri};
 use tokio_service::Service;
 use semver::Version;
 use serde_json;
@@ -43,15 +43,15 @@ pub fn query_crate<S>(service: S, crate_name: CrateName) ->
     where S: Service<Request=Request, Response=Response, Error=HyperError>
 {
     let uri_future = format!("{}/crates/{}/versions", CRATES_API_BASE_URI, crate_name.as_ref())
-        .parse().into_future().from_err();
+        .parse::<Uri>().into_future().from_err();
 
     uri_future.and_then(move |uri| {
-        let request = Request::new(Method::Get, uri);
+        let request = Request::new(Method::Get, uri.clone());
 
         service.call(request).from_err().and_then(move |response| {
             let status = response.status();
             if !status.is_success() {
-                future::Either::A(future::err(format_err!("Status code: {}", status)))
+                future::Either::A(future::err(format_err!("Status code {} for URI {}", status, uri)))
             } else {
                 let body_future = response.body().concat2().from_err();
                 let decode_future = body_future.and_then(|body| {

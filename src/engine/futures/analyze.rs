@@ -16,9 +16,15 @@ impl AnalyzeDependenciesFuture {
     pub fn new(engine: &Engine, deps: CrateDeps) -> Self {
         let analyzer = DependencyAnalyzer::new(&deps);
 
-        let main_deps = deps.main.into_iter().map(|(name, _)| name);
-        let dev_deps = deps.dev.into_iter().map(|(name, _)| name);
-        let build_deps = deps.build.into_iter().map(|(name, _)| name);
+        let main_deps = deps.main.into_iter().filter_map(|(name, dep)| {
+            if dep.is_external() { Some(name) } else { None }
+        });
+        let dev_deps = deps.dev.into_iter().filter_map(|(name, dep)| {
+            if dep.is_external() { Some(name) } else { None }
+        });
+        let build_deps = deps.build.into_iter().filter_map(|(name, dep)| {
+            if dep.is_external() { Some(name) } else { None }
+        });
 
         let release_futures = engine.fetch_releases(main_deps.chain(dev_deps).chain(build_deps));
 
