@@ -27,6 +27,7 @@ struct CargoTomlPackage {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct CargoTomlWorkspace {
+    #[serde(default)]
     members: Vec<RelativePathBuf>
 }
 
@@ -113,5 +114,36 @@ pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, Error> {
             Ok(CrateManifest::Mixed { name, deps, members }),
         (None, None) =>
             Err(format_err!("neither workspace nor package found in manifest"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use models::crates::CrateManifest;
+    use super::parse_manifest_toml;
+
+    #[test]
+    fn parse_workspace_without_members_declaration() {
+        let toml = r#"[package]
+name = "symbolic"
+
+[workspace]
+
+[dependencies]
+symbolic-common = { version = "2.0.6", path = "common" }
+"#;
+
+        let manifest = parse_manifest_toml(toml).unwrap();
+
+        match manifest {
+            CrateManifest::Mixed { name, deps, members } => {
+                assert_eq!(name.as_ref(), "symbolic");
+                assert_eq!(deps.main.len(), 1);
+                assert_eq!(deps.dev.len(), 0);
+                assert_eq!(deps.build.len(), 0);
+                assert_eq!(members.len(), 0);
+            },
+            _ => panic!("expected mixed manifest")
+        }
     }
 }
