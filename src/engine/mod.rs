@@ -15,32 +15,40 @@ use tokio_service::Service;
 mod machines;
 mod futures;
 
-use ::utils::throttle::Throttle;
+use ::utils::cache::Cache;
 
 use ::models::repo::{Repository, RepoPath};
 use ::models::crates::{CrateName, CrateRelease, AnalyzedDependencies};
 
-use ::interactors::crates::query_crate;
-use ::interactors::github::retrieve_file_at_path;
-use ::interactors::github::GetPopularRepos;
+use ::interactors::crates::QueryCrate;
+use ::interactors::github::{GetPopularRepos, RetrieveFileAtPath};
 
 use self::futures::AnalyzeDependenciesFuture;
 use self::futures::CrawlManifestFuture;
 
+type HttpClient = Client<HttpsConnector<HttpConnector>>;
+
 #[derive(Clone, Debug)]
 pub struct Engine {
-    client: Client<HttpsConnector<HttpConnector>>,
+    client: HttpClient,
     logger: Logger,
 
-    get_popular_repos: Arc<Throttle<GetPopularRepos<Client<HttpsConnector<HttpConnector>>>>>
+    query_crate: Arc<Cache<QueryCrate<HttpClient>>>,
+    get_popular_repos: Arc<Cache<GetPopularRepos<HttpClient>>>,
+    retrieve_file_at_path: Arc<RetrieveFileAtPath<HttpClient>>
 }
 
 impl Engine {
     pub fn new(client: Client<HttpsConnector<HttpConnector>>, logger: Logger) -> Engine {
+        let query_crate = Cache::new(QueryCrate(client.clone()), Duration::from_secs(300), 500);
+        let get_popular_repos = Cache::new(GetPopularRepos(client.clone()), Duration::from_secs(10), 1);
+
         Engine {
             client: client.clone(), logger,
 
-            get_popular_repos: Arc::new(Throttle::new(GetPopularRepos(client), Duration::from_secs(10)))
+            query_crate: Arc::new(query_crate),
+            get_popular_repos: Arc::new(get_popular_repos),
+            retrieve_file_at_path: Arc::new(RetrieveFileAtPath(client))
         }
     }
 }
@@ -97,10 +105,11 @@ impl Engine {
     fn fetch_releases<I: IntoIterator<Item=CrateName>>(&self, names: I) ->
         impl Iterator<Item=impl Future<Item=Vec<CrateRelease>, Error=Error>>
     {
-        let client = self.client.clone();
+        let engine = self.clone();
         names.into_iter().map(move |name| {
-            query_crate(client.clone(), name)
-                .map(|resp| resp.releases)
+            engine.query_crate.call(name)
+                .from_err()
+                .map(|resp| resp.releases.clone())
         })
     }
 
@@ -108,7 +117,7 @@ impl Engine {
         impl Future<Item=String, Error=Error>
     {
         let manifest_path = path.join(RelativePath::new("Cargo.toml"));
-        retrieve_file_at_path(self.client.clone(), &repo_path, &manifest_path).from_err()
+        self.retrieve_file_at_path.call((repo_path.clone(), manifest_path))
     }
 }
 

@@ -11,33 +11,46 @@ use ::models::repo::{Repository, RepoPath};
 const GITHUB_API_BASE_URI: &'static str = "https://api.github.com";
 const GITHUB_USER_CONTENT_BASE_URI: &'static str = "https://raw.githubusercontent.com";
 
-pub fn retrieve_file_at_path<S>(service: S, repo_path: &RepoPath, path: &RelativePathBuf) ->
-    impl Future<Item=String, Error=Error>
-    where S: Service<Request=Request, Response=Response, Error=HyperError>
+#[derive(Debug, Clone)]
+pub struct RetrieveFileAtPath<S>(pub S);
+
+impl<S> Service for RetrieveFileAtPath<S>
+    where S: Service<Request=Request, Response=Response, Error=HyperError> + Clone + 'static,
+          S::Future: 'static
 {
-    let path_str: &str = path.as_ref();
-    let uri_future = format!("{}/{}/{}/HEAD/{}",
-        GITHUB_USER_CONTENT_BASE_URI,
-        repo_path.qual.as_ref(),
-        repo_path.name.as_ref(),
-        path_str
-    ).parse::<Uri>().into_future().from_err();
+    type Request = (RepoPath, RelativePathBuf);
+    type Response = String;
+    type Error = Error;
+    type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
 
-    uri_future.and_then(move |uri| {
-        let request = Request::new(Method::Get, uri.clone());
+    fn call(&self, req: Self::Request) -> Self::Future {
+        let service = self.0.clone();
 
-        service.call(request).from_err().and_then(move |response| {
-            let status = response.status();
-            if !status.is_success() {
-                future::Either::A(future::err(format_err!("Status code {} for URI {}", status, uri)))
-            } else {
-                let body_future = response.body().concat2().from_err();
-                let decode_future = body_future
-                    .and_then(|body| String::from_utf8(body.to_vec()).map_err(|err| err.into()));
-                future::Either::B(decode_future)
-            }
-        })
-    })
+        let (repo_path, path) = req;
+        let path_str: &str = path.as_ref();
+        let uri_future = format!("{}/{}/{}/HEAD/{}",
+            GITHUB_USER_CONTENT_BASE_URI,
+            repo_path.qual.as_ref(),
+            repo_path.name.as_ref(),
+            path_str
+        ).parse::<Uri>().into_future().from_err();
+
+        Box::new(uri_future.and_then(move |uri| {
+            let request = Request::new(Method::Get, uri.clone());
+
+            service.call(request).from_err().and_then(move |response| {
+                let status = response.status();
+                if !status.is_success() {
+                    future::Either::A(future::err(format_err!("Status code {} for URI {}", status, uri)))
+                } else {
+                    let body_future = response.body().concat2().from_err();
+                    let decode_future = body_future
+                        .and_then(|body| String::from_utf8(body.to_vec()).map_err(|err| err.into()));
+                    future::Either::B(decode_future)
+                }
+            })
+        }))
+    }
 }
 
 #[derive(Deserialize)]

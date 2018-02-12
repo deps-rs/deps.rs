@@ -9,6 +9,7 @@ extern crate base64;
 extern crate hyper;
 extern crate hyper_tls;
 #[macro_use] extern crate lazy_static;
+extern crate lru_cache;
 extern crate maud;
 extern crate ordermap;
 extern crate relative_path;

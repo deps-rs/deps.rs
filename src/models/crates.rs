@@ -43,7 +43,7 @@ impl FromStr for CrateName {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct CrateRelease {
     pub name: CrateName,
     pub version: Version,

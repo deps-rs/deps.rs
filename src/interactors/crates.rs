@@ -36,43 +36,55 @@ pub struct QueryCrateResponse {
     pub releases: Vec<CrateRelease>
 }
 
-pub fn query_crate<S>(service: S, crate_name: CrateName) ->
-    impl Future<Item=QueryCrateResponse, Error=Error>
-    where S: Service<Request=Request, Response=Response, Error=HyperError>
+#[derive(Debug, Clone)]
+pub struct QueryCrate<S>(pub S);
+
+impl<S> Service for QueryCrate<S>
+    where S: Service<Request=Request, Response=Response, Error=HyperError> + Clone + 'static,
+          S::Future: 'static
 {
-    let lower_name = crate_name.as_ref().to_lowercase();
+    type Request = CrateName;
+    type Response = QueryCrateResponse;
+    type Error = Error;
+    type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
 
-    let path = match lower_name.len() {
-        1 => format!("1/{}", lower_name),
-        2 => format!("2/{}", lower_name),
-        3 => format!("3/{}/{}", &lower_name[..1], lower_name),
-        _ => format!("{}/{}/{}", &lower_name[0..2], &lower_name[2..4], lower_name),
-    };
+    fn call(&self,  crate_name: CrateName) -> Self::Future {
+        let service = self.0.clone();
 
-    let uri_future = format!("{}/master/{}", CRATES_INDEX_BASE_URI, path)
-        .parse::<Uri>().into_future().from_err();
+        let lower_name = crate_name.as_ref().to_lowercase();
 
-    uri_future.and_then(move |uri| {
-        let request = Request::new(Method::Get, uri.clone());
+        let path = match lower_name.len() {
+            1 => format!("1/{}", lower_name),
+            2 => format!("2/{}", lower_name),
+            3 => format!("3/{}/{}", &lower_name[..1], lower_name),
+            _ => format!("{}/{}/{}", &lower_name[0..2], &lower_name[2..4], lower_name),
+        };
 
-        service.call(request).from_err().and_then(move |response| {
-            let status = response.status();
-            if !status.is_success() {
-                future::Either::A(future::err(format_err!("Status code {} for URI {}", status, uri)))
-            } else {
-                let body_future = response.body().concat2().from_err();
-                let decode_future = body_future.and_then(|body| {
-                    let string_body = str::from_utf8(body.as_ref())?;
-                    let packages = string_body.lines()
-                        .map(|s| s.trim())
-                        .filter(|s| !s.is_empty())
-                        .map(|s| serde_json::from_str::<RegistryPackage>(s))
-                        .collect::<Result<_, _>>()?;
-                    Ok(packages)
-                });
-                let convert_future = decode_future.and_then(move |pkgs| convert_pkgs(&crate_name, pkgs));
-                future::Either::B(convert_future)
-            }
-        })
-    })
+        let uri_future = format!("{}/master/{}", CRATES_INDEX_BASE_URI, path)
+            .parse::<Uri>().into_future().from_err();
+
+        Box::new(uri_future.and_then(move |uri| {
+            let request = Request::new(Method::Get, uri.clone());
+
+            service.call(request).from_err().and_then(move |response| {
+                let status = response.status();
+                if !status.is_success() {
+                    future::Either::A(future::err(format_err!("Status code {} for URI {}", status, uri)))
+                } else {
+                    let body_future = response.body().concat2().from_err();
+                    let decode_future = body_future.and_then(|body| {
+                        let string_body = str::from_utf8(body.as_ref())?;
+                        let packages = string_body.lines()
+                            .map(|s| s.trim())
+                            .filter(|s| !s.is_empty())
+                            .map(|s| serde_json::from_str::<RegistryPackage>(s))
+                            .collect::<Result<_, _>>()?;
+                        Ok(packages)
+                    });
+                    let convert_future = decode_future.and_then(move |pkgs| convert_pkgs(&crate_name, pkgs));
+                    future::Either::B(convert_future)
+                }
+            })
+        }))
+    }
 }
