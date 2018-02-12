@@ -27,13 +27,15 @@ impl RepoPath {
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum RepoSite {
-    Github
+    Github,
+    Gitlab,
 }
 
 impl RepoSite {
     pub fn to_base_uri(&self) -> &'static str {
         match self {
-            &RepoSite::Github => "https://github.com"
+            &RepoSite::Github => "https://github.com",
+            &RepoSite::Gitlab => "https://gitlab.com"
         }
     }
 }
@@ -44,6 +46,7 @@ impl FromStr for RepoSite {
     fn from_str(input: &str) -> Result<RepoSite, Error> {
         match input {
             "github" => Ok(RepoSite::Github),
+            "gitlab" => Ok(RepoSite::Gitlab),
             _ => Err(format_err!("unknown repo site identifier"))
         }
     }
@@ -52,7 +55,8 @@ impl FromStr for RepoSite {
 impl AsRef<str> for RepoSite {
     fn as_ref(&self) -> &str {
         match self {
-            &RepoSite::Github => "github"
+            &RepoSite::Github => "github",
+            &RepoSite::Gitlab => "gitlab"
         }
     }
 }
