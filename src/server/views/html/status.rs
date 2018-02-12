@@ -5,7 +5,7 @@ use ordermap::OrderMap;
 
 use ::engine::AnalyzeDependenciesOutcome;
 use ::models::crates::{CrateName, AnalyzedDependency, AnalyzedDependencies};
-use ::models::repo::RepoPath;
+use ::models::repo::{RepoSite, RepoPath};
 use ::server::assets;
 
 fn dependency_tables(crate_name: CrateName, deps: AnalyzedDependencies) -> Markup {
@@ -84,7 +84,15 @@ fn dependency_table(title: &str, deps: OrderMap<CrateName, AnalyzedDependency>) 
     }
 }
 
+fn get_site_icon(repo_site: &RepoSite) -> &'static str {
+    match *repo_site {
+        RepoSite::Github => "fa-github",
+        RepoSite::Gitlab => "fa-gitlab",
+    }
+}
+
 fn render_failure(repo_path: RepoPath) -> Markup {
+    let site_icon = get_site_icon(&repo_path.site);
     html! {
         section class="hero is-light" {
             div class="hero-head" (super::render_navbar())
@@ -92,7 +100,7 @@ fn render_failure(repo_path: RepoPath) -> Markup {
                 div class="container" {
                     h1 class="title is-1" {
                         a href=(format!("{}/{}/{}", repo_path.site.to_base_uri(), repo_path.qual.as_ref(), repo_path.name.as_ref())) {
-                            i class="fa fa-github" ""
+                            i class=(format!("fa {}", site_icon)) ""
                             (format!(" {} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref()))
                         }
                     }
@@ -114,6 +122,7 @@ fn render_failure(repo_path: RepoPath) -> Markup {
 fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoPath) -> Markup {
     let self_path = format!("repo/{}/{}/{}", repo_path.site.as_ref(), repo_path.qual.as_ref(), repo_path.name.as_ref());
     let status_base_url = format!("{}/{}", &super::SELF_BASE_URL as &str, self_path);
+    let site_icon = get_site_icon(&repo_path.site);
 
     let (hero_class, status_asset) = if analysis_outcome.any_outdated() {
         ("is-warning", assets::BADGE_OUTDATED_SVG.as_ref())
@@ -130,7 +139,7 @@ fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoP
                 div class="container" {
                     h1 class="title is-1" {
                         a href=(format!("{}/{}/{}", repo_path.site.to_base_uri(), repo_path.qual.as_ref(), repo_path.name.as_ref())) {
-                            i class="fa fa-github" ""
+                            i class=(format!("fa {}", site_icon)) ""
                             (format!(" {} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref()))
                         }
                     }
