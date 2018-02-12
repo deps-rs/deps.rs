@@ -29,13 +29,15 @@ impl RepoPath {
 pub enum RepoSite {
     Github,
     Gitlab,
+    Bitbucket,
 }
 
 impl RepoSite {
     pub fn to_base_uri(&self) -> &'static str {
         match self {
             &RepoSite::Github => "https://github.com",
-            &RepoSite::Gitlab => "https://gitlab.com"
+            &RepoSite::Gitlab => "https://gitlab.com",
+            &RepoSite::Bitbucket => "https://bitbucket.org",
         }
     }
 }
@@ -47,6 +49,7 @@ impl FromStr for RepoSite {
         match input {
             "github" => Ok(RepoSite::Github),
             "gitlab" => Ok(RepoSite::Gitlab),
+            "bitbucket" => Ok(RepoSite::Bitbucket),
             _ => Err(format_err!("unknown repo site identifier"))
         }
     }
@@ -56,7 +59,8 @@ impl AsRef<str> for RepoSite {
     fn as_ref(&self) -> &str {
         match self {
             &RepoSite::Github => "github",
-            &RepoSite::Gitlab => "gitlab"
+            &RepoSite::Gitlab => "gitlab",
+            &RepoSite::Bitbucket => "https://bitbucket.org",
         }
     }
 }
