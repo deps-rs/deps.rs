@@ -40,7 +40,7 @@ pub fn render(popular: Vec<Repository>) -> Response {
                 div class="container" {
                     p class="title is-1" "Keep your dependencies up-to-date"
                     p {
-                        "Docs.rs uses semantic versioning to detect outdated or insecure dependencies in your project's"
+                        "Deps.rs uses semantic versioning to detect outdated or insecure dependencies in your project's"
                         code "Cargo.toml"
                         "."
                     }
