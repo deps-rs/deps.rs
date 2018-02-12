@@ -21,7 +21,8 @@ use ::models::repo::{Repository, RepoPath};
 use ::models::crates::{CrateName, CrateRelease, AnalyzedDependencies};
 
 use ::interactors::crates::QueryCrate;
-use ::interactors::github::{GetPopularRepos, RetrieveFileAtPath};
+use ::interactors::RetrieveFileAtPath;
+use ::interactors::github::{GetPopularRepos};
 
 use self::futures::AnalyzeDependenciesFuture;
 use self::futures::CrawlManifestFuture;
