@@ -16,7 +16,7 @@ pub fn retrieve_file_at_path<S>(service: S, repo_path: &RepoPath, path: &Relativ
     where S: Service<Request=Request, Response=Response, Error=HyperError>
 {
     let path_str: &str = path.as_ref();
-    let uri_future = format!("{}/{}/{}/master/{}",
+    let uri_future = format!("{}/{}/{}/HEAD/{}",
         GITHUB_USER_CONTENT_BASE_URI,
         repo_path.qual.as_ref(),
         repo_path.name.as_ref(),
