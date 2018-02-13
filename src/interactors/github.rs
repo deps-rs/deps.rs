@@ -11,7 +11,7 @@ use ::models::repo::{Repository, RepoPath};
 const GITHUB_API_BASE_URI: &'static str = "https://api.github.com";
 const GITHUB_USER_CONTENT_BASE_URI: &'static str = "https://raw.githubusercontent.com";
 
-pub fn get_manifest_uri(repo_path: &RepoPath, path: &RelativePathBuf) -> Result<Uri, ::hyper::error::UriError> {
+pub fn get_manifest_uri(repo_path: &RepoPath, path: &RelativePathBuf) -> Result<Uri, Error> {
     let path_str: &str = path.as_ref();
     Ok(format!("{}/{}/{}/HEAD/{}",
         GITHUB_USER_CONTENT_BASE_URI,
