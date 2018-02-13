@@ -60,7 +60,7 @@ impl AsRef<str> for RepoSite {
         match self {
             &RepoSite::Github => "github",
             &RepoSite::Gitlab => "gitlab",
-            &RepoSite::Bitbucket => "https://bitbucket.org",
+            &RepoSite::Bitbucket => "bitbucket",
         }
     }
 }
