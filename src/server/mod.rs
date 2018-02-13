@@ -148,7 +148,7 @@ impl Server {
     fn status_format_analysis(analysis_outcome: Option<AnalyzeDependenciesOutcome>, format: StatusFormat, repo_path: RepoPath) -> Response {
         match format {
             StatusFormat::Svg =>
-                views::status_svg(analysis_outcome),
+                views::badge::response(analysis_outcome.as_ref()),
             StatusFormat::Html =>
                 views::html::status::render(analysis_outcome, repo_path)
         }

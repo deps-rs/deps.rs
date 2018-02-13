@@ -6,7 +6,8 @@ use ordermap::OrderMap;
 use ::engine::AnalyzeDependenciesOutcome;
 use ::models::crates::{CrateName, AnalyzedDependency, AnalyzedDependencies};
 use ::models::repo::{RepoSite, RepoPath};
-use ::server::assets;
+
+use super::super::badge;
 
 fn dependency_tables(crate_name: CrateName, deps: AnalyzedDependencies) -> Markup {
     html! {
@@ -125,13 +126,14 @@ fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoP
     let status_base_url = format!("{}/{}", &super::SELF_BASE_URL as &str, self_path);
     let site_icon = get_site_icon(&repo_path.site);
 
-    let (hero_class, status_asset) = if analysis_outcome.any_outdated() {
-        ("is-warning", assets::BADGE_OUTDATED_SVG.as_ref())
-    } else {
-        ("is-success", assets::BADGE_UPTODATE_SVG.as_ref())
-    };
+    let status_badge = badge::svg(Some(&analysis_outcome));
+    let status_data_url = format!("data:image/svg+xml;base64,{}", Base64Display::standard(&status_badge));
 
-    let status_data_url = format!("data:image/svg+xml;base64,{}", Base64Display::standard(status_asset));
+    let hero_class = if analysis_outcome.any_outdated() {
+        "is-warning"
+    } else {
+        "is-success"
+    };
 
     html! {
         section class=(format!("hero {}", hero_class)) {
