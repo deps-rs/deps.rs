@@ -6,6 +6,7 @@ use tokio_service::Service;
 
 use ::models::repo::{RepoSite, RepoPath};
 
+pub mod bitbucket;
 pub mod crates;
 pub mod github;
 pub mod gitlab;
@@ -34,6 +35,9 @@ impl<S> Service for RetrieveFileAtPath<S>
             &RepoSite::Gitlab => {
                 gitlab::get_manifest_uri(&repo_path, &path)
             },
+            &RepoSite::Bitbucket => {
+                bitbucket::get_manifest_uri(&repo_path, &path)
+            }
         };
         let uri_future = uri.into_future().from_err();
 

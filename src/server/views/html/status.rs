@@ -88,6 +88,7 @@ fn get_site_icon(repo_site: &RepoSite) -> &'static str {
     match *repo_site {
         RepoSite::Github => "fa-github",
         RepoSite::Gitlab => "fa-gitlab",
+        RepoSite::Bitbucket => "fa-bitbucket",
     }
 }
 
