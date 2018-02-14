@@ -126,7 +126,7 @@ impl Badge {
             })
             .next()
             .unwrap_or(0.0);
-        (width + ((text.len() as f32 - 1f32) * 1.5)).ceil() as u32
+        (width + ((text.len() as f32 - 1f32) * 1.3)).ceil() as u32
     }
 }
 

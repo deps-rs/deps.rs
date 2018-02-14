@@ -63,6 +63,12 @@ impl AnalyzeDependenciesOutcome {
     pub fn any_outdated(&self) -> bool {
         self.crates.iter().any(|&(_, ref deps)| deps.any_outdated())
     }
+
+    pub fn outdated_ratio(&self) -> (usize, usize) {
+        self.crates.iter().fold((0, 0), |(outdated, total), &(_, ref deps)| {
+            (outdated + deps.count_outdated(), total + deps.count_total())
+        })
+    }
 }
 
 impl Engine {

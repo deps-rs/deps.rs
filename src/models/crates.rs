@@ -127,6 +127,23 @@ impl AnalyzedDependencies {
         AnalyzedDependencies { main, dev, build }
     }
 
+    pub fn count_total(&self) -> usize {
+        self.main.len() + self.dev.len() + self.build.len()
+    }
+
+    pub fn count_outdated(&self) -> usize {
+        let main_outdated = self.main.iter()
+            .filter(|&(_, dep)| dep.is_outdated())
+            .count();
+        let dev_outdated = self.dev.iter()
+            .filter(|&(_, dep)| dep.is_outdated())
+            .count();
+        let build_outdated = self.build.iter()
+            .filter(|&(_, dep)| dep.is_outdated())
+            .count();
+        main_outdated + dev_outdated + build_outdated
+    } 
+
     pub fn any_outdated(&self) -> bool {
         let main_any_outdated = self.main.iter()
             .any(|(_, dep)| dep.is_outdated());

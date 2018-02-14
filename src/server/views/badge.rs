@@ -7,16 +7,24 @@ use ::engine::AnalyzeDependenciesOutcome;
 pub fn badge(analysis_outcome: Option<&AnalyzeDependenciesOutcome>) -> Badge {
     let opts = match analysis_outcome {
         Some(outcome) => {
-            if outcome.any_outdated() {
+            let (outdated, total) = outcome.outdated_ratio();
+
+            if outdated > 0 {
                 BadgeOptions {
                     subject: "dependencies".into(),
-                    status: "outdated".into(),
+                    status: format!("{} of {} outdated", outdated, total),
                     color: "#dfb317".into()
+                }
+            } else if total > 0 {
+                BadgeOptions {
+                    subject: "dependencies".into(),
+                    status: "up to date".into(),
+                    color: "#4c1".into()
                 }
             } else {
                 BadgeOptions {
                     subject: "dependencies".into(),
-                    status: "up to date".into(),
+                    status: "none".into(),
                     color: "#4c1".into()
                 }
             }
