@@ -4,7 +4,7 @@ use hyper::header::ContentType;
 
 use ::engine::AnalyzeDependenciesOutcome;
 
-pub fn svg(analysis_outcome: Option<&AnalyzeDependenciesOutcome>) -> Vec<u8> {
+pub fn badge(analysis_outcome: Option<&AnalyzeDependenciesOutcome>) -> Badge {
     let opts = match analysis_outcome {
         Some(outcome) => {
             if outcome.any_outdated() {
@@ -32,12 +32,10 @@ pub fn svg(analysis_outcome: Option<&AnalyzeDependenciesOutcome>) -> Vec<u8> {
 
     Badge::new(opts)
         .expect("failed to create badge")
-        .to_svg()
-        .into_bytes()
 }
 
 pub fn response(analysis_outcome: Option<&AnalyzeDependenciesOutcome>) -> Response {
     Response::new()
         .with_header(ContentType("image/svg+xml;charset=utf-8".parse().unwrap()))
-        .with_body(svg(analysis_outcome))
+        .with_body(badge(analysis_outcome).to_svg().into_bytes())
 }

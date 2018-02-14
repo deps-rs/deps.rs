@@ -1,4 +1,3 @@
-use base64::display::Base64Display;
 use hyper::Response;
 use maud::{Markup, html};
 use ordermap::OrderMap;
@@ -126,8 +125,7 @@ fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoP
     let status_base_url = format!("{}/{}", &super::SELF_BASE_URL as &str, self_path);
     let site_icon = get_site_icon(&repo_path.site);
 
-    let status_badge = badge::svg(Some(&analysis_outcome));
-    let status_data_url = format!("data:image/svg+xml;base64,{}", Base64Display::standard(&status_badge));
+    let status_data_uri = badge::badge(Some(&analysis_outcome)).to_svg_data_uri();
 
     let hero_class = if analysis_outcome.any_outdated() {
         "is-warning"
@@ -147,7 +145,7 @@ fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoP
                         }
                     }
 
-                    img src=(status_data_url);
+                    img src=(status_data_uri);
                 }
             }
             div class="hero-footer" {

@@ -4,7 +4,6 @@
 #![feature(proc_macro)]
 
 extern crate badge;
-extern crate base64;
 #[macro_use] extern crate failure;
 #[macro_use] extern crate futures;
 extern crate hyper;
