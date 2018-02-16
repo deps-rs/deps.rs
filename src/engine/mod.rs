@@ -9,6 +9,7 @@ use hyper::Client;
 use hyper::client::HttpConnector;
 use hyper_tls::HttpsConnector;
 use relative_path::{RelativePath, RelativePathBuf};
+use semver::VersionReq;
 use slog::Logger;
 use tokio_service::Service;
 
@@ -132,6 +133,23 @@ impl Engine {
                         }
                     }))
                 }
+            }
+        })
+    }
+
+    pub fn find_latest_crate_release(&self, name: CrateName, req: Option<VersionReq>) ->
+        impl Future<Item=Option<CrateRelease>, Error=Error>
+    {
+        self.query_crate.call(name).from_err().map(move |query_response| {
+            if let Some(vreq) = req {
+                query_response.releases.iter()
+                    .filter(|release| vreq.matches(&release.version))
+                    .max_by(|r1, r2| r1.version.cmp(&r2.version))
+                    .cloned()
+            } else {
+                query_response.releases.iter()
+                    .max_by(|r1, r2| r1.version.cmp(&r2.version))
+                    .cloned()
             }
         })
     }

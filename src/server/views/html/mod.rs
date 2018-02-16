@@ -9,12 +9,9 @@ pub mod index;
 pub mod error;
 pub mod status;
 
-lazy_static! {
-    static ref SELF_BASE_URL: String = {
-        env::var("BASE_URL")
-            .unwrap_or_else(|_| "http://localhost:8080".to_string())
-    };
+use super::super::SELF_BASE_URL;
 
+lazy_static! {
     static ref GAUGES_SITE_ID: Option<String> = {
         env::var("GAUGES_SITE_ID").ok().map(|s| s.to_string())
     };
