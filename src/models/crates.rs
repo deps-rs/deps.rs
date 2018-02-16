@@ -6,6 +6,21 @@ use ordermap::OrderMap;
 use relative_path::RelativePathBuf;
 use semver::{Version, VersionReq};
 
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct CratePath {
+    pub name: CrateName,
+    pub version: Version
+}
+
+impl CratePath {
+    pub fn from_parts(name: &str, version: &str) -> Result<CratePath, Error> {
+        Ok(CratePath {
+            name: name.parse()?,
+            version: version.parse()?
+        })
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CrateName(String);
 
@@ -47,6 +62,7 @@ impl FromStr for CrateName {
 pub struct CrateRelease {
     pub name: CrateName,
     pub version: Version,
+    pub deps: CrateDeps,
     pub yanked: bool
 }
 

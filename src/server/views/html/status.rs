@@ -4,7 +4,8 @@ use ordermap::OrderMap;
 
 use ::engine::AnalyzeDependenciesOutcome;
 use ::models::crates::{CrateName, AnalyzedDependency, AnalyzedDependencies};
-use ::models::repo::{RepoSite, RepoPath};
+use ::models::SubjectPath;
+use ::models::repo::RepoSite;
 
 use super::super::badge;
 
@@ -84,26 +85,44 @@ fn dependency_table(title: &str, deps: OrderMap<CrateName, AnalyzedDependency>) 
     }
 }
 
-fn get_site_icon(repo_site: &RepoSite) -> &'static str {
-    match *repo_site {
+fn get_site_icon(site: &RepoSite) -> &'static str {
+    match *site {
         RepoSite::Github => "fa-github",
         RepoSite::Gitlab => "fa-gitlab",
-        RepoSite::Bitbucket => "fa-bitbucket",
+        RepoSite::Bitbucket => "fa-bitbucket"
     }
 }
 
-fn render_failure(repo_path: RepoPath) -> Markup {
-    let site_icon = get_site_icon(&repo_path.site);
+fn render_title(subject_path: &SubjectPath) -> Markup {
+    match *subject_path {
+        SubjectPath::Repo(ref repo_path) => {
+            let site_icon = get_site_icon(&repo_path.site);
+            html! {
+                a href=(format!("{}/{}/{}", repo_path.site.to_base_uri(), repo_path.qual.as_ref(), repo_path.name.as_ref())) {
+                    i class=(format!("fa {}", site_icon)) ""
+                    (format!(" {} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref()))
+                }
+            }
+        },
+        SubjectPath::Crate(ref crate_path) => {
+            html! {
+                a href=(format!("https://crates.io/crates/{}/{}", crate_path.name.as_ref(), crate_path.version)) {
+                    i class="fa fa-cube" ""
+                    (format!(" {} {}", crate_path.name.as_ref(), crate_path.version))
+                }
+            }
+        }
+    }
+}
+
+fn render_failure(subject_path: SubjectPath) -> Markup {
     html! {
         section class="hero is-light" {
             div class="hero-head" (super::render_navbar())
             div class="hero-body" {
                 div class="container" {
                     h1 class="title is-1" {
-                        a href=(format!("{}/{}/{}", repo_path.site.to_base_uri(), repo_path.qual.as_ref(), repo_path.name.as_ref())) {
-                            i class=(format!("fa {}", site_icon)) ""
-                            (format!(" {} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref()))
-                        }
+                        (render_title(&subject_path))
                     }
                 }
             }
@@ -120,10 +139,14 @@ fn render_failure(repo_path: RepoPath) -> Markup {
     }
 }
 
-fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoPath) -> Markup {
-    let self_path = format!("repo/{}/{}/{}", repo_path.site.as_ref(), repo_path.qual.as_ref(), repo_path.name.as_ref());
+fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, subject_path: SubjectPath) -> Markup {
+    let self_path = match subject_path {
+        SubjectPath::Repo(ref repo_path) =>
+            format!("repo/{}/{}/{}", repo_path.site.as_ref(), repo_path.qual.as_ref(), repo_path.name.as_ref()),
+        SubjectPath::Crate(ref crate_path) =>
+            format!("crate/{}/{}", crate_path.name.as_ref(), crate_path.version)
+    };
     let status_base_url = format!("{}/{}", &super::SELF_BASE_URL as &str, self_path);
-    let site_icon = get_site_icon(&repo_path.site);
 
     let status_data_uri = badge::badge(Some(&analysis_outcome)).to_svg_data_uri();
 
@@ -139,10 +162,7 @@ fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoP
             div class="hero-body" {
                 div class="container" {
                     h1 class="title is-1" {
-                        a href=(format!("{}/{}/{}", repo_path.site.to_base_uri(), repo_path.qual.as_ref(), repo_path.name.as_ref())) {
-                            i class=(format!("fa {}", site_icon)) ""
-                            (format!(" {} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref()))
-                        }
+                        (render_title(&subject_path))
                     }
 
                     img src=(status_data_uri);
@@ -167,12 +187,17 @@ fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, repo_path: RepoP
     }
 }
 
-pub fn render(analysis_outcome: Option<AnalyzeDependenciesOutcome>, repo_path: RepoPath) -> Response {
-    let title = format!("{} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref());
+pub fn render(analysis_outcome: Option<AnalyzeDependenciesOutcome>, subject_path: SubjectPath) -> Response {
+    let title = match subject_path {
+        SubjectPath::Repo(ref repo_path) =>
+            format!("{} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref()),
+        SubjectPath::Crate(ref crate_path) =>
+            format!("{} {}", crate_path.name.as_ref(), crate_path.version)
+    };
 
     if let Some(outcome) = analysis_outcome {
-        super::render_html(&title, render_success(outcome, repo_path))
+        super::render_html(&title, render_success(outcome, subject_path))
     } else {
-        super::render_html(&title, render_failure(repo_path))
+        super::render_html(&title, render_failure(subject_path))
     }
 }

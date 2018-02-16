@@ -11,7 +11,9 @@ mod assets;
 mod views;
 
 use ::engine::{Engine, AnalyzeDependenciesOutcome};
+use ::models::crates::CratePath;
 use ::models::repo::RepoPath;
+use ::models::SubjectPath;
 
 #[derive(Clone, Copy, PartialEq)]
 enum StatusFormat {
@@ -28,7 +30,8 @@ enum StaticFile {
 enum Route {
     Index,
     Static(StaticFile),
-    Status(StatusFormat)
+    RepoStatus(StatusFormat),
+    CrateStatus(StatusFormat)
 }
 
 #[derive(Clone)]
@@ -47,8 +50,11 @@ impl Server {
         router.add("/static/style.css", Route::Static(StaticFile::StyleCss));
         router.add("/static/favicon.png", Route::Static(StaticFile::FaviconPng));
 
-        router.add("/repo/:site/:qual/:name", Route::Status(StatusFormat::Html));
-        router.add("/repo/:site/:qual/:name/status.svg", Route::Status(StatusFormat::Svg));
+        router.add("/repo/:site/:qual/:name", Route::RepoStatus(StatusFormat::Html));
+        router.add("/repo/:site/:qual/:name/status.svg", Route::RepoStatus(StatusFormat::Svg));
+
+        router.add("/crate/:name/:version", Route::CrateStatus(StatusFormat::Html));
+        router.add("/crate/:name/:version/status.svg", Route::CrateStatus(StatusFormat::Svg));
 
         Server { logger, engine, router: Arc::new(router) }
     }
@@ -70,9 +76,14 @@ impl Service for Server {
                         return Box::new(self.index(req, route_match.params, logger));
                     }
                 },
-                &Route::Status(format) => {
+                &Route::RepoStatus(format) => {
                     if *req.method() == Method::Get {
-                        return Box::new(self.status(req, route_match.params, logger, format));
+                        return Box::new(self.repo_status(req, route_match.params, logger, format));
+                    }
+                },
+                &Route::CrateStatus(format) => {
+                    if *req.method() == Method::Get {
+                        return Box::new(self.crate_status(req, route_match.params, logger, format));
                     }
                 },
                 &Route::Static(file) => {
@@ -108,7 +119,7 @@ impl Server {
         })
     }
 
-    fn status(&self, _req: Request, params: Params, logger: Logger, format: StatusFormat) ->
+    fn repo_status(&self, _req: Request, params: Params, logger: Logger, format: StatusFormat) ->
         impl Future<Item=Response, Error=HyperError>
     {
         let server = self.clone();
@@ -127,15 +138,15 @@ impl Server {
                     future::Either::A(future::ok(response))
                 },
                 Ok(repo_path) => {
-                    future::Either::B(server.engine.analyze_dependencies(repo_path.clone()).then(move |analyze_result| {
+                    future::Either::B(server.engine.analyze_repo_dependencies(repo_path.clone()).then(move |analyze_result| {
                         match analyze_result {
                             Err(err) => {
                                 error!(logger, "error: {}", err);
-                                let response = Server::status_format_analysis(None, format, repo_path);
+                                let response = Server::status_format_analysis(None, format, SubjectPath::Repo(repo_path));
                                 future::ok(response)
                             },
                             Ok(analysis_outcome) => {
-                                let response = Server::status_format_analysis(Some(analysis_outcome), format, repo_path);
+                                let response = Server::status_format_analysis(Some(analysis_outcome), format, SubjectPath::Repo(repo_path));
                                 future::ok(response)
                             }
                         }
@@ -145,12 +156,48 @@ impl Server {
         })
     }
 
-    fn status_format_analysis(analysis_outcome: Option<AnalyzeDependenciesOutcome>, format: StatusFormat, repo_path: RepoPath) -> Response {
+    fn crate_status(&self, _req: Request, params: Params, logger: Logger, format: StatusFormat) ->
+        impl Future<Item=Response, Error=HyperError>
+    {
+        let server = self.clone();
+
+        let name = params.find("name").expect("route param 'name' not found");
+        let version = params.find("version").expect("route param 'version' not found");
+
+        CratePath::from_parts(name, version).into_future().then(move |crate_path_result| {
+            match crate_path_result {
+                Err(err) => {
+                    error!(logger, "error: {}", err);
+                    let mut response = views::html::error::render("Could not parse crate path",
+                        "Please make sure to provide a valid crate name and version.");
+                    response.set_status(StatusCode::BadRequest);
+                    future::Either::A(future::ok(response))
+                },
+                Ok(crate_path) => {
+                    future::Either::B(server.engine.analyze_crate_dependencies(crate_path.clone()).then(move |analyze_result| {
+                        match analyze_result {
+                            Err(err) => {
+                                error!(logger, "error: {}", err);
+                                let response = Server::status_format_analysis(None, format, SubjectPath::Crate(crate_path));
+                                future::ok(response)
+                            },
+                            Ok(analysis_outcome) => {
+                                let response = Server::status_format_analysis(Some(analysis_outcome), format, SubjectPath::Crate(crate_path));
+                                future::ok(response)
+                            }
+                        }
+                    }))
+                }
+            }
+        })
+    }
+
+    fn status_format_analysis(analysis_outcome: Option<AnalyzeDependenciesOutcome>, format: StatusFormat, subject_path: SubjectPath) -> Response {
         match format {
             StatusFormat::Svg =>
                 views::badge::response(analysis_outcome.as_ref()),
             StatusFormat::Html =>
-                views::html::status::render(analysis_outcome, repo_path)
+                views::html::status::render(analysis_outcome, subject_path)
         }
     }
 

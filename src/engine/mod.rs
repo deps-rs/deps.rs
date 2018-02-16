@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use failure::Error;
-use futures::Future;
+use futures::{Future, future};
 use futures::future::join_all;
 use hyper::Client;
 use hyper::client::HttpConnector;
@@ -18,7 +18,7 @@ mod futures;
 use ::utils::cache::Cache;
 
 use ::models::repo::{Repository, RepoPath};
-use ::models::crates::{CrateName, CrateRelease, AnalyzedDependencies};
+use ::models::crates::{CrateName, CratePath, CrateRelease, AnalyzedDependencies};
 
 use ::interactors::crates::QueryCrate;
 use ::interactors::RetrieveFileAtPath;
@@ -83,7 +83,7 @@ impl Engine {
             })
     }
 
-    pub fn analyze_dependencies(&self, repo_path: RepoPath) ->
+    pub fn analyze_repo_dependencies(&self, repo_path: RepoPath) ->
         impl Future<Item=AnalyzeDependenciesOutcome, Error=Error>
     {
         let start = Instant::now();
@@ -106,6 +106,33 @@ impl Engine {
                     crates, duration
                 }
             })
+        })
+    }
+
+    pub fn analyze_crate_dependencies(&self, crate_path: CratePath) ->
+        impl Future<Item=AnalyzeDependenciesOutcome, Error=Error>
+    {
+        let start = Instant::now();
+
+        let query_future = self.query_crate.call(crate_path.name.clone()).from_err();
+
+        let engine = self.clone();
+        query_future.and_then(move |query_response| {
+            match query_response.releases.iter().find(|release| release.version == crate_path.version) {
+                None => future::Either::A(future::err(format_err!("could not find crate release with version {}", crate_path.version))),
+                Some(release) => {
+                    let analyzed_deps_future = AnalyzeDependenciesFuture::new(&engine, release.deps.clone());
+
+                    future::Either::B(analyzed_deps_future.map(move |analyzed_deps| {
+                        let crates = vec![(crate_path.name, analyzed_deps)].into_iter().collect();
+                        let duration = start.elapsed();
+
+                        AnalyzeDependenciesOutcome {
+                            crates, duration
+                        }
+                    }))
+                }
+            }
         })
     }
 

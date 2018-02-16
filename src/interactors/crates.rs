@@ -4,28 +4,49 @@ use failure::Error;
 use futures::{Future, Stream, IntoFuture, future};
 use hyper::{Error as HyperError, Method, Request, Response, Uri};
 use tokio_service::Service;
-use semver::Version;
+use semver::{Version, VersionReq};
 use serde_json;
 
-use ::models::crates::{CrateName, CrateRelease};
+use ::models::crates::{CrateName, CrateRelease, CrateDeps, CrateDep};
 
 const CRATES_INDEX_BASE_URI: &str = "https://raw.githubusercontent.com/rust-lang/crates.io-index";
 
 #[derive(Deserialize, Debug)]
+struct RegistryPackageDep {
+    name: String,
+    req: VersionReq,
+    #[serde(default)]
+    kind: Option<String>
+}
+
+#[derive(Deserialize, Debug)]
 struct RegistryPackage {
     vers: Version,
+    #[serde(default)]
+    deps: Vec<RegistryPackageDep>,
     #[serde(default)]
     yanked: bool
 }
 
 fn convert_pkgs(name: &CrateName, packages: Vec<RegistryPackage>) -> Result<QueryCrateResponse, Error> {
     let releases = packages.into_iter().map(|package| {
-        CrateRelease {
+        let mut deps = CrateDeps::default();
+        for dep in package.deps {
+            match dep.kind.map(|k| k.clone()).unwrap_or_else(|| "normal".into()).as_ref() {
+                "normal" =>
+                    deps.main.insert(dep.name.parse()?, CrateDep::External(dep.req)),
+                "dev" =>
+                    deps.dev.insert(dep.name.parse()?, CrateDep::External(dep.req)),
+                _ => None
+            };
+        }
+        Ok(CrateRelease {
             name: name.clone(),
             version: package.vers,
+            deps: deps,
             yanked: package.yanked
-        }
-    }).collect();
+        })
+    }).collect::<Result<_, Error>>()?;
 
     Ok(QueryCrateResponse {
         releases: releases
@@ -72,7 +93,7 @@ impl<S> Service for QueryCrate<S>
                     future::Either::A(future::err(format_err!("Status code {} for URI {}", status, uri)))
                 } else {
                     let body_future = response.body().concat2().from_err();
-                    let decode_future = body_future.and_then(|body| {
+                    let decode_future = body_future.and_then(move |body| {
                         let string_body = str::from_utf8(body.as_ref())?;
                         let packages = string_body.lines()
                             .map(|s| s.trim())
