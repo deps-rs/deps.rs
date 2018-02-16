@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 use std::str::FromStr;
 
 use failure::Error;
-use ordermap::OrderMap;
+use indexmap::IndexMap;
 use relative_path::RelativePathBuf;
 use semver::{Version, VersionReq};
 
@@ -84,9 +84,9 @@ impl CrateDep {
 
 #[derive(Clone, Debug, Default)]
 pub struct CrateDeps {
-    pub main: OrderMap<CrateName, CrateDep>,
-    pub dev: OrderMap<CrateName, CrateDep>,
-    pub build: OrderMap<CrateName, CrateDep>
+    pub main: IndexMap<CrateName, CrateDep>,
+    pub dev: IndexMap<CrateName, CrateDep>,
+    pub build: IndexMap<CrateName, CrateDep>
 }
 
 #[derive(Debug)]
@@ -112,9 +112,9 @@ impl AnalyzedDependency {
 
 #[derive(Debug)]
 pub struct AnalyzedDependencies {
-    pub main: OrderMap<CrateName, AnalyzedDependency>,
-    pub dev: OrderMap<CrateName, AnalyzedDependency>,
-    pub build: OrderMap<CrateName, AnalyzedDependency>
+    pub main: IndexMap<CrateName, AnalyzedDependency>,
+    pub dev: IndexMap<CrateName, AnalyzedDependency>,
+    pub build: IndexMap<CrateName, AnalyzedDependency>
 }
 
 impl AnalyzedDependencies {

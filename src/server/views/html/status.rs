@@ -1,6 +1,6 @@
 use hyper::Response;
 use maud::{Markup, html};
-use ordermap::OrderMap;
+use indexmap::IndexMap;
 
 use ::engine::AnalyzeDependenciesOutcome;
 use ::models::crates::{CrateName, AnalyzedDependency, AnalyzedDependencies};
@@ -34,7 +34,7 @@ fn dependency_tables(crate_name: CrateName, deps: AnalyzedDependencies) -> Marku
     }
 }
 
-fn dependency_table(title: &str, deps: OrderMap<CrateName, AnalyzedDependency>) -> Markup {
+fn dependency_table(title: &str, deps: IndexMap<CrateName, AnalyzedDependency>) -> Markup {
     let count_total = deps.len();
     let count_outdated = deps.iter().filter(|&(_, dep)| dep.is_outdated()).count();
 

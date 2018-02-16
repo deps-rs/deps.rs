@@ -8,10 +8,10 @@ failure = "0.1.1"
 futures = "0.1.18"
 hyper = "0.11.15"
 hyper-tls = "0.1.2"
+indexmap = { version = "0.4.1", features = ["serde-1"] }
 lazy_static = "1.0.0"
 lru-cache = "0.1.1"
 maud = "0.17.2"
-ordermap = { version = "0.4.0", features = ["serde-1"] }
 relative-path = { version = "0.3.7", features = ["serde"] }
 route-recognizer = "0.1.12"
 semver = { version = "0.9.0", features = ["serde"] }

@@ -2,13 +2,13 @@ use std::collections::HashMap;
 
 use failure::Error;
 use relative_path::RelativePathBuf;
-use ordermap::map::OrderMap;
+use indexmap::IndexMap;
 
 use ::parsers::manifest::parse_manifest_toml;
 use ::models::crates::{CrateDep, CrateDeps, CrateName, CrateManifest};
 
 pub struct ManifestCrawlerOutput {
-    pub crates: OrderMap<CrateName, CrateDeps>
+    pub crates: IndexMap<CrateName, CrateDeps>
 }
 
 pub struct ManifestCrawlerStepOutput {
@@ -17,14 +17,14 @@ pub struct ManifestCrawlerStepOutput {
 
 pub struct ManifestCrawler {
     manifests: HashMap<RelativePathBuf, CrateManifest>,
-    leaf_crates: OrderMap<CrateName, CrateDeps>
+    leaf_crates: IndexMap<CrateName, CrateDeps>
 }
 
 impl ManifestCrawler {
     pub fn new() -> ManifestCrawler {
         ManifestCrawler {
             manifests: HashMap::new(),
-            leaf_crates: OrderMap::new()
+            leaf_crates: IndexMap::new()
         }
     }
 
