@@ -65,8 +65,8 @@ mod tests {
 
         let mut analyzer = DependencyAnalyzer::new(&deps);
         analyzer.process(vec![
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.0".parse().unwrap(), yanked: false },
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.1".parse().unwrap(), yanked: false }
+            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.0".parse().unwrap(), deps: Default::default(), yanked: false },
+            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.1".parse().unwrap(), deps: Default::default(), yanked: false }
         ]);
 
         let analyzed = analyzer.finalize();
@@ -82,9 +82,9 @@ mod tests {
 
         let mut analyzer = DependencyAnalyzer::new(&deps);
         analyzer.process(vec![
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.0".parse().unwrap(), yanked: false },
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.1".parse().unwrap(), yanked: false },
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.11.0".parse().unwrap(), yanked: false }
+            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.0".parse().unwrap(), deps: Default::default(), yanked: false },
+            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.1".parse().unwrap(), deps: Default::default(), yanked: false },
+            CrateRelease { name: "hyper".parse().unwrap(), version: "0.11.0".parse().unwrap(), deps: Default::default(), yanked: false }
         ]);
 
         let analyzed = analyzer.finalize();
@@ -100,8 +100,8 @@ mod tests {
 
         let mut analyzer = DependencyAnalyzer::new(&deps);
         analyzer.process(vec![
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.0".parse().unwrap(), yanked: false },
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.1".parse().unwrap(), yanked: true },
+            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.0".parse().unwrap(), deps: Default::default(), yanked: false },
+            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.1".parse().unwrap(), deps: Default::default(), yanked: true },
         ]);
 
         let analyzed = analyzer.finalize();
@@ -117,8 +117,8 @@ mod tests {
 
         let mut analyzer = DependencyAnalyzer::new(&deps);
         analyzer.process(vec![
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.0".parse().unwrap(), yanked: false },
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.1-alpha".parse().unwrap(), yanked: false },
+            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.0".parse().unwrap(), deps: Default::default(), yanked: false },
+            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.1-alpha".parse().unwrap(), deps: Default::default(), yanked: false },
         ]);
 
         let analyzed = analyzer.finalize();
