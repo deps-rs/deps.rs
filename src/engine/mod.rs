@@ -21,7 +21,7 @@ use ::utils::cache::Cache;
 use ::models::repo::{Repository, RepoPath};
 use ::models::crates::{CrateName, CratePath, CrateRelease, AnalyzedDependencies};
 
-use ::interactors::crates::QueryCrate;
+use ::interactors::crates::{QueryCrate, GetPopularCrates};
 use ::interactors::RetrieveFileAtPath;
 use ::interactors::github::{GetPopularRepos};
 
@@ -36,6 +36,7 @@ pub struct Engine {
     logger: Logger,
 
     query_crate: Arc<Cache<QueryCrate<HttpClient>>>,
+    get_popular_crates: Arc<Cache<GetPopularCrates<HttpClient>>>,
     get_popular_repos: Arc<Cache<GetPopularRepos<HttpClient>>>,
     retrieve_file_at_path: Arc<RetrieveFileAtPath<HttpClient>>
 }
@@ -43,12 +44,14 @@ pub struct Engine {
 impl Engine {
     pub fn new(client: Client<HttpsConnector<HttpConnector>>, logger: Logger) -> Engine {
         let query_crate = Cache::new(QueryCrate(client.clone()), Duration::from_secs(300), 500);
+        let get_popular_crates = Cache::new(GetPopularCrates(client.clone()), Duration::from_secs(10), 1);
         let get_popular_repos = Cache::new(GetPopularRepos(client.clone()), Duration::from_secs(10), 1);
 
         Engine {
             client: client.clone(), logger,
 
             query_crate: Arc::new(query_crate),
+            get_popular_crates: Arc::new(get_popular_crates),
             get_popular_repos: Arc::new(get_popular_repos),
             retrieve_file_at_path: Arc::new(RetrieveFileAtPath(client))
         }
@@ -82,6 +85,13 @@ impl Engine {
                     .filter(|repo| !POPULAR_REPOS_BLACKLIST.contains(&repo.path))
                     .cloned().collect()
             })
+    }
+
+     pub fn get_popular_crates(&self) ->
+        impl Future<Item=Vec<CratePath>, Error=Error>
+    {
+        self.get_popular_crates.call(())
+            .from_err().map(|crates| crates.clone())
     }
 
     pub fn analyze_repo_dependencies(&self, repo_path: RepoPath) ->
@@ -180,7 +190,8 @@ lazy_static! {
             RepoPath::from_parts("github", "google", "xi-editor"),
             RepoPath::from_parts("github", "lk-geimfari", "awesomo"),
             RepoPath::from_parts("github", "redox-os", "tfs"),
-            RepoPath::from_parts("github", "carols10cents", "rustlings")
+            RepoPath::from_parts("github", "carols10cents", "rustlings"),
+            RepoPath::from_parts("github", "rust-unofficial", "awesome-rust")
         ].into_iter().collect::<Result<HashSet<_>, _>>().unwrap()
     };
 }

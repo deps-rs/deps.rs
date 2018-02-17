@@ -113,18 +113,20 @@ impl Server {
     fn index(&self, _req: Request, _params: Params, logger: Logger) ->
         impl Future<Item=Response, Error=HyperError>
     {
-        self.engine.get_popular_repos().then(move |popular_result| {
-            match popular_result {
-                Err(err) => {
-                    error!(logger, "error: {}", err);
-                    let mut response = views::html::error::render("Could not retrieve popular repositories", "");
-                    response.set_status(StatusCode::InternalServerError);
-                    future::ok(response)
-                },
-                Ok(popular) =>
-                    future::ok(views::html::index::render(popular))
-            }
-        })
+        self.engine.get_popular_repos()
+            .join(self.engine.get_popular_crates())
+            .then(move |popular_result| {
+                match popular_result {
+                    Err(err) => {
+                        error!(logger, "error: {}", err);
+                        let mut response = views::html::error::render("Could not retrieve popular items", "");
+                        response.set_status(StatusCode::InternalServerError);
+                        future::ok(response)
+                    },
+                    Ok((popular_repos, popular_crates)) =>
+                        future::ok(views::html::index::render(popular_repos, popular_crates))
+                }
+            })
     }
 
     fn repo_status(&self, _req: Request, params: Params, logger: Logger, format: StatusFormat) ->
