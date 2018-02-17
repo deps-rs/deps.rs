@@ -147,20 +147,14 @@ impl Engine {
         })
     }
 
-    pub fn find_latest_crate_release(&self, name: CrateName, req: Option<VersionReq>) ->
+    pub fn find_latest_crate_release(&self, name: CrateName, req: VersionReq) ->
         impl Future<Item=Option<CrateRelease>, Error=Error>
     {
         self.query_crate.call(name).from_err().map(move |query_response| {
-            if let Some(vreq) = req {
-                query_response.releases.iter()
-                    .filter(|release| vreq.matches(&release.version))
-                    .max_by(|r1, r2| r1.version.cmp(&r2.version))
-                    .cloned()
-            } else {
-                query_response.releases.iter()
-                    .max_by(|r1, r2| r1.version.cmp(&r2.version))
-                    .cloned()
-            }
+            query_response.releases.iter()
+                .filter(|release| req.matches(&release.version))
+                .max_by(|r1, r2| r1.version.cmp(&r2.version))
+                .cloned()
         })
     }
 

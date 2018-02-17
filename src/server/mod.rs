@@ -5,6 +5,7 @@ use futures::{Future, IntoFuture, future};
 use hyper::{Error as HyperError, Method, Request, Response, StatusCode};
 use hyper::header::{ContentType, Location};
 use route_recognizer::{Params, Router};
+use semver::VersionReq;
 use slog::Logger;
 use tokio_service::Service;
 
@@ -183,7 +184,7 @@ impl Server {
                     future::Either::A(future::ok(response))
                 },
                 Ok(crate_name) => {
-                    future::Either::B(engine.find_latest_crate_release(crate_name, None).then(move |release_result| {
+                    future::Either::B(engine.find_latest_crate_release(crate_name, VersionReq::any()).then(move |release_result| {
                         match release_result {
                             Err(err) => {
                                 error!(logger, "error: {}", err);
