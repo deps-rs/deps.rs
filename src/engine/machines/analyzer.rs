@@ -1,19 +1,24 @@
+use std::sync::Arc;
+
+use rustsec::db::AdvisoryDatabase;
 use semver::Version;
 
-use ::models::crates::{CrateDeps, CrateRelease, AnalyzedDependency, AnalyzedDependencies};
+use ::models::crates::{CrateDeps, CrateRelease, CrateName, AnalyzedDependency, AnalyzedDependencies};
 
 pub struct DependencyAnalyzer {
-    deps: AnalyzedDependencies
+    deps: AnalyzedDependencies,
+    advisory_db: Arc<AdvisoryDatabase>
 }
 
 impl DependencyAnalyzer {
-    pub fn new(deps: &CrateDeps) -> DependencyAnalyzer {
+    pub fn new(deps: &CrateDeps, advisory_db: Arc<AdvisoryDatabase>) -> DependencyAnalyzer {
         DependencyAnalyzer {
-            deps: AnalyzedDependencies::new(deps)
+            deps: AnalyzedDependencies::new(deps),
+            advisory_db
         }
     }
 
-    fn process_single(dep: &mut AnalyzedDependency, ver: &Version) {
+    fn process_single(name: &CrateName, dep: &mut AnalyzedDependency, ver: &Version, advisory_db: &AdvisoryDatabase) {
         if dep.required.matches(&ver) {
             if let Some(ref mut current_latest_that_matches) = dep.latest_that_matches {
                 if *current_latest_that_matches < *ver {
@@ -21,6 +26,10 @@ impl DependencyAnalyzer {
                 }
             } else {
                 dep.latest_that_matches = Some(ver.clone());
+            }
+
+            if !advisory_db.find_vulns_for_crate(name.as_ref(), ver).is_empty() {
+                dep.insecure = true;
             }
         }
         if !ver.is_prerelease() {
@@ -37,13 +46,13 @@ impl DependencyAnalyzer {
     pub fn process<I: IntoIterator<Item=CrateRelease>>(&mut self, releases: I) {
         for release in releases.into_iter().filter(|r| !r.yanked) {
             if let Some(main_dep) = self.deps.main.get_mut(&release.name) {
-                DependencyAnalyzer::process_single(main_dep, &release.version)
+                DependencyAnalyzer::process_single(&release.name, main_dep, &release.version, &self.advisory_db)
             }
             if let Some(dev_dep) = self.deps.dev.get_mut(&release.name) {
-                DependencyAnalyzer::process_single(dev_dep, &release.version)
+                DependencyAnalyzer::process_single(&release.name, dev_dep, &release.version, &self.advisory_db)
             }
             if let Some(build_dep) = self.deps.build.get_mut(&release.name) {
-                DependencyAnalyzer::process_single(build_dep, &release.version)
+                DependencyAnalyzer::process_single(&release.name, build_dep, &release.version, &self.advisory_db)
             }
         }
     }

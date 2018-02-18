@@ -36,12 +36,15 @@ fn dependency_tables(crate_name: CrateName, deps: AnalyzedDependencies) -> Marku
 
 fn dependency_table(title: &str, deps: IndexMap<CrateName, AnalyzedDependency>) -> Markup {
     let count_total = deps.len();
+    let count_insecure = deps.iter().filter(|&(_, dep)| dep.insecure).count();
     let count_outdated = deps.iter().filter(|&(_, dep)| dep.is_outdated()).count();
 
     html! {
         h3 class="title is-4" (title)
         p class="subtitle is-5" {
-            @if count_outdated > 0 {
+            @if count_insecure > 0 {
+                (format!(" ({} total, {} insecure)", count_total, count_insecure))
+            } @else if count_outdated > 0 {
                 (format!(" ({} total, {} up-to-date, {} outdated)", count_total, count_total - count_outdated, count_outdated))
             } @else {
                 (format!(" ({} total, all up-to-date)", count_total))
@@ -72,7 +75,9 @@ fn dependency_table(title: &str, deps: IndexMap<CrateName, AnalyzedDependency>) 
                             }
                         }
                         td class="has-text-right" {
-                            @if dep.is_outdated() {
+                            @if dep.insecure {
+                                span class="tag is-danger" "insecure"
+                            } @else if dep.is_outdated() {
                                 span class="tag is-warning" "out of date"
                             } @else {
                                 span class="tag is-success" "up to date"
@@ -150,7 +155,9 @@ fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, subject_path: Su
 
     let status_data_uri = badge::badge(Some(&analysis_outcome)).to_svg_data_uri();
 
-    let hero_class = if analysis_outcome.any_outdated() {
+    let hero_class = if analysis_outcome.any_insecure()  {
+        "is-danger"
+    } else if analysis_outcome.any_outdated() {
         "is-warning"
     } else {
         "is-success"
