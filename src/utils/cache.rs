@@ -1,49 +1,53 @@
 use std::fmt::{Debug, Formatter, Result as FmtResult};
-use std::time::Duration;
+use std::hash::Hash;
+use std::time::{Duration, Instant};
 use std::ops::Deref;
 use std::sync::Mutex;
 
 use failure::Error;
 use futures::{Future, Poll};
 use futures::future::{FromErr, Shared, SharedItem};
-use lru_time_cache::LruCache;
+use lru_cache::LruCache;
 use shared_failure::SharedFailure;
 use tokio_service::Service;
 
 pub struct Cache<S>
     where S: Service<Error=Error>,
-          S::Request: Ord
+          S::Request: Hash + Eq
 {
     inner: S,
-    cache: Mutex<LruCache<S::Request, Shared<FromErr<S::Future, SharedFailure>>>>
+    duration: Duration,
+    cache: Mutex<LruCache<S::Request, (Instant, Shared<FromErr<S::Future, SharedFailure>>)>>
 }
 
 impl<S> Debug for Cache<S>
     where S: Service<Error=Error> + Debug,
-          S::Request: Ord
+          S::Request: Hash + Eq
 {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
         fmt.debug_struct("Cache")
             .field("inner", &self.inner)
+            .field("duration", &self.duration)
             .finish()
     }
 }
 
 impl<S> Cache<S> 
     where S: Service<Error=Error>,
-          S::Request: Clone + Ord
+          S::Request: Hash + Eq
 {
     pub fn new(service: S, duration: Duration, capacity: usize) -> Cache<S> {
         Cache {
             inner: service,
-            cache: Mutex::new(LruCache::with_expiry_duration_and_capacity(duration, capacity))
+            duration: duration,
+            cache: Mutex::new(LruCache::new(capacity))
         }
     }
 }
 
 impl<S> Service for Cache<S>
     where S: Service<Error=Error>,
-          S::Request: Clone + Ord
+          S::Request: Clone + Hash + Eq
 {
     type Request = S::Request;
     type Response = CachedItem<S::Response>;
@@ -51,14 +55,17 @@ impl<S> Service for Cache<S>
     type Future = Cached<S::Future>;
 
     fn call(&self, req: Self::Request) -> Self::Future {
+        let now = Instant::now();
         let mut cache = self.cache.lock().expect("lock poisoned");
-        if let Some(shared_future) = cache.get_mut(&req) {
-            if let Some(Ok(_)) = shared_future.peek() {
-                return Cached(shared_future.clone());
+        if let Some(&mut (valid_until, ref shared_future)) = cache.get_mut(&req) {
+            if valid_until > now {
+                if let Some(Ok(_)) = shared_future.peek() {
+                    return Cached(shared_future.clone());
+                }
             }
         }
         let shared_future = self.inner.call(req.clone()).from_err().shared();
-        cache.insert(req, shared_future.clone());
+        cache.insert(req, (now + self.duration, shared_future.clone()));
         Cached(shared_future)
     }
 }
