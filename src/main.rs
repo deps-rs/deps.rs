@@ -4,6 +4,7 @@
 #![feature(proc_macro)]
 
 extern crate badge;
+extern crate cadence;
 #[macro_use] extern crate failure;
 #[macro_use] extern crate futures;
 extern crate hyper;
@@ -33,9 +34,10 @@ mod engine;
 mod server;
 
 use std::env;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr, UdpSocket, SocketAddr};
 use std::sync::Mutex;
 
+use cadence::{QueuingMetricSink, UdpMetricSink};
 use futures::{Future, Stream};
 use hyper::Client;
 use hyper::server::Http;
@@ -46,11 +48,21 @@ use tokio_core::reactor::Core;
 use self::server::Server;
 use self::engine::Engine;
 
+fn init_metrics() -> QueuingMetricSink {
+    let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
+    socket.set_nonblocking(true).unwrap();
+    let host = ("127.0.0.1", 8125);
+    let sink = UdpMetricSink::from(host, socket).unwrap();
+    QueuingMetricSink::from(sink)
+}
+
 fn main() {
     let logger = slog::Logger::root(
         Mutex::new(slog_json::Json::default(std::io::stderr())).map(slog::Fuse),
         o!("version" => env!("CARGO_PKG_VERSION"))
     );
+
+    let metrics = init_metrics();
 
     let mut core = Core::new()
         .expect("failed to create event loop");
@@ -71,7 +83,8 @@ fn main() {
 
     let http = Http::new();
 
-    let engine = Engine::new(client.clone(), logger.clone());
+    let mut engine = Engine::new(client.clone(), logger.clone());
+    engine.set_metrics(metrics);
 
     let server = Server::new(logger.clone(), engine);
 

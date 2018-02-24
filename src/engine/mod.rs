@@ -2,6 +2,8 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use cadence::prelude::*;
+use cadence::{MetricSink, NopMetricSink, StatsdClient};
 use failure::Error;
 use futures::{Future, future};
 use futures::future::join_all;
@@ -34,6 +36,7 @@ type HttpClient = Client<HttpsConnector<HttpConnector>>;
 pub struct Engine {
     client: HttpClient,
     logger: Logger,
+    metrics: StatsdClient,
 
     query_crate: Arc<Cache<QueryCrate<HttpClient>>>,
     get_popular_crates: Arc<Cache<GetPopularCrates<HttpClient>>>,
@@ -43,18 +46,24 @@ pub struct Engine {
 
 impl Engine {
     pub fn new(client: Client<HttpsConnector<HttpConnector>>, logger: Logger) -> Engine {
+        let metrics = StatsdClient::from_sink("engine", NopMetricSink);
+
         let query_crate = Cache::new(QueryCrate(client.clone()), Duration::from_secs(300), 500);
         let get_popular_crates = Cache::new(GetPopularCrates(client.clone()), Duration::from_secs(10), 1);
         let get_popular_repos = Cache::new(GetPopularRepos(client.clone()), Duration::from_secs(10), 1);
 
         Engine {
-            client: client.clone(), logger,
+            client: client.clone(), logger, metrics,
 
             query_crate: Arc::new(query_crate),
             get_popular_crates: Arc::new(get_popular_crates),
             get_popular_repos: Arc::new(get_popular_repos),
             retrieve_file_at_path: Arc::new(RetrieveFileAtPath(client))
         }
+    }
+
+    pub fn set_metrics<M: MetricSink + Send + Sync + 'static>(&mut self, sink: M) {
+        self.metrics = StatsdClient::from_sink("engine", sink);
     }
 }
 
@@ -100,22 +109,28 @@ impl Engine {
         let start = Instant::now();
 
         let entry_point = RelativePath::new("/").to_relative_path_buf();
-        let manifest_future = CrawlManifestFuture::new(self, repo_path, entry_point);
+        let manifest_future = CrawlManifestFuture::new(self, repo_path.clone(), entry_point);
 
         let engine = self.clone();
         manifest_future.and_then(move |manifest_output| {
+            let engine_for_analyze = engine.clone();
             let futures = manifest_output.crates.into_iter().map(move |(crate_name, deps)| {
-                let analyzed_deps_future = AnalyzeDependenciesFuture::new(&engine, deps);
+                let analyzed_deps_future = AnalyzeDependenciesFuture::new(&engine_for_analyze, deps);
 
                 analyzed_deps_future.map(move |analyzed_deps| (crate_name, analyzed_deps))
             });
 
-            join_all(futures).map(move |crates| {
+            join_all(futures).and_then(move |crates| {
                 let duration = start.elapsed();
+                engine.metrics.time_duration_with_tags("analyze_duration", duration)
+                    .with_tag("repo_site", repo_path.site.as_ref())
+                    .with_tag("repo_qual", repo_path.qual.as_ref())
+                    .with_tag("repo_name", repo_path.name.as_ref())
+                    .send()?;
 
-                AnalyzeDependenciesOutcome {
+                Ok(AnalyzeDependenciesOutcome {
                     crates, duration
-                }
+                })
             })
         })
     }

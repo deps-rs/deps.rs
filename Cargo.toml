@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Sam Rijs <srijs@airpost.net>"]
 
 [dependencies]
+cadence = "0.13.1"
 failure = "0.1.1"
 futures = "0.1.18"
 hyper = "0.11.15"
