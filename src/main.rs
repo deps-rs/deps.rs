@@ -18,6 +18,7 @@ extern crate semver;
 #[macro_use] extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
+extern crate shared_failure;
 #[macro_use] extern crate slog;
 extern crate slog_json;
 extern crate tokio_core;
