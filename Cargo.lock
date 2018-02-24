@@ -274,11 +274,6 @@ version = "0.2.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "linked-hash-map"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
 name = "literalext"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -300,12 +295,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "lru-cache"
-version = "0.1.1"
+name = "lru_time_cache"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "linked-hash-map 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
-]
 
 [[package]]
 name = "maud"
@@ -688,7 +680,7 @@ dependencies = [
  "hyper-tls 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "indexmap 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lru-cache 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lru_time_cache 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "maud 0.17.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "relative-path 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "route-recognizer 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -974,11 +966,10 @@ dependencies = [
 "checksum lazy_static 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c8f31047daa365f19be14b47c29df4f7c3b581832407daabe6ae77397619237d"
 "checksum lazycell 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a6f08839bc70ef4a3fe1d566d5350f519c5912ea86be0df1740a7d247c7fc0ef"
 "checksum libc 0.2.36 (registry+https://github.com/rust-lang/crates.io-index)" = "1e5d97d6708edaa407429faa671b942dc0f2727222fb6b6539bf1db936e4b121"
-"checksum linked-hash-map 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7860ec297f7008ff7a1e3382d7f7e1dcd69efc94751a2284bafc3d013c2aa939"
 "checksum literalext 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2f42dd699527975a1e0d722e0707998671188a0125f2051d2d192fc201184a81"
 "checksum log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)" = "e19e8d5c34a3e0e2223db8e060f9e8264aeeb5c5fc64a4ee9965c062211c024b"
 "checksum log 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "89f010e843f2b1a31dbd316b3b8d443758bc634bed37aabade59c686d644e0a2"
-"checksum lru-cache 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4d06ff7ff06f729ce5f4e227876cb88d10bc59cd4ae1e09fbb2bde15c850dc21"
+"checksum lru_time_cache 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d151f6ddf993d99d1f3fa84530f8a91287497606559e6792ac5453268c17455b"
 "checksum maud 0.17.2 (registry+https://github.com/rust-lang/crates.io-index)" = "c0023c814f4a545946ab612ad64a4edce8126d4fe4f0abc5f319b80877112048"
 "checksum maud_htmlescape 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d0fb85bccffc42302ad1e1ed8679f6a39d1317f775a37fbc3f79bdfbe054bfb7"
 "checksum maud_macros 0.17.2 (registry+https://github.com/rust-lang/crates.io-index)" = "0d8377d77c1995044b8ad67a59d15b434c8b7de470ac743de4916ee2bd9fce55"

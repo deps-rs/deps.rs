@@ -10,7 +10,7 @@ extern crate hyper;
 extern crate hyper_tls;
 extern crate indexmap;
 #[macro_use] extern crate lazy_static;
-extern crate lru_cache;
+extern crate lru_time_cache;
 extern crate maud;
 extern crate relative_path;
 extern crate route_recognizer;
