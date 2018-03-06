@@ -71,8 +71,6 @@ impl<S> Service for QueryCrate<S>
     type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
 
     fn call(&self,  crate_name: CrateName) -> Self::Future {
-        let service = self.0.clone();
-
         let lower_name = crate_name.as_ref().to_lowercase();
 
         let path = match lower_name.len() {
@@ -82,31 +80,31 @@ impl<S> Service for QueryCrate<S>
             _ => format!("{}/{}/{}", &lower_name[0..2], &lower_name[2..4], lower_name),
         };
 
-        let uri_future = format!("{}/master/{}", CRATES_INDEX_BASE_URI, path)
-            .parse::<Uri>().into_future().from_err();
+        let uri = try_future_box!(format!("{}/master/{}", CRATES_INDEX_BASE_URI, path)
+            .parse::<Uri>());
 
-        Box::new(uri_future.and_then(move |uri| {
-            let request = Request::new(Method::Get, uri.clone());
+        let request = Request::new(Method::Get, uri.clone());
 
-            service.call(request).from_err().and_then(move |response| {
-                let status = response.status();
-                if !status.is_success() {
-                    future::Either::A(future::err(format_err!("Status code {} for URI {}", status, uri)))
-                } else {
-                    let body_future = response.body().concat2().from_err();
-                    let decode_future = body_future.and_then(move |body| {
-                        let string_body = str::from_utf8(body.as_ref())?;
-                        let packages = string_body.lines()
-                            .map(|s| s.trim())
-                            .filter(|s| !s.is_empty())
-                            .map(|s| serde_json::from_str::<RegistryPackage>(s))
-                            .collect::<Result<_, _>>()?;
-                        Ok(packages)
-                    });
-                    let convert_future = decode_future.and_then(move |pkgs| convert_pkgs(&crate_name, pkgs));
-                    future::Either::B(convert_future)
-                }
-            })
+        Box::new(self.0.call(request).from_err().and_then(move |response| {
+            let status = response.status();
+            if !status.is_success() {
+                try_future!(Err(format_err!("Status code {} for URI {}", status, uri)));
+            }
+
+            let body_future = response.body().concat2().from_err();
+            let decode_future = body_future.and_then(move |body| {
+                let string_body = str::from_utf8(body.as_ref())?;
+                let packages = string_body.lines()
+                    .map(|s| s.trim())
+                    .filter(|s| !s.is_empty())
+                    .map(|s| serde_json::from_str::<RegistryPackage>(s))
+                    .collect::<Result<_, _>>()?;
+                Ok(packages)
+            });
+
+            decode_future
+                .and_then(move |pkgs| convert_pkgs(&crate_name, pkgs))
+                .into()
         }))
     }
 }
