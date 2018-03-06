@@ -19,6 +19,7 @@ semver = { version = "0.9.0", features = ["serde"] }
 serde = "1.0.27"
 serde_derive = "1.0.27"
 serde_json = "1.0.9"
+shared_failure = "0.1.0"
 slog = "2.1.1"
 slog-json = "2.2.0"
 tokio-core = "0.1.12"
@@ -28,10 +29,6 @@ toml = "0.4.5"
 [dependencies.badge]
 version = "0.2.0"
 path = "libs/badge"
-
-[dependencies.shared-failure]
-version = "0.1.0"
-path = "libs/shared-failure"
 
 [build-dependencies]
 sass-rs = "0.2.1"

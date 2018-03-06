@@ -1,7 +1,0 @@
-[package]
-name = "shared-failure"
-version = "0.1.0"
-authors = ["Sam Rijs <srijs@airpost.net>"]
-
-[dependencies]
-failure = "0.1.1"
