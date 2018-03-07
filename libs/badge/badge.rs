@@ -1,6 +1,7 @@
 //! Simple badge generator
 
 extern crate base64;
+#[macro_use] extern crate lazy_static;
 extern crate rusttype;
 
 
@@ -34,31 +35,37 @@ impl Default for BadgeOptions {
 }
 
 
-pub struct Badge {
-    options: BadgeOptions,
+struct BadgeStaticData {
     font: Font<'static>,
     scale: Scale,
-    offset: Point<f32>,
+    offset: Point<f32>
 }
 
 
-impl Badge {
-    pub fn new(options: BadgeOptions) -> Result<Badge, String> {
+lazy_static! {
+    static ref DATA: BadgeStaticData = {
         let collection = FontCollection::from_bytes(FONT_DATA);
-        // this should never fail in practice
-        let font = try!(collection.into_font().ok_or("Failed to load font data".to_owned()));
+        let font = collection.into_font().expect("Failed to load font data");
         let scale = Scale {
             x: FONT_SIZE,
             y: FONT_SIZE,
         };
         let v_metrics = font.v_metrics(scale);
         let offset = point(0.0, v_metrics.ascent);
-        Ok(Badge {
-            options: options,
-            font: font,
-            scale: scale,
-            offset: offset,
-        })
+
+        BadgeStaticData { font, scale, offset }
+    };
+}
+
+
+pub struct Badge {
+    options: BadgeOptions
+}
+
+
+impl Badge {
+    pub fn new(options: BadgeOptions) -> Badge {
+        Badge { options }
     }
 
 
@@ -117,7 +124,7 @@ impl Badge {
 
     fn calculate_width(&self, text: &str) -> u32 {
         let glyphs: Vec<PositionedGlyph> =
-            self.font.layout(text, self.scale, self.offset).collect();
+            DATA.font.layout(text, DATA.scale, DATA.offset).collect();
         let width = glyphs.iter()
             .rev()
             .filter_map(|g| {
@@ -140,17 +147,11 @@ mod tests {
         BadgeOptions::default()
     }
 
-
-    #[test]
-    fn test_new() {
-        assert!(Badge::new(options()).is_ok());
-    }
-
     #[test]
     fn test_calculate_width() {
-        let badge = Badge::new(options()).unwrap();
-        assert_eq!(badge.calculate_width("build"), 31);
-        assert_eq!(badge.calculate_width("passing"), 48);
+        let badge = Badge::new(options());
+        assert_eq!(badge.calculate_width("build"), 29);
+        assert_eq!(badge.calculate_width("passing"), 44);
     }
 
     #[test]
@@ -164,7 +165,7 @@ mod tests {
             status: "passing".to_owned(),
             ..BadgeOptions::default()
         };
-        let badge = Badge::new(options).unwrap();
+        let badge = Badge::new(options);
         file.write_all(badge.to_svg().as_bytes()).unwrap();
     }
 }

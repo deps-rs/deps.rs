@@ -12,4 +12,5 @@ path = "badge.rs"
 
 [dependencies]
 base64 = "0.9.0"
+lazy_static = "1.0.0"
 rusttype = "0.4.0"

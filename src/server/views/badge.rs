@@ -39,7 +39,6 @@ pub fn badge(analysis_outcome: Option<&AnalyzeDependenciesOutcome>) -> Badge {
     };
 
     Badge::new(opts)
-        .expect("failed to create badge")
 }
 
 pub fn response(analysis_outcome: Option<&AnalyzeDependenciesOutcome>) -> Response {
