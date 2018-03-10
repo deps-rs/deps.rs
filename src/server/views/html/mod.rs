@@ -1,4 +1,3 @@
-use std::env;
 use std::time::Duration;
 
 use hyper::Response;
@@ -10,12 +9,6 @@ pub mod error;
 pub mod status;
 
 use super::super::SELF_BASE_URL;
-
-lazy_static! {
-    static ref GAUGES_SITE_ID: Option<String> = {
-        env::var("GAUGES_SITE_ID").ok().map(|s| s.to_string())
-    };
-}
 
 fn render_html<B: Render>(title: &str, body: B) -> Response {
     let rendered = html! {
@@ -30,25 +23,7 @@ fn render_html<B: Render>(title: &str, body: B) -> Response {
                 link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Source+Code+Pro";
                 link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css";
             }
-            body {
-                (body)
-                @if let Some(site_id) = GAUGES_SITE_ID.as_ref() {
-                    script type="text/javascript" {
-                        (format!("var _gauges = _gauges || [];
-(function() {{
-    var t   = document.createElement('script');
-    t.type  = 'text/javascript';
-    t.async = true;
-    t.id    = 'gauges-tracker';
-    t.setAttribute('data-site-id', '{}');
-    t.setAttribute('data-track-path', 'https://track.gaug.es/track.gif');
-    t.src = 'https://d2fuc4clr7gvcn.cloudfront.net/track.js';
-    var s = document.getElementsByTagName('script')[0];
-    s.parentNode.insertBefore(t, s);
-}})();", site_id))
-                    }
-                }
-            }
+            body (body)
         }
     };
 
