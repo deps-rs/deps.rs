@@ -10,7 +10,7 @@ pub mod bitbucket;
 pub mod crates;
 pub mod github;
 pub mod gitlab;
-
+pub mod rustsec;
 
 #[derive(Debug, Clone)]
 pub struct RetrieveFileAtPath<S>(pub S);

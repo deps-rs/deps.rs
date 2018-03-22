@@ -93,7 +93,8 @@ pub struct CrateDeps {
 pub struct AnalyzedDependency {
     pub required: VersionReq,
     pub latest_that_matches: Option<Version>,
-    pub latest: Option<Version>
+    pub latest: Option<Version>,
+    pub insecure: bool
 }
 
 impl AnalyzedDependency {
@@ -101,7 +102,8 @@ impl AnalyzedDependency {
         AnalyzedDependency {
             required,
             latest_that_matches: None,
-            latest: None
+            latest: None,
+            insecure: false
         }
     }
 
@@ -158,6 +160,19 @@ impl AnalyzedDependencies {
             .filter(|&(_, dep)| dep.is_outdated())
             .count();
         main_outdated + dev_outdated + build_outdated
+    }
+
+     pub fn count_insecure(&self) -> usize {
+        let main_insecure = self.main.iter()
+            .filter(|&(_, dep)| dep.insecure)
+            .count();
+        let dev_insecure = self.dev.iter()
+            .filter(|&(_, dep)| dep.insecure)
+            .count();
+        let build_insecure = self.build.iter()
+            .filter(|&(_, dep)| dep.insecure)
+            .count();
+        main_insecure + dev_insecure + build_insecure
     } 
 
     pub fn any_outdated(&self) -> bool {

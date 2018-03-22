@@ -15,6 +15,7 @@ extern crate lru_cache;
 extern crate maud;
 extern crate relative_path;
 extern crate route_recognizer;
+extern crate rustsec;
 extern crate semver;
 #[macro_use] extern crate serde_derive;
 extern crate serde;
