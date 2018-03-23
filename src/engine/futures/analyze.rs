@@ -14,7 +14,7 @@ pub struct AnalyzeDependenciesFuture {
 impl AnalyzeDependenciesFuture {
     pub fn new(engine: Engine, deps: CrateDeps) -> Self {
         let future = engine.fetch_advisory_db().and_then(move |advisory_db| {
-            let analyzer = DependencyAnalyzer::new(&deps, advisory_db);
+            let analyzer = DependencyAnalyzer::new(&deps, Some(advisory_db));
 
             let main_deps = deps.main.into_iter().filter_map(|(name, dep)| {
                 if dep.is_external() { Some(name) } else { None }
