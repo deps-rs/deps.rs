@@ -44,8 +44,10 @@ struct BadgeStaticData {
 
 lazy_static! {
     static ref DATA: BadgeStaticData = {
-        let collection = FontCollection::from_bytes(FONT_DATA);
-        let font = collection.into_font().expect("Failed to load font data");
+        let collection = FontCollection::from_bytes(FONT_DATA)
+            .expect("failed to parse font collection");
+        let font = collection.into_font()
+            .expect("failed to load font data");
         let scale = Scale {
             x: FONT_SIZE,
             y: FONT_SIZE,
