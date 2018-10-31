@@ -8,13 +8,13 @@ fn popular_table(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>)
     html! {
         div class="columns" {
             div class="column" {
-                h2 class="title is-3" "Popular Repositories"
+                h2 class="title is-3" { "Popular Repositories" }
 
                 table class="table is-fullwidth is-striped is-hoverable" {
                     thead {
                         tr {
-                            th "Repository"
-                            th class="has-text-right" "Status"
+                            th { "Repository" }
+                            th class="has-text-right" { "Status" }
                         }
                     }
                     tbody {
@@ -34,13 +34,13 @@ fn popular_table(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>)
                 }
             }
             div class="column" {
-                h2 class="title is-3" "Popular Crates"
+                h2 class="title is-3" { "Popular Crates" }
 
                 table class="table is-fullwidth is-striped is-hoverable" {
                     thead {
                         tr {
-                            th "Crate"
-                            th class="has-text-right" "Status"
+                            th { "Crate" }
+                            th class="has-text-right" { "Status" }
                         }
                     }
                     tbody {
@@ -66,20 +66,20 @@ fn popular_table(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>)
 pub fn render(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>) -> Response {
     super::render_html("Keep your dependencies up-to-date", html! {
         section class="hero is-light" {
-            div class="hero-head" (super::render_navbar())
+            div class="hero-head" { (super::render_navbar()) }
             div class="hero-body" {
                 div class="container" {
-                    p class="title is-1" "Keep your dependencies up-to-date"
+                    p class="title is-1" { "Keep your dependencies up-to-date" }
                     p {
                         "Deps.rs uses semantic versioning to detect outdated or insecure dependencies in your project's"
-                        code "Cargo.toml"
+                        code { "Cargo.toml" }
                         "."
                     }
                 }
             }
         }
         section class="section" {
-            div class="container" (popular_table(popular_repos, popular_crates))
+            div class="container" { (popular_table(popular_repos, popular_crates)) }
         }
         (super::render_footer(None))
     })
