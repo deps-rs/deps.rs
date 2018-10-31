@@ -22,6 +22,7 @@ extern crate shared_failure;
 extern crate slog_json;
 extern crate tokio_core;
 extern crate tokio_service;
+extern crate tokio_threadpool;
 extern crate toml;
 #[macro_use] extern crate try_future;
 

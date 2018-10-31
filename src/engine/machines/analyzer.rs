@@ -28,7 +28,8 @@ impl DependencyAnalyzer {
                 dep.latest_that_matches = Some(ver.clone());
             }
 
-            if !advisory_db.map(|db| db.find_vulns_for_crate(name.as_ref(), ver).is_empty()).unwrap_or(true) {
+            let package_name: rustsec::package::PackageName = name.as_ref().into();
+            if !advisory_db.map(|db| db.advisories_for_crate(package_name, ver).is_empty()).unwrap_or(true) {
                 dep.insecure = true;
             }
         }

@@ -44,7 +44,7 @@ pub struct Engine {
     get_popular_crates: Arc<Cache<GetPopularCrates<HttpClient>>>,
     get_popular_repos: Arc<Cache<GetPopularRepos<HttpClient>>>,
     retrieve_file_at_path: Arc<RetrieveFileAtPath<HttpClient>>,
-    fetch_advisory_db: Arc<Cache<FetchAdvisoryDatabase<HttpClient>>>
+    fetch_advisory_db: Arc<Cache<FetchAdvisoryDatabase>>
 }
 
 impl Engine {
@@ -54,7 +54,7 @@ impl Engine {
         let query_crate = Cache::new(QueryCrate(client.clone()), Duration::from_secs(300), 500);
         let get_popular_crates = Cache::new(GetPopularCrates(client.clone()), Duration::from_secs(10), 1);
         let get_popular_repos = Cache::new(GetPopularRepos(client.clone()), Duration::from_secs(10), 1);
-        let fetch_advisory_db =  Cache::new(FetchAdvisoryDatabase(client.clone()), Duration::from_secs(300), 1);
+        let fetch_advisory_db =  Cache::new(FetchAdvisoryDatabase {}, Duration::from_secs(300), 1);
 
         Engine {
             client: client.clone(), logger, metrics,
