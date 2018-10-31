@@ -2,12 +2,13 @@ use std::str;
 
 use failure::Error;
 use futures::{Future, Stream, IntoFuture, future};
-use hyper::{Error as HyperError, Method, Request, Response, Uri};
+use hyper::Uri;
 use tokio_service::Service;
 use semver::{Version, VersionReq};
 use serde_json;
 
 use ::models::crates::{CrateName, CrateRelease, CrateDeps, CrateDep, CratePath};
+use ::engine::HttpClient;
 
 const CRATES_INDEX_BASE_URI: &str = "https://raw.githubusercontent.com/rust-lang/crates.io-index";
 const CRATES_API_BASE_URI: &str = "https://crates.io/api/v1";
@@ -59,16 +60,14 @@ pub struct QueryCrateResponse {
 }
 
 #[derive(Debug, Clone)]
-pub struct QueryCrate<S>(pub S);
+pub struct QueryCrate(pub HttpClient);
 
-impl<S> Service for QueryCrate<S>
-    where S: Service<Request=Request, Response=Response, Error=HyperError> + Clone + 'static,
-          S::Future: 'static
+impl Service for QueryCrate
 {
     type Request = CrateName;
     type Response = QueryCrateResponse;
     type Error = Error;
-    type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
+    type Future = Box<Future<Item=Self::Response, Error=Self::Error> + Send>;
 
     fn call(&self,  crate_name: CrateName) -> Self::Future {
         let lower_name = crate_name.as_ref().to_lowercase();
@@ -83,15 +82,13 @@ impl<S> Service for QueryCrate<S>
         let uri = try_future_box!(format!("{}/master/{}", CRATES_INDEX_BASE_URI, path)
             .parse::<Uri>());
 
-        let request = Request::new(Method::Get, uri.clone());
-
-        Box::new(self.0.call(request).from_err().and_then(move |response| {
+        Box::new(self.0.get(uri.clone()).from_err().and_then(move |response| {
             let status = response.status();
             if !status.is_success() {
                 try_future!(Err(format_err!("Status code {} for URI {}", status, uri)));
             }
 
-            let body_future = response.body().concat2().from_err();
+            let body_future = response.into_body().concat2().from_err();
             let decode_future = body_future.and_then(move |body| {
                 let string_body = str::from_utf8(body.as_ref())?;
                 let packages = string_body.lines()
@@ -128,32 +125,28 @@ fn convert_summary(response: SummaryResponse) -> Result<Vec<CratePath>, Error> {
 }
 
 #[derive(Debug, Clone)]
-pub struct GetPopularCrates<S>(pub S);
+pub struct GetPopularCrates(pub HttpClient);
 
-impl<S> Service for GetPopularCrates<S>
-    where S: Service<Request=Request, Response=Response, Error=HyperError> + Clone + 'static,
-          S::Future: 'static
+impl Service for GetPopularCrates
 {
     type Request = ();
     type Response = Vec<CratePath>;
     type Error = Error;
-    type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
+    type Future = Box<Future<Item=Self::Response, Error=Self::Error> + Send>;
 
     fn call(&self, _req: ()) -> Self::Future {
-        let service = self.0.clone();
+        let client = self.0.clone();
 
         let uri_future = format!("{}/summary", CRATES_API_BASE_URI)
             .parse::<Uri>().into_future().from_err();
 
         Box::new(uri_future.and_then(move |uri| {
-            let request = Request::new(Method::Get, uri.clone());
-
-            service.call(request).from_err().and_then(move |response| {
+            client.get(uri.clone()).from_err().and_then(move |response| {
                 let status = response.status();
                 if !status.is_success() {
                     future::Either::A(future::err(format_err!("Status code {} for URI {}", status, uri)))
                 } else {
-                    let body_future = response.body().concat2().from_err();
+                    let body_future = response.into_body().concat2().from_err();
                     let decode_future = body_future.and_then(|body| {
                         let summary = serde_json::from_slice::<SummaryResponse>(&body)?;
                         convert_summary(summary)

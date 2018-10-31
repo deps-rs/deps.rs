@@ -1,15 +1,17 @@
 use failure::Error;
 use futures::{Future, Stream};
-use hyper::{Error as HyperError, Method, Request, Response, Uri};
-use hyper::header::UserAgent;
+use hyper::{Body, Request, Uri};
+use hyper::header::USER_AGENT;
 use relative_path::RelativePathBuf;
 use tokio_service::Service;
 use serde_json;
 
 use ::models::repo::{Repository, RepoPath};
+use ::engine::HttpClient;
 
 const GITHUB_API_BASE_URI: &'static str = "https://api.github.com";
 const GITHUB_USER_CONTENT_BASE_URI: &'static str = "https://raw.githubusercontent.com";
+
 
 pub fn get_manifest_uri(repo_path: &RepoPath, path: &RelativePathBuf) -> Result<Uri, Error> {
     let path_str: &str = path.as_ref();
@@ -39,31 +41,31 @@ struct GithubOwner {
 }
 
 #[derive(Debug, Clone)]
-pub struct GetPopularRepos<S>(pub S);
+pub struct GetPopularRepos(pub HttpClient);
 
-impl<S> Service for GetPopularRepos<S>
-    where S: Service<Request=Request, Response=Response, Error=HyperError> + Clone + 'static,
-          S::Future: 'static
+impl Service for GetPopularRepos
 {
     type Request = ();
     type Response = Vec<Repository>;
     type Error = Error;
-    type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
+    type Future = Box<Future<Item=Self::Response, Error=Self::Error> + Send>;
 
     fn call(&self, _req: ()) -> Self::Future {
         let uri = try_future_box!(format!("{}/search/repositories?q=language:rust&sort=stars", GITHUB_API_BASE_URI)
             .parse::<Uri>());
 
-        let mut request = Request::new(Method::Get, uri);
-        request.headers_mut().set(UserAgent::new("deps.rs"));
+        let request = Request::get(uri)
+            .header(USER_AGENT, "deps.rs")
+            .body(Body::empty())
+            .unwrap();
 
-        Box::new(self.0.call(request).from_err().and_then(|response| {
+        Box::new(self.0.request(request).from_err().and_then(|response| {
             let status = response.status();
             if !status.is_success() {
                 try_future!(Err(format_err!("Status code {} for popular repo search", status)));
             }
 
-            let body_future = response.body().concat2().from_err();
+            let body_future = response.into_body().concat2().from_err();
             let decode_future = body_future
                 .and_then(|body| serde_json::from_slice(body.as_ref()).map_err(|err| err.into()));
             decode_future.and_then(|search_response: GithubSearchResponse| {

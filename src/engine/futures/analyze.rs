@@ -8,7 +8,7 @@ use super::super::Engine;
 use super::super::machines::analyzer::DependencyAnalyzer;
 
 pub struct AnalyzeDependenciesFuture {
-    inner: Box<Future<Item=AnalyzedDependencies, Error=Error>>
+    inner: Box<Future<Item=AnalyzedDependencies, Error=Error> + Send>
 }
 
 impl AnalyzeDependenciesFuture {

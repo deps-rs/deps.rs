@@ -2,12 +2,12 @@ use std::env;
 use std::sync::Arc;
 
 use futures::{Future, IntoFuture, future};
-use hyper::{Error as HyperError, Method, Request, Response, StatusCode};
-use hyper::header::{ContentType, Location};
+use hyper::{Body, Error as HyperError, Method, Request, Response, StatusCode};
+use hyper::header::{CONTENT_TYPE, LOCATION};
 use route_recognizer::{Params, Router};
 use semver::VersionReq;
 use slog::Logger;
-use tokio_service::Service;
+use hyper::service::Service;
 
 mod assets;
 mod views;
@@ -65,38 +65,38 @@ impl Server {
 }
 
 impl Service for Server {
-    type Request = Request;
-    type Response = Response;
+    type ReqBody = Body;
+    type ResBody = Body;
     type Error = HyperError;
-    type Future = Box<Future<Item=Response, Error=HyperError>>;
+    type Future = Box<Future<Item=Response<Body>, Error=HyperError> + Send>;
 
-    fn call(&self, req: Request) -> Self::Future {
+    fn call(&mut self, req: Request<Body>) -> Self::Future {
         let logger = self.logger.new(o!("http_path" => req.uri().path().to_owned()));
 
         if let Ok(route_match) = self.router.recognize(req.uri().path()) {
             match route_match.handler {
                 &Route::Index => {
-                    if *req.method() == Method::Get {
+                    if *req.method() == Method::GET {
                         return Box::new(self.index(req, route_match.params, logger));
                     }
                 },
                 &Route::RepoStatus(format) => {
-                    if *req.method() == Method::Get {
+                    if *req.method() == Method::GET {
                         return Box::new(self.repo_status(req, route_match.params, logger, format));
                     }
                 },
                 &Route::CrateStatus(format) => {
-                    if *req.method() == Method::Get {
+                    if *req.method() == Method::GET {
                         return Box::new(self.crate_status(req, route_match.params, logger, format));
                     }
                 },
                 &Route::CrateRedirect => {
-                    if *req.method() == Method::Get {
+                    if *req.method() == Method::GET {
                         return Box::new(self.crate_redirect(req, route_match.params, logger));
                     }
                 },
                 &Route::Static(file) => {
-                    if *req.method() == Method::Get {
+                    if *req.method() == Method::GET {
                         return Box::new(future::ok(Server::static_file(file)));
                     }
                 }
@@ -104,15 +104,15 @@ impl Service for Server {
             }
         }
 
-        let mut response = Response::new();
-        response.set_status(StatusCode::NotFound);
+        let mut response = Response::default();
+        *response.status_mut() = StatusCode::NOT_FOUND;
         Box::new(future::ok(response))
     }
 }
 
 impl Server {
-    fn index(&self, _req: Request, _params: Params, logger: Logger) ->
-        impl Future<Item=Response, Error=HyperError>
+    fn index(&self, _req: Request<Body>, _params: Params, logger: Logger) ->
+        impl Future<Item=Response<Body>, Error=HyperError> + Send
     {
         self.engine.get_popular_repos()
             .join(self.engine.get_popular_crates())
@@ -121,7 +121,7 @@ impl Server {
                     Err(err) => {
                         error!(logger, "error: {}", err);
                         let mut response = views::html::error::render("Could not retrieve popular items", "");
-                        response.set_status(StatusCode::InternalServerError);
+                        *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
                         future::ok(response)
                     },
                     Ok((popular_repos, popular_crates)) =>
@@ -130,8 +130,8 @@ impl Server {
             })
     }
 
-    fn repo_status(&self, _req: Request, params: Params, logger: Logger, format: StatusFormat) ->
-        impl Future<Item=Response, Error=HyperError>
+    fn repo_status(&self, _req: Request<Body>, params: Params, logger: Logger, format: StatusFormat) ->
+        impl Future<Item=Response<Body>, Error=HyperError> + Send
     {
         let server = self.clone();
 
@@ -145,7 +145,7 @@ impl Server {
                     error!(logger, "error: {}", err);
                     let mut response = views::html::error::render("Could not parse repository path",
                         "Please make sure to provide a valid repository path.");
-                    response.set_status(StatusCode::BadRequest);
+                    *response.status_mut() = StatusCode::BAD_REQUEST;
                     future::Either::A(future::ok(response))
                 },
                 Ok(repo_path) => {
@@ -167,20 +167,19 @@ impl Server {
         })
     }
 
-    fn crate_redirect(&self, _req: Request, params: Params, logger: Logger) ->
-        impl Future<Item=Response, Error=HyperError>
+    fn crate_redirect(&self, _req: Request<Body>, params: Params, logger: Logger) ->
+        impl Future<Item=Response<Body>, Error=HyperError> + Send
     {
         let engine = self.engine.clone();
 
         let name = params.find("name").expect("route param 'name' not found");
-
         name.parse::<CrateName>().into_future().then(move |crate_name_result| {
              match crate_name_result {
                 Err(err) => {
                     error!(logger, "error: {}", err);
                     let mut response = views::html::error::render("Could not parse crate name",
                         "Please make sure to provide a valid crate name.");
-                    response.set_status(StatusCode::BadRequest);
+                    *response.status_mut() = StatusCode::BAD_REQUEST;
                     future::Either::A(future::ok(response))
                 },
                 Ok(crate_name) => {
@@ -190,23 +189,26 @@ impl Server {
                                 error!(logger, "error: {}", err);
                                 let mut response = views::html::error::render("Could not fetch crate information",
                                     "Please make sure to provide a valid crate name.");
-                                response.set_status(StatusCode::NotFound);
+                                *response.status_mut() = StatusCode::NOT_FOUND;
                                 future::ok(response)
                             },
                             Ok(None) => {
                                 let mut response = views::html::error::render("Could not fetch crate information",
                                     "Please make sure to provide a valid crate name.");
-                                response.set_status(StatusCode::NotFound);
+                                *response.status_mut() = StatusCode::NOT_FOUND;
                                 future::ok(response)
                             },
                             Ok(Some(release)) => {
-                                let mut response = Response::new();
-                                response.set_status(StatusCode::TemporaryRedirect);
                                 let url = format!("{}/crate/{}/{}",
                                     &SELF_BASE_URL as &str,
                                     release.name.as_ref(),
                                     release.version);
-                                response.headers_mut().set(Location::new(url));
+
+                                let response = Response::builder()
+                                    .status(StatusCode::TEMPORARY_REDIRECT)
+                                    .header(LOCATION, url)
+                                    .body(Body::empty())
+                                    .unwrap();
                                 future::ok(response)
                             }
                         }
@@ -216,8 +218,8 @@ impl Server {
         })
     }
 
-    fn crate_status(&self, _req: Request, params: Params, logger: Logger, format: StatusFormat) ->
-        impl Future<Item=Response, Error=HyperError>
+    fn crate_status(&self, _req: Request<Body>, params: Params, logger: Logger, format: StatusFormat) ->
+        impl Future<Item=Response<Body>, Error=HyperError> + Send
     {
         let server = self.clone();
 
@@ -230,7 +232,7 @@ impl Server {
                     error!(logger, "error: {}", err);
                     let mut response = views::html::error::render("Could not parse crate path",
                         "Please make sure to provide a valid crate name and version.");
-                    response.set_status(StatusCode::BadRequest);
+                    *response.status_mut() = StatusCode::BAD_REQUEST;
                     future::Either::A(future::ok(response))
                 },
                 Ok(crate_path) => {
@@ -252,7 +254,7 @@ impl Server {
         })
     }
 
-    fn status_format_analysis(analysis_outcome: Option<AnalyzeDependenciesOutcome>, format: StatusFormat, subject_path: SubjectPath) -> Response {
+    fn status_format_analysis(analysis_outcome: Option<AnalyzeDependenciesOutcome>, format: StatusFormat, subject_path: SubjectPath) -> Response<Body> {
         match format {
             StatusFormat::Svg =>
                 views::badge::response(analysis_outcome.as_ref()),
@@ -261,17 +263,19 @@ impl Server {
         }
     }
 
-    fn static_file(file: StaticFile) -> Response {
+    fn static_file(file: StaticFile) -> Response<Body> {
         match file {
             StaticFile::StyleCss => {
-                Response::new()
-                    .with_header(ContentType("text/css".parse().unwrap()))
-                    .with_body(assets::STATIC_STYLE_CSS)
+                Response::builder()
+                    .header(CONTENT_TYPE, "text/css")
+                    .body(assets::STATIC_STYLE_CSS.into())
+                    .unwrap()
             },
             StaticFile::FaviconPng => {
-                Response::new()
-                    .with_header(ContentType("image/png".parse().unwrap()))
-                    .with_body(assets::STATIC_FAVICON_PNG.to_vec())
+                Response::builder()
+                    .header(CONTENT_TYPE, "image/png")
+                    .body(assets::STATIC_FAVICON_PNG.to_vec().into())
+                    .unwrap()
             }
         }
     }

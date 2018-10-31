@@ -1,4 +1,4 @@
-use hyper::Response;
+use hyper::{Body, Response};
 use maud::{Markup, html};
 use indexmap::IndexMap;
 
@@ -194,7 +194,7 @@ fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, subject_path: Su
     }
 }
 
-pub fn render(analysis_outcome: Option<AnalyzeDependenciesOutcome>, subject_path: SubjectPath) -> Response {
+pub fn render(analysis_outcome: Option<AnalyzeDependenciesOutcome>, subject_path: SubjectPath) -> Response<Body> {
     let title = match subject_path {
         SubjectPath::Repo(ref repo_path) =>
             format!("{} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref()),

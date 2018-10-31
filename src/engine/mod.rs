@@ -32,7 +32,7 @@ use ::interactors::rustsec::FetchAdvisoryDatabase;
 use self::futures::AnalyzeDependenciesFuture;
 use self::futures::CrawlManifestFuture;
 
-type HttpClient = Client<HttpsConnector<HttpConnector>>;
+pub type HttpClient = Client<HttpsConnector<HttpConnector>>;
 
 #[derive(Clone, Debug)]
 pub struct Engine {
@@ -40,15 +40,15 @@ pub struct Engine {
     logger: Logger,
     metrics: StatsdClient,
 
-    query_crate: Arc<Cache<QueryCrate<HttpClient>>>,
-    get_popular_crates: Arc<Cache<GetPopularCrates<HttpClient>>>,
-    get_popular_repos: Arc<Cache<GetPopularRepos<HttpClient>>>,
-    retrieve_file_at_path: Arc<RetrieveFileAtPath<HttpClient>>,
+    query_crate: Arc<Cache<QueryCrate>>,
+    get_popular_crates: Arc<Cache<GetPopularCrates>>,
+    get_popular_repos: Arc<Cache<GetPopularRepos>>,
+    retrieve_file_at_path: Arc<RetrieveFileAtPath>,
     fetch_advisory_db: Arc<Cache<FetchAdvisoryDatabase>>
 }
 
 impl Engine {
-    pub fn new(client: Client<HttpsConnector<HttpConnector>>, logger: Logger) -> Engine {
+    pub fn new(client: HttpClient, logger: Logger) -> Engine {
         let metrics = StatsdClient::from_sink("engine", NopMetricSink);
 
         let query_crate = Cache::new(QueryCrate(client.clone()), Duration::from_secs(300), 500);
@@ -95,7 +95,7 @@ impl AnalyzeDependenciesOutcome {
 
 impl Engine {
     pub fn get_popular_repos(&self) ->
-        impl Future<Item=Vec<Repository>, Error=Error>
+        impl Future<Item=Vec<Repository>, Error=Error> + Send
     {
         self.get_popular_repos.call(())
             .from_err().map(|repos| {
@@ -106,14 +106,14 @@ impl Engine {
     }
 
      pub fn get_popular_crates(&self) ->
-        impl Future<Item=Vec<CratePath>, Error=Error>
+        impl Future<Item=Vec<CratePath>, Error=Error> + Send
     {
         self.get_popular_crates.call(())
             .from_err().map(|crates| crates.clone())
     }
 
     pub fn analyze_repo_dependencies(&self, repo_path: RepoPath) ->
-        impl Future<Item=AnalyzeDependenciesOutcome, Error=Error>
+        impl Future<Item=AnalyzeDependenciesOutcome, Error=Error> + Send
     {
         let start = Instant::now();
 
@@ -145,7 +145,7 @@ impl Engine {
     }
 
     pub fn analyze_crate_dependencies(&self, crate_path: CratePath) ->
-        impl Future<Item=AnalyzeDependenciesOutcome, Error=Error>
+        impl Future<Item=AnalyzeDependenciesOutcome, Error=Error> + Send
     {
         let start = Instant::now();
 
@@ -172,7 +172,7 @@ impl Engine {
     }
 
     pub fn find_latest_crate_release(&self, name: CrateName, req: VersionReq) ->
-        impl Future<Item=Option<CrateRelease>, Error=Error>
+        impl Future<Item=Option<CrateRelease>, Error=Error> + Send
     {
         self.query_crate.call(name).from_err().map(move |query_response| {
             query_response.releases.iter()
@@ -183,7 +183,7 @@ impl Engine {
     }
 
     fn fetch_releases<I: IntoIterator<Item=CrateName>>(&self, names: I) ->
-        impl Iterator<Item=impl Future<Item=Vec<CrateRelease>, Error=Error>>
+        impl Iterator<Item=impl Future<Item=Vec<CrateRelease>, Error=Error> + Send>
     {
         let engine = self.clone();
         names.into_iter().map(move |name| {
@@ -194,14 +194,14 @@ impl Engine {
     }
 
     fn retrieve_manifest_at_path(&self, repo_path: &RepoPath, path: &RelativePathBuf) ->
-        impl Future<Item=String, Error=Error>
+        impl Future<Item=String, Error=Error> + Send
     {
         let manifest_path = path.join(RelativePath::new("Cargo.toml"));
         self.retrieve_file_at_path.call((repo_path.clone(), manifest_path))
     }
 
     fn fetch_advisory_db(&self) ->
-        impl Future<Item=Arc<AdvisoryDatabase>, Error=Error>
+        impl Future<Item=Arc<AdvisoryDatabase>, Error=Error> + Send
     {
         self.fetch_advisory_db.call(()).from_err().map(|db| db.clone())
     }

@@ -1,4 +1,4 @@
-use hyper::Response;
+use hyper::{Body, Response};
 use maud::{Markup, html};
 
 use ::models::repo::Repository;
@@ -63,7 +63,7 @@ fn popular_table(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>)
     }
 }
 
-pub fn render(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>) -> Response {
+pub fn render(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>) -> Response<Body> {
     super::render_html("Keep your dependencies up-to-date", html! {
         section class="hero is-light" {
             div class="hero-head" { (super::render_navbar()) }

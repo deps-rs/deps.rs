@@ -32,7 +32,7 @@ impl<S> Debug for Cache<S>
     }
 }
 
-impl<S> Cache<S> 
+impl<S> Cache<S>
     where S: Service<Error=Error>,
           S::Request: Hash + Eq
 {
@@ -47,7 +47,8 @@ impl<S> Cache<S>
 
 impl<S> Service for Cache<S>
     where S: Service<Error=Error>,
-          S::Request: Clone + Hash + Eq
+          S::Request: Clone + Hash + Eq,
+          S::Future: Send
 {
     type Request = S::Request;
     type Response = CachedItem<S::Response>;
@@ -70,10 +71,10 @@ impl<S> Service for Cache<S>
     }
 }
 
-pub struct Cached<F: Future<Error=Error>>(Shared<FromErr<F, SharedFailure>>);
+pub struct Cached<F: Future<Error=Error> + Send>(Shared<FromErr<F, SharedFailure>>);
 
 impl<F> Debug for Cached<F>
-    where F: Future<Error=Error> + Debug,
+    where F: Future<Error=Error> + Debug + Send,
           F::Item: Debug
 {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
@@ -81,7 +82,7 @@ impl<F> Debug for Cached<F>
     }
 }
 
-impl<F: Future<Error=Error>> Future for Cached<F> {
+impl<F: Future<Error=Error> + Send> Future for Cached<F> {
     type Item = CachedItem<F::Item>;
     type Error = SharedFailure;
 

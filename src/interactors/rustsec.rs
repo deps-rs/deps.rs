@@ -15,7 +15,7 @@ impl Service for FetchAdvisoryDatabase
     type Request = ();
     type Response = Arc<AdvisoryDatabase>;
     type Error = Error;
-    type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
+    type Future = Box<Future<Item=Self::Response, Error=Self::Error>+ Send>;
 
     fn call(&self, _req: ()) -> Self::Future {
         Box::new(
