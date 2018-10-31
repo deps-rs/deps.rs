@@ -72,7 +72,7 @@ impl Engine {
         }
     }
 
-    pub fn set_metrics<M: MetricSink + Send + Sync + 'static>(&mut self, sink: M) {
+    pub fn set_metrics<M: MetricSink + Send + Sync + RefUnwindSafe + 'static>(&mut self, sink: M) {
         self.metrics = StatsdClient::from_sink("engine", sink);
     }
 }
