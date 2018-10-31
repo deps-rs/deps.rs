@@ -135,7 +135,7 @@ impl Engine {
                     .with_tag("repo_site", repo_path.site.as_ref())
                     .with_tag("repo_qual", repo_path.qual.as_ref())
                     .with_tag("repo_name", repo_path.name.as_ref())
-                    .send()?;
+                    .try_send()?;
 
                 Ok(AnalyzeDependenciesOutcome {
                     crates, duration
