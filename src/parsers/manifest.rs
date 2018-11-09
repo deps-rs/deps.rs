@@ -10,7 +10,8 @@ use ::models::crates::{CrateName, CrateDep, CrateDeps, CrateManifest};
 struct CargoTomlComplexDependency {
     git: Option<String>,
     path: Option<RelativePathBuf>,
-    version: Option<String>
+    version: Option<String>,
+    package: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -65,10 +66,17 @@ fn convert_dependency(cargo_dep: (String, CargoTomlDependency)) -> Option<Result
                     })
                 })
             } else {
-                cplx.version.map(|string| {
+                cplx.version.clone().map(|string| {
                     name.parse::<CrateName>().map_err(|err| err.into()).and_then(|parsed_name| {
                         string.parse::<VersionReq>().map_err(|err| err.into())
-                            .map(|version| (parsed_name, CrateDep::External(version)))
+                            .map(|version| {
+                                let name = if let Some(Ok(pkg)) = cplx.package.map(|pkg| pkg.parse::<CrateName>()) {
+                                    pkg
+                                } else {
+                                    parsed_name
+                                };
+                                 (name, CrateDep::External(version))
+                            })
                     })
                 })
             }
