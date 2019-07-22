@@ -3,7 +3,7 @@ use std::sync::Arc;
 use rustsec::db::AdvisoryDatabase;
 use semver::Version;
 
-use models::crates::{
+use crate::models::crates::{
     AnalyzedDependencies, AnalyzedDependency, CrateDeps, CrateName, CrateRelease,
 };
 
@@ -92,7 +92,7 @@ impl DependencyAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::DependencyAnalyzer;
-    use models::crates::{CrateDep, CrateDeps, CrateRelease};
+    use crate::models::crates::{CrateDep, CrateDeps, CrateRelease};
 
     #[test]
     fn tracks_latest_without_matching() {

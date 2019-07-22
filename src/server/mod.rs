@@ -12,10 +12,10 @@ use slog::Logger;
 mod assets;
 mod views;
 
-use engine::{AnalyzeDependenciesOutcome, Engine};
-use models::crates::{CrateName, CratePath};
-use models::repo::RepoPath;
-use models::SubjectPath;
+use crate::engine::{AnalyzeDependenciesOutcome, Engine};
+use crate::models::crates::{CrateName, CratePath};
+use crate::models::repo::RepoPath;
+use crate::models::SubjectPath;
 
 #[derive(Clone, Copy, PartialEq)]
 enum StatusFormat {
@@ -84,7 +84,7 @@ impl Service for Server {
     type ReqBody = Body;
     type ResBody = Body;
     type Error = HyperError;
-    type Future = Box<Future<Item = Response<Body>, Error = HyperError> + Send>;
+    type Future = Box<dyn Future<Item = Response<Body>, Error = HyperError> + Send>;
 
     fn call(&mut self, req: Request<Body>) -> Self::Future {
         let logger = self

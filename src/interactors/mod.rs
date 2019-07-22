@@ -3,8 +3,8 @@ use futures::{Future, Stream};
 use relative_path::RelativePathBuf;
 use tokio_service::Service;
 
-use engine::HttpClient;
-use models::repo::{RepoPath, RepoSite};
+use crate::engine::HttpClient;
+use crate::models::repo::{RepoPath, RepoSite};
 
 pub mod bitbucket;
 pub mod crates;
@@ -19,7 +19,7 @@ impl Service for RetrieveFileAtPath {
     type Request = (RepoPath, RelativePathBuf);
     type Response = String;
     type Error = Error;
-    type Future = Box<Future<Item = Self::Response, Error = Self::Error> + Send>;
+    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error> + Send>;
 
     fn call(&self, req: Self::Request) -> Self::Future {
         let (repo_path, path) = req;

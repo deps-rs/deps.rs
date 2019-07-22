@@ -4,7 +4,7 @@ use relative_path::RelativePathBuf;
 use semver::VersionReq;
 use toml;
 
-use models::crates::{CrateDep, CrateDeps, CrateManifest, CrateName};
+use crate::models::crates::{CrateDep, CrateDeps, CrateManifest, CrateName};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct CargoTomlComplexDependency {
@@ -141,7 +141,7 @@ pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, Error> {
 #[cfg(test)]
 mod tests {
     use super::parse_manifest_toml;
-    use models::crates::CrateManifest;
+    use crate::models::crates::CrateManifest;
 
     #[test]
     fn parse_workspace_without_members_declaration() {

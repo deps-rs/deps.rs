@@ -4,8 +4,8 @@ use failure::Error;
 use indexmap::IndexMap;
 use relative_path::RelativePathBuf;
 
-use models::crates::{CrateDep, CrateDeps, CrateManifest, CrateName};
-use parsers::manifest::parse_manifest_toml;
+use crate::models::crates::{CrateDep, CrateDeps, CrateManifest, CrateName};
+use crate::parsers::manifest::parse_manifest_toml;
 
 pub struct ManifestCrawlerOutput {
     pub crates: IndexMap<CrateName, CrateDeps>,
@@ -99,7 +99,7 @@ impl ManifestCrawler {
         members: &[RelativePathBuf],
         output: &mut ManifestCrawlerStepOutput,
     ) {
-        for mut path in members {
+        for path in members {
             if !path.ends_with("*") {
                 self.register_interest(base_path, path, output);
             }
@@ -119,7 +119,7 @@ mod tests {
     use semver::VersionReq;
 
     use super::ManifestCrawler;
-    use models::crates::CrateDep;
+    use crate::models::crates::CrateDep;
 
     #[test]
     fn simple_package_manifest() {

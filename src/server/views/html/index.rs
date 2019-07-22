@@ -1,8 +1,8 @@
 use hyper::{Body, Response};
 use maud::{html, Markup};
 
-use models::crates::CratePath;
-use models::repo::Repository;
+use crate::models::crates::CratePath;
+use crate::models::repo::Repository;
 
 fn popular_table(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>) -> Markup {
     html! {

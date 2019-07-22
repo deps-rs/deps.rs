@@ -20,15 +20,15 @@ use tokio_service::Service;
 mod futures;
 mod machines;
 
-use utils::cache::Cache;
+use crate::utils::cache::Cache;
 
-use models::crates::{AnalyzedDependencies, CrateName, CratePath, CrateRelease};
-use models::repo::{RepoPath, Repository};
+use crate::models::crates::{AnalyzedDependencies, CrateName, CratePath, CrateRelease};
+use crate::models::repo::{RepoPath, Repository};
 
-use interactors::crates::{GetPopularCrates, QueryCrate};
-use interactors::github::GetPopularRepos;
-use interactors::rustsec::FetchAdvisoryDatabase;
-use interactors::RetrieveFileAtPath;
+use crate::interactors::crates::{GetPopularCrates, QueryCrate};
+use crate::interactors::github::GetPopularRepos;
+use crate::interactors::rustsec::FetchAdvisoryDatabase;
+use crate::interactors::RetrieveFileAtPath;
 
 use self::futures::AnalyzeDependenciesFuture;
 use self::futures::CrawlManifestFuture;

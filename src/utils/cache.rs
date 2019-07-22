@@ -95,7 +95,7 @@ impl<F: Future<Error = Error> + Send> Future for Cached<F> {
         self.0
             .poll()
             .map_err(|err| (*err).clone())
-            .map(|async| async.map(CachedItem))
+            .map(|r#async| r#async.map(CachedItem))
     }
 }
 
