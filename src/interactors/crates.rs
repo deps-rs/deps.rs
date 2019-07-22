@@ -1,8 +1,8 @@
 use std::str;
 
 use failure::Error;
-use futures::{future, Future, IntoFuture, Stream};
-use hyper::Uri;
+use futures::{future, Future, Stream};
+use hyper::{Request, Uri};
 use semver::{Version, VersionReq};
 use serde_json;
 use tokio_service::Service;
@@ -28,6 +28,13 @@ struct RegistryPackage {
     deps: Vec<RegistryPackageDep>,
     #[serde(default)]
     yanked: bool,
+}
+
+fn get_request(uri: Uri) -> Request<hyper::Body> {
+    Request::get(uri)
+        .header("User-Agent", "deps.rs")
+        .body(hyper::Body::default())
+        .expect("Failed to construct request")
 }
 
 fn convert_pkgs(
@@ -89,12 +96,13 @@ impl Service for QueryCrate {
             _ => format!("{}/{}/{}", &lower_name[0..2], &lower_name[2..4], lower_name),
         };
 
-        let uri =
-            try_future_box!(format!("{}/master/{}", CRATES_INDEX_BASE_URI, path).parse::<Uri>());
+        let uri = format!("{}/master/{}", CRATES_INDEX_BASE_URI, path)
+            .parse::<Uri>()
+            .expect("Could not parse crates.io API url");
 
         Box::new(
             self.0
-                .get(uri.clone())
+                .request(get_request(uri.clone()))
                 .from_err()
                 .and_then(move |response| {
                     let status = response.status();
@@ -159,14 +167,12 @@ impl Service for GetPopularCrates {
     fn call(&self, _req: ()) -> Self::Future {
         let client = self.0.clone();
 
-        let uri_future = format!("{}/summary", CRATES_API_BASE_URI)
+        let uri = format!("{}/summary", CRATES_API_BASE_URI)
             .parse::<Uri>()
-            .into_future()
-            .from_err();
-
-        Box::new(uri_future.and_then(move |uri| {
+            .expect("Could not parse crates.io API url");
+        Box::new(
             client
-                .get(uri.clone())
+                .request(get_request(uri.clone()))
                 .from_err()
                 .and_then(move |response| {
                     let status = response.status();
@@ -184,7 +190,7 @@ impl Service for GetPopularCrates {
                         });
                         future::Either::B(decode_future)
                     }
-                })
-        }))
+                }),
+        )
     }
 }
