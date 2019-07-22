@@ -1,28 +1,30 @@
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 use std::hash::Hash;
-use std::time::{Duration, Instant};
 use std::ops::Deref;
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use failure::Error;
-use futures::{Future, Poll};
 use futures::future::{FromErr, Shared, SharedItem};
+use futures::{Future, Poll};
 use lru_cache::LruCache;
 use shared_failure::SharedFailure;
 use tokio_service::Service;
 
 pub struct Cache<S>
-    where S: Service<Error=Error>,
-          S::Request: Hash + Eq
+where
+    S: Service<Error = Error>,
+    S::Request: Hash + Eq,
 {
     inner: S,
     duration: Duration,
-    cache: Mutex<LruCache<S::Request, (Instant, Shared<FromErr<S::Future, SharedFailure>>)>>
+    cache: Mutex<LruCache<S::Request, (Instant, Shared<FromErr<S::Future, SharedFailure>>)>>,
 }
 
 impl<S> Debug for Cache<S>
-    where S: Service<Error=Error> + Debug,
-          S::Request: Hash + Eq
+where
+    S: Service<Error = Error> + Debug,
+    S::Request: Hash + Eq,
 {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
         fmt.debug_struct("Cache")
@@ -33,22 +35,24 @@ impl<S> Debug for Cache<S>
 }
 
 impl<S> Cache<S>
-    where S: Service<Error=Error>,
-          S::Request: Hash + Eq
+where
+    S: Service<Error = Error>,
+    S::Request: Hash + Eq,
 {
     pub fn new(service: S, duration: Duration, capacity: usize) -> Cache<S> {
         Cache {
             inner: service,
             duration: duration,
-            cache: Mutex::new(LruCache::new(capacity))
+            cache: Mutex::new(LruCache::new(capacity)),
         }
     }
 }
 
 impl<S> Service for Cache<S>
-    where S: Service<Error=Error>,
-          S::Request: Clone + Hash + Eq,
-          S::Future: Send
+where
+    S: Service<Error = Error>,
+    S::Request: Clone + Hash + Eq,
+    S::Future: Send,
 {
     type Request = S::Request;
     type Response = CachedItem<S::Response>;
@@ -71,23 +75,25 @@ impl<S> Service for Cache<S>
     }
 }
 
-pub struct Cached<F: Future<Error=Error> + Send>(Shared<FromErr<F, SharedFailure>>);
+pub struct Cached<F: Future<Error = Error> + Send>(Shared<FromErr<F, SharedFailure>>);
 
 impl<F> Debug for Cached<F>
-    where F: Future<Error=Error> + Debug + Send,
-          F::Item: Debug
+where
+    F: Future<Error = Error> + Debug + Send,
+    F::Item: Debug,
 {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
         self.0.fmt(fmt)
     }
 }
 
-impl<F: Future<Error=Error> + Send> Future for Cached<F> {
+impl<F: Future<Error = Error> + Send> Future for Cached<F> {
     type Item = CachedItem<F::Item>;
     type Error = SharedFailure;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        self.0.poll()
+        self.0
+            .poll()
             .map_err(|err| (*err).clone())
             .map(|async| async.map(CachedItem))
     }

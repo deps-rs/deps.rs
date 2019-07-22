@@ -1,21 +1,20 @@
 use std::sync::Arc;
 
 use failure::Error;
-use futures::{done, Future};
 use futures::future::poll_fn;
+use futures::{done, Future};
 use rustsec::db::AdvisoryDatabase;
-use tokio_threadpool::blocking;
 use tokio_service::Service;
+use tokio_threadpool::blocking;
 
 #[derive(Debug, Clone)]
 pub struct FetchAdvisoryDatabase;
 
-impl Service for FetchAdvisoryDatabase
-{
+impl Service for FetchAdvisoryDatabase {
     type Request = ();
     type Response = Arc<AdvisoryDatabase>;
     type Error = Error;
-    type Future = Box<Future<Item=Self::Response, Error=Self::Error>+ Send>;
+    type Future = Box<Future<Item = Self::Response, Error = Self::Error> + Send>;
 
     fn call(&self, _req: ()) -> Self::Future {
         Box::new(

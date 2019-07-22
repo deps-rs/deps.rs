@@ -1,5 +1,5 @@
-mod crawl;
 mod analyze;
+mod crawl;
 
-pub use self::crawl::CrawlManifestFuture;
 pub use self::analyze::AnalyzeDependenciesFuture;
+pub use self::crawl::CrawlManifestFuture;

@@ -2,38 +2,44 @@
 
 extern crate badge;
 extern crate cadence;
-#[macro_use] extern crate failure;
-#[macro_use] extern crate futures;
+#[macro_use]
+extern crate failure;
+#[macro_use]
+extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;
 extern crate indexmap;
-#[macro_use] extern crate lazy_static;
+#[macro_use]
+extern crate lazy_static;
 extern crate lru_cache;
 extern crate maud;
 extern crate relative_path;
 extern crate route_recognizer;
 extern crate rustsec;
 extern crate semver;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
 extern crate shared_failure;
-#[macro_use] extern crate slog;
+#[macro_use]
+extern crate slog;
 extern crate slog_json;
 extern crate tokio_service;
 extern crate tokio_threadpool;
 extern crate toml;
-#[macro_use] extern crate try_future;
+#[macro_use]
+extern crate try_future;
 
-mod utils;
+mod engine;
+mod interactors;
 mod models;
 mod parsers;
-mod interactors;
-mod engine;
 mod server;
+mod utils;
 
 use std::env;
-use std::net::{IpAddr, Ipv4Addr, UdpSocket, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 use std::sync::Mutex;
 
 use cadence::{QueuingMetricSink, UdpMetricSink};
@@ -42,8 +48,8 @@ use hyper::Client;
 use hyper_tls::HttpsConnector;
 use slog::Drain;
 
-use self::server::Server;
 use self::engine::Engine;
+use self::server::Server;
 
 fn init_metrics() -> QueuingMetricSink {
     let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
@@ -56,17 +62,17 @@ fn init_metrics() -> QueuingMetricSink {
 fn main() {
     let logger = slog::Logger::root(
         Mutex::new(slog_json::Json::default(std::io::stderr())).map(slog::Fuse),
-        o!("version" => env!("CARGO_PKG_VERSION"))
+        o!("version" => env!("CARGO_PKG_VERSION")),
     );
 
     let metrics = init_metrics();
 
-    let connector = HttpsConnector::new(4)
-        .expect("failed to create https connector");
-    let client = Client::builder()
-        .build::<_, hyper::Body>(connector);
+    let connector = HttpsConnector::new(4).expect("failed to create https connector");
+    let client = Client::builder().build::<_, hyper::Body>(connector);
 
-    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string()).parse()
+    let port = env::var("PORT")
+        .unwrap_or_else(|_| "8080".to_string())
+        .parse()
         .expect("could not read port");
 
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);

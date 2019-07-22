@@ -1,14 +1,14 @@
 use std::str;
 
 use failure::Error;
-use futures::{Future, Stream, IntoFuture, future};
+use futures::{future, Future, IntoFuture, Stream};
 use hyper::Uri;
-use tokio_service::Service;
 use semver::{Version, VersionReq};
 use serde_json;
+use tokio_service::Service;
 
-use ::models::crates::{CrateName, CrateRelease, CrateDeps, CrateDep, CratePath};
-use ::engine::HttpClient;
+use engine::HttpClient;
+use models::crates::{CrateDep, CrateDeps, CrateName, CratePath, CrateRelease};
 
 const CRATES_INDEX_BASE_URI: &str = "https://raw.githubusercontent.com/rust-lang/crates.io-index";
 const CRATES_API_BASE_URI: &str = "https://crates.io/api/v1";
@@ -18,7 +18,7 @@ struct RegistryPackageDep {
     name: String,
     req: VersionReq,
     #[serde(default)]
-    kind: Option<String>
+    kind: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -27,49 +27,59 @@ struct RegistryPackage {
     #[serde(default)]
     deps: Vec<RegistryPackageDep>,
     #[serde(default)]
-    yanked: bool
+    yanked: bool,
 }
 
-fn convert_pkgs(name: &CrateName, packages: Vec<RegistryPackage>) -> Result<QueryCrateResponse, Error> {
-    let releases = packages.into_iter().map(|package| {
-        let mut deps = CrateDeps::default();
-        for dep in package.deps {
-            match dep.kind.map(|k| k.clone()).unwrap_or_else(|| "normal".into()).as_ref() {
-                "normal" =>
-                    deps.main.insert(dep.name.parse()?, CrateDep::External(dep.req)),
-                "dev" =>
-                    deps.dev.insert(dep.name.parse()?, CrateDep::External(dep.req)),
-                _ => None
-            };
-        }
-        Ok(CrateRelease {
-            name: name.clone(),
-            version: package.vers,
-            deps: deps,
-            yanked: package.yanked
+fn convert_pkgs(
+    name: &CrateName,
+    packages: Vec<RegistryPackage>,
+) -> Result<QueryCrateResponse, Error> {
+    let releases = packages
+        .into_iter()
+        .map(|package| {
+            let mut deps = CrateDeps::default();
+            for dep in package.deps {
+                match dep
+                    .kind
+                    .map(|k| k.clone())
+                    .unwrap_or_else(|| "normal".into())
+                    .as_ref()
+                {
+                    "normal" => deps
+                        .main
+                        .insert(dep.name.parse()?, CrateDep::External(dep.req)),
+                    "dev" => deps
+                        .dev
+                        .insert(dep.name.parse()?, CrateDep::External(dep.req)),
+                    _ => None,
+                };
+            }
+            Ok(CrateRelease {
+                name: name.clone(),
+                version: package.vers,
+                deps: deps,
+                yanked: package.yanked,
+            })
         })
-    }).collect::<Result<_, Error>>()?;
+        .collect::<Result<_, Error>>()?;
 
-    Ok(QueryCrateResponse {
-        releases: releases
-    })
+    Ok(QueryCrateResponse { releases: releases })
 }
 
 pub struct QueryCrateResponse {
-    pub releases: Vec<CrateRelease>
+    pub releases: Vec<CrateRelease>,
 }
 
 #[derive(Debug, Clone)]
 pub struct QueryCrate(pub HttpClient);
 
-impl Service for QueryCrate
-{
+impl Service for QueryCrate {
     type Request = CrateName;
     type Response = QueryCrateResponse;
     type Error = Error;
-    type Future = Box<Future<Item=Self::Response, Error=Self::Error> + Send>;
+    type Future = Box<Future<Item = Self::Response, Error = Self::Error> + Send>;
 
-    fn call(&self,  crate_name: CrateName) -> Self::Future {
+    fn call(&self, crate_name: CrateName) -> Self::Future {
         let lower_name = crate_name.as_ref().to_lowercase();
 
         let path = match lower_name.len() {
@@ -79,81 +89,102 @@ impl Service for QueryCrate
             _ => format!("{}/{}/{}", &lower_name[0..2], &lower_name[2..4], lower_name),
         };
 
-        let uri = try_future_box!(format!("{}/master/{}", CRATES_INDEX_BASE_URI, path)
-            .parse::<Uri>());
+        let uri =
+            try_future_box!(format!("{}/master/{}", CRATES_INDEX_BASE_URI, path).parse::<Uri>());
 
-        Box::new(self.0.get(uri.clone()).from_err().and_then(move |response| {
-            let status = response.status();
-            if !status.is_success() {
-                try_future!(Err(format_err!("Status code {} for URI {}", status, uri)));
-            }
+        Box::new(
+            self.0
+                .get(uri.clone())
+                .from_err()
+                .and_then(move |response| {
+                    let status = response.status();
+                    if !status.is_success() {
+                        try_future!(Err(format_err!("Status code {} for URI {}", status, uri)));
+                    }
 
-            let body_future = response.into_body().concat2().from_err();
-            let decode_future = body_future.and_then(move |body| {
-                let string_body = str::from_utf8(body.as_ref())?;
-                let packages = string_body.lines()
-                    .map(|s| s.trim())
-                    .filter(|s| !s.is_empty())
-                    .map(|s| serde_json::from_str::<RegistryPackage>(s))
-                    .collect::<Result<_, _>>()?;
-                Ok(packages)
-            });
+                    let body_future = response.into_body().concat2().from_err();
+                    let decode_future = body_future.and_then(move |body| {
+                        let string_body = str::from_utf8(body.as_ref())?;
+                        let packages = string_body
+                            .lines()
+                            .map(|s| s.trim())
+                            .filter(|s| !s.is_empty())
+                            .map(|s| serde_json::from_str::<RegistryPackage>(s))
+                            .collect::<Result<_, _>>()?;
+                        Ok(packages)
+                    });
 
-            decode_future
-                .and_then(move |pkgs| convert_pkgs(&crate_name, pkgs))
-                .into()
-        }))
+                    decode_future
+                        .and_then(move |pkgs| convert_pkgs(&crate_name, pkgs))
+                        .into()
+                }),
+        )
     }
 }
 
 #[derive(Deserialize)]
 struct SummaryResponseDetail {
     name: String,
-    max_version: Version
+    max_version: Version,
 }
 
 #[derive(Deserialize)]
 struct SummaryResponse {
-    most_downloaded: Vec<SummaryResponseDetail>
+    most_downloaded: Vec<SummaryResponseDetail>,
 }
 
 fn convert_summary(response: SummaryResponse) -> Result<Vec<CratePath>, Error> {
-    response.most_downloaded.into_iter().map(|detail| {
-        let name = detail.name.parse()?;
-        Ok(CratePath { name, version: detail.max_version })
-    }).collect()
+    response
+        .most_downloaded
+        .into_iter()
+        .map(|detail| {
+            let name = detail.name.parse()?;
+            Ok(CratePath {
+                name,
+                version: detail.max_version,
+            })
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone)]
 pub struct GetPopularCrates(pub HttpClient);
 
-impl Service for GetPopularCrates
-{
+impl Service for GetPopularCrates {
     type Request = ();
     type Response = Vec<CratePath>;
     type Error = Error;
-    type Future = Box<Future<Item=Self::Response, Error=Self::Error> + Send>;
+    type Future = Box<Future<Item = Self::Response, Error = Self::Error> + Send>;
 
     fn call(&self, _req: ()) -> Self::Future {
         let client = self.0.clone();
 
         let uri_future = format!("{}/summary", CRATES_API_BASE_URI)
-            .parse::<Uri>().into_future().from_err();
+            .parse::<Uri>()
+            .into_future()
+            .from_err();
 
         Box::new(uri_future.and_then(move |uri| {
-            client.get(uri.clone()).from_err().and_then(move |response| {
-                let status = response.status();
-                if !status.is_success() {
-                    future::Either::A(future::err(format_err!("Status code {} for URI {}", status, uri)))
-                } else {
-                    let body_future = response.into_body().concat2().from_err();
-                    let decode_future = body_future.and_then(|body| {
-                        let summary = serde_json::from_slice::<SummaryResponse>(&body)?;
-                        convert_summary(summary)
-                    });
-                    future::Either::B(decode_future)
-                }
-            })
+            client
+                .get(uri.clone())
+                .from_err()
+                .and_then(move |response| {
+                    let status = response.status();
+                    if !status.is_success() {
+                        future::Either::A(future::err(format_err!(
+                            "Status code {} for URI {}",
+                            status,
+                            uri
+                        )))
+                    } else {
+                        let body_future = response.into_body().concat2().from_err();
+                        let decode_future = body_future.and_then(|body| {
+                            let summary = serde_json::from_slice::<SummaryResponse>(&body)?;
+                            convert_summary(summary)
+                        });
+                        future::Either::B(decode_future)
+                    }
+                })
         }))
     }
 }

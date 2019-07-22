@@ -1,40 +1,57 @@
 use failure::Error;
-use futures::{Future, Poll, Stream};
 use futures::stream::futures_unordered;
+use futures::{Future, Poll, Stream};
 
-use ::models::crates::{AnalyzedDependencies, CrateDeps};
+use models::crates::{AnalyzedDependencies, CrateDeps};
 
-use super::super::Engine;
 use super::super::machines::analyzer::DependencyAnalyzer;
+use super::super::Engine;
 
 pub struct AnalyzeDependenciesFuture {
-    inner: Box<Future<Item=AnalyzedDependencies, Error=Error> + Send>
+    inner: Box<Future<Item = AnalyzedDependencies, Error = Error> + Send>,
 }
 
 impl AnalyzeDependenciesFuture {
     pub fn new(engine: Engine, deps: CrateDeps) -> Self {
-        let future = engine.fetch_advisory_db().and_then(move |advisory_db| {
-            let analyzer = DependencyAnalyzer::new(&deps, Some(advisory_db));
+        let future =
+            engine.fetch_advisory_db().and_then(move |advisory_db| {
+                let analyzer = DependencyAnalyzer::new(&deps, Some(advisory_db));
 
-            let main_deps = deps.main.into_iter().filter_map(|(name, dep)| {
-                if dep.is_external() { Some(name) } else { None }
-            });
-            let dev_deps = deps.dev.into_iter().filter_map(|(name, dep)| {
-                if dep.is_external() { Some(name) } else { None }
-            });
-            let build_deps = deps.build.into_iter().filter_map(|(name, dep)| {
-                if dep.is_external() { Some(name) } else { None }
-            });
+                let main_deps = deps.main.into_iter().filter_map(|(name, dep)| {
+                    if dep.is_external() {
+                        Some(name)
+                    } else {
+                        None
+                    }
+                });
+                let dev_deps = deps.dev.into_iter().filter_map(|(name, dep)| {
+                    if dep.is_external() {
+                        Some(name)
+                    } else {
+                        None
+                    }
+                });
+                let build_deps = deps.build.into_iter().filter_map(|(name, dep)| {
+                    if dep.is_external() {
+                        Some(name)
+                    } else {
+                        None
+                    }
+                });
 
-            let release_futures = engine.fetch_releases(main_deps.chain(dev_deps).chain(build_deps));
+                let release_futures =
+                    engine.fetch_releases(main_deps.chain(dev_deps).chain(build_deps));
 
-            futures_unordered(release_futures)
-                .fold(analyzer, |mut analyzer, releases| { analyzer.process(releases); Ok(analyzer) as Result<_, Error> })
-                .map(|analyzer| analyzer.finalize())
-        });
+                futures_unordered(release_futures)
+                    .fold(analyzer, |mut analyzer, releases| {
+                        analyzer.process(releases);
+                        Ok(analyzer) as Result<_, Error>
+                    })
+                    .map(|analyzer| analyzer.finalize())
+            });
 
         AnalyzeDependenciesFuture {
-            inner: Box::new(future)
+            inner: Box::new(future),
         }
     }
 }

@@ -11,8 +11,7 @@ fn build_style() -> String {
         ..Default::default()
     };
 
-    sass::compile_file("./assets/styles/main.sass", options)
-        .expect("failed to compile style sheet")
+    sass::compile_file("./assets/styles/main.sass", options).expect("failed to compile style sheet")
 }
 
 fn main() {
