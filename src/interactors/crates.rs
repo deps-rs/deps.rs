@@ -19,6 +19,8 @@ struct RegistryPackageDep {
     req: VersionReq,
     #[serde(default)]
     kind: Option<String>,
+    #[serde(default)]
+    package: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -45,19 +47,18 @@ fn convert_pkgs(
         .into_iter()
         .map(|package| {
             let mut deps = CrateDeps::default();
+
             for dep in package.deps {
+                let name = dep.package.as_ref().unwrap_or(&dep.name);
+
                 match dep
                     .kind
                     .map(|k| k.clone())
                     .unwrap_or_else(|| "normal".into())
                     .as_ref()
                 {
-                    "normal" => deps
-                        .main
-                        .insert(dep.name.parse()?, CrateDep::External(dep.req)),
-                    "dev" => deps
-                        .dev
-                        .insert(dep.name.parse()?, CrateDep::External(dep.req)),
+                    "normal" => deps.main.insert(name.parse()?, CrateDep::External(dep.req)),
+                    "dev" => deps.dev.insert(name.parse()?, CrateDep::External(dep.req)),
                     _ => None,
                 };
             }
