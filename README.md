@@ -4,6 +4,10 @@
 [![dependency status](https://deps.rs/repo/github/srijs/deps.rs/status.svg)](https://deps.rs/repo/github/srijs/deps.rs)
 [![GitHub license](https://img.shields.io/github/license/srijs/deps.rs.svg)](https://github.com/srijs/deps.rs/blob/master/LICENSE)
 
+## Looking for maintainer(s)
+
+I'm not able to put as much time towards this project as it may need or deserve. If you are interested taking on maintainership, please let me know by commenting on [this issue](https://github.com/srijs/deps.rs/issues/40).
+
 ## Copyright and License
 
 Copyright 2018 Sam Rijs and Contributors
