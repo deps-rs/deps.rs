@@ -12,7 +12,7 @@ hyper-tls = "0.1.2"
 indexmap = { version = "1.0.0", features = ["serde-1"] }
 lazy_static = "1.0.0"
 lru-cache = "0.1.1"
-maud = "0.17.2"
+maud = "0.21"
 relative-path = { version = "0.3.7", features = ["serde"] }
 route-recognizer = "0.1.12"
 rustsec = "0.6.0"
