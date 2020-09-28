@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use failure::Error;
+use anyhow::{anyhow, ensure, Error};
 
 #[derive(Clone, Debug)]
 pub struct Repository {
@@ -50,7 +50,7 @@ impl FromStr for RepoSite {
             "github" => Ok(RepoSite::Github),
             "gitlab" => Ok(RepoSite::Gitlab),
             "bitbucket" => Ok(RepoSite::Bitbucket),
-            _ => Err(format_err!("unknown repo site identifier")),
+            _ => Err(anyhow!("unknown repo site identifier")),
         }
     }
 }

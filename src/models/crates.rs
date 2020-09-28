@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 use std::str::FromStr;
 
-use failure::Error;
+use anyhow::{anyhow, ensure, Error};
 use indexmap::IndexMap;
 use relative_path::RelativePathBuf;
 use semver::{Version, VersionReq};
@@ -51,7 +51,7 @@ impl FromStr for CrateName {
             .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-');
 
         if !is_valid {
-            Err(format_err!("failed to validate crate name: {}", input))
+            Err(anyhow!("failed to validate crate name: {}", input))
         } else {
             Ok(CrateName(input.to_string()))
         }

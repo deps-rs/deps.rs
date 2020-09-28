@@ -1,4 +1,4 @@
-use failure::Error;
+use anyhow::{anyhow, ensure, Error};
 use indexmap::IndexMap;
 use relative_path::RelativePathBuf;
 use semver::VersionReq;
@@ -132,9 +132,7 @@ pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, Error> {
             deps,
             members,
         }),
-        (None, None) => Err(format_err!(
-            "neither workspace nor package found in manifest"
-        )),
+        (None, None) => Err(anyhow!("neither workspace nor package found in manifest")),
     }
 }
 

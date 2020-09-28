@@ -1,4 +1,4 @@
-use failure::Error;
+use anyhow::{anyhow, ensure, Error};
 use hyper::Uri;
 use relative_path::RelativePathBuf;
 

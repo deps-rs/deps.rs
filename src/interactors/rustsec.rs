@@ -1,7 +1,7 @@
 use std::str;
 use std::sync::Arc;
 
-use failure::Error;
+use anyhow::{anyhow, ensure, Error};
 use futures::{future, Future, IntoFuture, Stream};
 use hyper::{Error as HyperError, Method, Request, Response};
 use rustsec::db::AdvisoryDatabase;
@@ -32,7 +32,7 @@ where
             service.call(request).from_err().and_then(|response| {
                 let status = response.status();
                 if !status.is_success() {
-                    future::Either::A(future::err(format_err!(
+                    future::Either::A(future::err(anyhow!(
                         "Status code {} when fetching advisory db",
                         status
                     )))

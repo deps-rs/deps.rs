@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 use cadence::prelude::*;
 use cadence::{MetricSink, NopMetricSink, StatsdClient};
-use failure::Error;
+use anyhow::{anyhow, ensure, Error};
 use futures::future::join_all;
 use futures::{future, Future};
 use hyper::client::HttpConnector;
@@ -176,7 +176,7 @@ impl Engine {
                 .iter()
                 .find(|release| release.version == crate_path.version)
             {
-                None => future::Either::A(future::err(format_err!(
+                None => future::Either::A(future::err(anyhow!(
                     "could not find crate release with version {}",
                     crate_path.version
                 ))),

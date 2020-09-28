@@ -1,4 +1,4 @@
-use failure::Error;
+use anyhow::{anyhow, ensure, Error};
 use futures::stream::futures_unordered;
 use futures::{Future, Poll, Stream};
 

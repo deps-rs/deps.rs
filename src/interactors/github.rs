@@ -1,4 +1,4 @@
-use failure::Error;
+use anyhow::{anyhow, ensure, Error};
 use futures::{Future, Stream};
 use hyper::header::UserAgent;
 use hyper::{Error as HyperError, Method, Request, Response, Uri};
@@ -66,7 +66,7 @@ where
         Box::new(self.0.call(request).from_err().and_then(|response| {
             let status = response.status();
             if !status.is_success() {
-                try_future!(Err(format_err!(
+                try_future!(Err(anyhow!(
                     "Status code {} for popular repo search",
                     status
                 )));

@@ -13,9 +13,9 @@ members = [
 [dependencies]
 badge = { path = "./libs/badge" }
 
+anyhow = "1"
 cadence = "0.13"
 derive_more = "0.99"
-failure = "0.1"
 futures = "0.1"
 hyper = "0.11"
 hyper-tls = "0.1"
@@ -29,7 +29,6 @@ rustsec = "0.6.0"
 semver = { version = "0.11", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-shared_failure = "0.1"
 slog = "2"
 slog-json = "2"
 tokio-core = "0.1"

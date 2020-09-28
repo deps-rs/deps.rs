@@ -1,6 +1,6 @@
 use std::mem;
 
-use failure::Error;
+use anyhow::{anyhow, ensure, Error};
 use futures::stream::FuturesOrdered;
 use futures::{try_ready, Async, Future, Poll, Stream};
 use relative_path::RelativePathBuf;

@@ -1,6 +1,6 @@
 use std::str;
 
-use failure::Error;
+use anyhow::{anyhow, ensure, Error};
 use futures::{future, Future, IntoFuture, Stream};
 use hyper::{Error as HyperError, Method, Request, Response, Uri};
 use semver::{Version, VersionReq};
@@ -100,7 +100,7 @@ where
         Box::new(self.0.call(request).from_err().and_then(move |response| {
             let status = response.status();
             if !status.is_success() {
-                try_future!(Err(format_err!("Status code {} for URI {}", status, uri)));
+                try_future!(Err(anyhow!("Status code {} for URI {}", status, uri)));
             }
 
             let body_future = response.body().concat2().from_err();
@@ -174,7 +174,7 @@ where
             service.call(request).from_err().and_then(move |response| {
                 let status = response.status();
                 if !status.is_success() {
-                    future::Either::A(future::err(format_err!(
+                    future::Either::A(future::err(anyhow!(
                         "Status code {} for URI {}",
                         status,
                         uri

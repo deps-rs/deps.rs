@@ -4,11 +4,10 @@ use std::ops::Deref;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use failure::Error;
+use anyhow::{anyhow, ensure, Error};
 use futures::future::{FromErr, Shared, SharedItem};
 use futures::{Future, Poll};
 use lru_cache::LruCache;
-use shared_failure::SharedFailure;
 use tokio_service::Service;
 
 pub struct Cache<S>
@@ -18,7 +17,7 @@ where
 {
     inner: S,
     duration: Duration,
-    cache: Mutex<LruCache<S::Request, (Instant, Shared<FromErr<S::Future, SharedFailure>>)>>,
+    cache: Mutex<LruCache<S::Request, (Instant, Shared<FromErr<S::Future, Error>>)>>,
 }
 
 impl<S> Debug for Cache<S>
@@ -55,7 +54,7 @@ where
 {
     type Request = S::Request;
     type Response = CachedItem<S::Response>;
-    type Error = SharedFailure;
+    type Error = Error;
     type Future = Cached<S::Future>;
 
     fn call(&self, req: Self::Request) -> Self::Future {
@@ -74,7 +73,7 @@ where
     }
 }
 
-pub struct Cached<F: Future<Error = Error>>(Shared<FromErr<F, SharedFailure>>);
+pub struct Cached<F: Future<Error = Error>>(Shared<FromErr<F, Error>>);
 
 impl<F> Debug for Cached<F>
 where
@@ -88,13 +87,13 @@ where
 
 impl<F: Future<Error = Error>> Future for Cached<F> {
     type Item = CachedItem<F::Item>;
-    type Error = SharedFailure;
+    type Error = Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         self.0
             .poll()
-            .map_err(|err| (*err).clone())
-            .map(|_async| _async.map(CachedItem))
+            .map_err(|_err| anyhow!("TODO: shared error not clone-able"))
+            .map(|item| item.map(CachedItem))
     }
 }
 
