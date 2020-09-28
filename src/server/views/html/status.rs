@@ -2,10 +2,10 @@ use hyper::Response;
 use maud::{Markup, html};
 use indexmap::IndexMap;
 
-use ::engine::AnalyzeDependenciesOutcome;
-use ::models::crates::{CrateName, AnalyzedDependency, AnalyzedDependencies};
-use ::models::SubjectPath;
-use ::models::repo::RepoSite;
+use crate::engine::AnalyzeDependenciesOutcome;
+use crate::models::crates::{CrateName, AnalyzedDependency, AnalyzedDependencies};
+use crate::models::SubjectPath;
+use crate::models::repo::RepoSite;
 
 use super::super::badge;
 

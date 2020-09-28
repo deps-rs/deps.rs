@@ -4,8 +4,8 @@ use failure::Error;
 use relative_path::RelativePathBuf;
 use indexmap::IndexMap;
 
-use ::parsers::manifest::parse_manifest_toml;
-use ::models::crates::{CrateDep, CrateDeps, CrateName, CrateManifest};
+use crate::parsers::manifest::parse_manifest_toml;
+use crate::models::crates::{CrateDep, CrateDeps, CrateName, CrateManifest};
 
 pub struct ManifestCrawlerOutput {
     pub crates: IndexMap<CrateName, CrateDeps>

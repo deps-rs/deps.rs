@@ -12,10 +12,10 @@ use tokio_service::Service;
 mod assets;
 mod views;
 
-use ::engine::{Engine, AnalyzeDependenciesOutcome};
-use ::models::crates::{CrateName, CratePath};
-use ::models::repo::RepoPath;
-use ::models::SubjectPath;
+use crate::engine::{Engine, AnalyzeDependenciesOutcome};
+use crate::models::crates::{CrateName, CratePath};
+use crate::models::repo::RepoPath;
+use crate::models::SubjectPath;
 
 #[derive(Clone, Copy, PartialEq)]
 enum StatusFormat {
@@ -68,7 +68,7 @@ impl Service for Server {
     type Request = Request;
     type Response = Response;
     type Error = HyperError;
-    type Future = Box<Future<Item=Response, Error=HyperError>>;
+    type Future = Box<dyn Future<Item=Response, Error=HyperError>>;
 
     fn call(&self, req: Request) -> Self::Future {
         let logger = self.logger.new(o!("http_path" => req.uri().path().to_owned()));

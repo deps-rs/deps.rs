@@ -2,7 +2,7 @@ use badge::{Badge, BadgeOptions};
 use hyper::Response;
 use hyper::header::ContentType;
 
-use ::engine::AnalyzeDependenciesOutcome;
+use crate::engine::AnalyzeDependenciesOutcome;
 
 pub fn badge(analysis_outcome: Option<&AnalyzeDependenciesOutcome>) -> Badge {
     let opts = match analysis_outcome {

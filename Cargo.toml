@@ -2,6 +2,7 @@
 name = "shiny-robots"
 version = "0.1.0"
 authors = ["Sam Rijs <srijs@airpost.net>"]
+edition = "2018"
 
 [workspace]
 members = [
@@ -35,6 +36,7 @@ tokio-core = "0.1.12"
 tokio-service = "0.1.0"
 toml = "0.4.5"
 try_future = "0.1.1"
+once_cell = "1.4"
 
 
 [build-dependencies]

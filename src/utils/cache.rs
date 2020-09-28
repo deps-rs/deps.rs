@@ -88,7 +88,7 @@ impl<F: Future<Error=Error>> Future for Cached<F> {
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         self.0.poll()
             .map_err(|err| (*err).clone())
-            .map(|async| async.map(CachedItem))
+            .map(|_async| _async.map(CachedItem))
     }
 }
 

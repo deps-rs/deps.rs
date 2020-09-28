@@ -4,7 +4,7 @@ use relative_path::RelativePathBuf;
 use semver::VersionReq;
 use toml;
 
-use ::models::crates::{CrateName, CrateDep, CrateDeps, CrateManifest};
+use crate::models::crates::{CrateName, CrateDep, CrateDeps, CrateManifest};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct CargoTomlComplexDependency {

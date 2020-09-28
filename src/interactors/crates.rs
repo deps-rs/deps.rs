@@ -7,7 +7,7 @@ use tokio_service::Service;
 use semver::{Version, VersionReq};
 use serde_json;
 
-use ::models::crates::{CrateName, CrateRelease, CrateDeps, CrateDep, CratePath};
+use crate::models::crates::{CrateName, CrateRelease, CrateDeps, CrateDep, CratePath};
 
 const CRATES_INDEX_BASE_URI: &str = "https://raw.githubusercontent.com/rust-lang/crates.io-index";
 const CRATES_API_BASE_URI: &str = "https://crates.io/api/v1";
@@ -68,7 +68,7 @@ impl<S> Service for QueryCrate<S>
     type Request = CrateName;
     type Response = QueryCrateResponse;
     type Error = Error;
-    type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
+    type Future = Box<dyn Future<Item=Self::Response, Error=Self::Error>>;
 
     fn call(&self,  crate_name: CrateName) -> Self::Future {
         let lower_name = crate_name.as_ref().to_lowercase();
@@ -137,7 +137,7 @@ impl<S> Service for GetPopularCrates<S>
     type Request = ();
     type Response = Vec<CratePath>;
     type Error = Error;
-    type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
+    type Future = Box<dyn Future<Item=Self::Response, Error=Self::Error>>;
 
     fn call(&self, _req: ()) -> Self::Future {
         let service = self.0.clone();

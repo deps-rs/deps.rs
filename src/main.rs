@@ -1,42 +1,16 @@
-#![allow(bare_trait_objects)]
+#![deny(bare_trait_objects)]
+#![allow(unused)]
 
-extern crate badge;
-extern crate cadence;
 #[macro_use]
 extern crate failure;
 #[macro_use]
-extern crate futures;
-extern crate hyper;
-extern crate hyper_tls;
-extern crate indexmap;
-#[macro_use]
 extern crate lazy_static;
-extern crate lru_cache;
-extern crate maud;
-extern crate relative_path;
-extern crate route_recognizer;
-extern crate rustsec;
-extern crate semver;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde;
-extern crate serde_json;
-extern crate shared_failure;
 #[macro_use]
 extern crate slog;
-extern crate slog_json;
-extern crate tokio_core;
-extern crate tokio_service;
-extern crate toml;
 #[macro_use]
 extern crate try_future;
-
-mod engine;
-mod interactors;
-mod models;
-mod parsers;
-mod server;
-mod utils;
 
 use std::env;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
@@ -49,6 +23,13 @@ use hyper::Client;
 use hyper_tls::HttpsConnector;
 use slog::Drain;
 use tokio_core::reactor::Core;
+
+mod engine;
+mod interactors;
+mod models;
+mod parsers;
+mod server;
+mod utils;
 
 use self::engine::Engine;
 use self::server::Server;

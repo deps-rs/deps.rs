@@ -2,13 +2,13 @@ use failure::Error;
 use futures::{Future, Poll, Stream};
 use futures::stream::futures_unordered;
 
-use ::models::crates::{AnalyzedDependencies, CrateDeps};
+use crate::models::crates::{AnalyzedDependencies, CrateDeps};
 
 use super::super::Engine;
 use super::super::machines::analyzer::DependencyAnalyzer;
 
 pub struct AnalyzeDependenciesFuture {
-    inner: Box<Future<Item=AnalyzedDependencies, Error=Error>>
+    inner: Box<dyn Future<Item=AnalyzedDependencies, Error=Error>>
 }
 
 impl AnalyzeDependenciesFuture {

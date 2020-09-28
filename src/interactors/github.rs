@@ -6,7 +6,7 @@ use relative_path::RelativePathBuf;
 use tokio_service::Service;
 use serde_json;
 
-use ::models::repo::{Repository, RepoPath};
+use crate::models::repo::{Repository, RepoPath};
 
 const GITHUB_API_BASE_URI: &'static str = "https://api.github.com";
 const GITHUB_USER_CONTENT_BASE_URI: &'static str = "https://raw.githubusercontent.com";
@@ -48,7 +48,7 @@ impl<S> Service for GetPopularRepos<S>
     type Request = ();
     type Response = Vec<Repository>;
     type Error = Error;
-    type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
+    type Future = Box<dyn Future<Item=Self::Response, Error=Self::Error>>;
 
     fn call(&self, _req: ()) -> Self::Future {
         let uri = try_future_box!(format!("{}/search/repositories?q=language:rust&sort=stars", GITHUB_API_BASE_URI)

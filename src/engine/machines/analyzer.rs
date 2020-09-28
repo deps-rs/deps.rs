@@ -3,7 +3,7 @@ use std::sync::Arc;
 use rustsec::db::AdvisoryDatabase;
 use semver::Version;
 
-use ::models::crates::{CrateDeps, CrateRelease, CrateName, AnalyzedDependency, AnalyzedDependencies};
+use crate::models::crates::{CrateDeps, CrateRelease, CrateName, AnalyzedDependency, AnalyzedDependencies};
 
 pub struct DependencyAnalyzer {
     deps: AnalyzedDependencies,

@@ -4,7 +4,7 @@ use hyper::{Error as HyperError, Method, Request, Response};
 use relative_path::RelativePathBuf;
 use tokio_service::Service;
 
-use ::models::repo::{RepoSite, RepoPath};
+use crate::models::repo::{RepoSite, RepoPath};
 
 pub mod bitbucket;
 pub mod crates;
@@ -22,7 +22,7 @@ impl<S> Service for RetrieveFileAtPath<S>
     type Request = (RepoPath, RelativePathBuf);
     type Response = String;
     type Error = Error;
-    type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
+    type Future = Box<dyn Future<Item=Self::Response, Error=Self::Error>>;
 
     fn call(&self, req: Self::Request) -> Self::Future {
         let (repo_path, path) = req;
@@ -54,5 +54,3 @@ impl<S> Service for RetrieveFileAtPath<S>
         }))
     }
 }
-
-

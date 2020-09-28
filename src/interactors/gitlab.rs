@@ -2,7 +2,7 @@ use hyper::Uri;
 use relative_path::RelativePathBuf;
 use failure::Error;
 
-use ::models::repo::RepoPath;
+use crate::models::repo::RepoPath;
 
 const GITLAB_USER_CONTENT_BASE_URI: &'static str = "https://gitlab.com";
 
