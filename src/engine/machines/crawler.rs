@@ -70,7 +70,7 @@ impl ManifestCrawler {
     }
 
     fn process_workspace(&mut self, base_path: &RelativePathBuf, members: &[RelativePathBuf], output: &mut ManifestCrawlerStepOutput) {
-        for mut path in members {
+        for path in members {
             if !path.ends_with("*") {
                 self.register_interest(base_path, path, output);
             }

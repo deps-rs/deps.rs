@@ -24,7 +24,7 @@ maud = "0.22"
 relative-path = { version = "0.3.7", features = ["serde"] }
 route-recognizer = "0.1.12"
 rustsec = "0.6.0"
-semver = { version = "0.9.0", features = ["serde"] }
+semver = { version = "0.11", features = ["serde"] }
 serde = "1.0.27"
 serde_derive = "1.0.27"
 serde_json = "1.0.9"
