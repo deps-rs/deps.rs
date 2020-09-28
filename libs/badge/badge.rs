@@ -1,18 +1,16 @@
 //! Simple badge generator
 
-extern crate base64;
-#[macro_use] extern crate lazy_static;
-extern crate rusttype;
-
-
 use base64::display::Base64Display;
-use rusttype::{Font, FontCollection, Scale, point, Point, PositionedGlyph};
+use once_cell::sync::Lazy;
+use rusttype::{point, Font, Point, PositionedGlyph, Scale};
 
-
-const FONT_DATA: &'static [u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"),
-                                                        "/DejaVuSans.ttf"));
+const FONT_DATA: &'static [u8] =
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/DejaVuSans.ttf"));
 const FONT_SIZE: f32 = 11.;
-
+const SCALE: Scale = Scale {
+    x: FONT_SIZE,
+    y: FONT_SIZE,
+};
 
 pub struct BadgeOptions {
     /// Subject will be displayed on the left side of badge
@@ -22,7 +20,6 @@ pub struct BadgeOptions {
     /// HTML color of badge
     pub color: String,
 }
-
 
 impl Default for BadgeOptions {
     fn default() -> BadgeOptions {
@@ -34,54 +31,47 @@ impl Default for BadgeOptions {
     }
 }
 
-
 struct BadgeStaticData {
     font: Font<'static>,
     scale: Scale,
-    offset: Point<f32>
+    offset: Point<f32>,
 }
 
+static DATA: Lazy<BadgeStaticData> = Lazy::new(|| {
+    let font = Font::try_from_bytes(FONT_DATA).expect("failed to parse font collection");
+    
+    let v_metrics = font.v_metrics(SCALE);
+    let offset = point(0.0, v_metrics.ascent);
 
-lazy_static! {
-    static ref DATA: BadgeStaticData = {
-        let collection = FontCollection::from_bytes(FONT_DATA)
-            .expect("failed to parse font collection");
-        let font = collection.into_font()
-            .expect("failed to load font data");
-        let scale = Scale {
-            x: FONT_SIZE,
-            y: FONT_SIZE,
-        };
-        let v_metrics = font.v_metrics(scale);
-        let offset = point(0.0, v_metrics.ascent);
-
-        BadgeStaticData { font, scale, offset }
-    };
-}
-
+    BadgeStaticData {
+        font,
+        scale: SCALE.clone(),
+        offset,
+    }
+});
 
 pub struct Badge {
-    options: BadgeOptions
+    options: BadgeOptions,
 }
-
 
 impl Badge {
     pub fn new(options: BadgeOptions) -> Badge {
         Badge { options }
     }
 
-
     pub fn to_svg_data_uri(&self) -> String {
-        format!("data:image/svg+xml;base64,{}",
-            Base64Display::standard(self.to_svg().as_bytes()))
+        format!(
+            "data:image/svg+xml;base64,{}",
+            Base64Display::with_config(self.to_svg().as_bytes(), base64::STANDARD)
+        )
     }
-
 
     pub fn to_svg(&self) -> String {
         let left_width = self.calculate_width(&self.options.subject) + 6;
         let right_width = self.calculate_width(&self.options.status) + 6;
 
-        let svg = format!(r###"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{}" height="20">
+        let svg = format!(
+            r###"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{}" height="20">
   <linearGradient id="smooth" x2="0" y2="100%">
     <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
     <stop offset="1" stop-opacity=".1"/>
@@ -118,16 +108,17 @@ impl Badge {
             left_width + (right_width / 2),
             self.options.status,
             left_width + (right_width / 2),
-            self.options.status);
+            self.options.status
+        );
 
         svg
     }
 
-
     fn calculate_width(&self, text: &str) -> u32 {
         let glyphs: Vec<PositionedGlyph> =
             DATA.font.layout(text, DATA.scale, DATA.offset).collect();
-        let width = glyphs.iter()
+        let width = glyphs
+            .iter()
             .rev()
             .filter_map(|g| {
                 g.pixel_bounding_box()
@@ -138,8 +129,6 @@ impl Badge {
         (width + ((text.len() as f32 - 1f32) * 1.3)).ceil() as u32
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
