@@ -3,6 +3,9 @@
 #![feature(ip_constructors)]
 #![feature(proc_macro)]
 
+#![allow(bare_trait_objects)]
+
+
 extern crate badge;
 extern crate cadence;
 #[macro_use] extern crate failure;
@@ -81,7 +84,7 @@ fn main() {
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string()).parse()
         .expect("could not read port");
 
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::unspecified()), port);
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
 
     let http = Http::new();
 

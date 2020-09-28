@@ -10,6 +10,8 @@ members = [
 ]
 
 [dependencies]
+badge = { path = "./libs/badge" }
+
 cadence = "0.13.1"
 failure = "0.1.1"
 futures = "0.1.18"
@@ -18,7 +20,7 @@ hyper-tls = "0.1.2"
 indexmap = { version = "1.0.0", features = ["serde-1"] }
 lazy_static = "1.0.0"
 lru-cache = "0.1.1"
-maud = "0.17.2"
+maud = "0.22"
 relative-path = { version = "0.3.7", features = ["serde"] }
 route-recognizer = "0.1.12"
 rustsec = "0.6.0"
@@ -34,9 +36,6 @@ tokio-service = "0.1.0"
 toml = "0.4.5"
 try_future = "0.1.1"
 
-[dependencies.badge]
-version = "0.2.0"
-path = "libs/badge"
 
 [build-dependencies]
-sass-rs = "0.2.1"
+sass-rs = "0.2"
