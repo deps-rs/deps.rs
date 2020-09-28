@@ -1,10 +1,7 @@
-#![deny(bare_trait_objects)]
-#![allow(unused)]
+#![deny(rust_2018_idioms)]
 
 #[macro_use]
 extern crate failure;
-#[macro_use]
-extern crate lazy_static;
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]

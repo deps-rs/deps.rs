@@ -1249,7 +1249,6 @@ dependencies = [
  "hyper 0.11.27",
  "hyper-tls",
  "indexmap",
- "lazy_static 1.4.0",
  "lru-cache",
  "maud",
  "once_cell",

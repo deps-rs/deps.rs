@@ -24,7 +24,7 @@ impl<S> Debug for Cache<S>
     where S: Service<Error=Error> + Debug,
           S::Request: Hash + Eq
 {
-    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> FmtResult {
         fmt.debug_struct("Cache")
             .field("inner", &self.inner)
             .field("duration", &self.duration)
@@ -76,7 +76,7 @@ impl<F> Debug for Cached<F>
     where F: Future<Error=Error> + Debug,
           F::Item: Debug
 {
-    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> FmtResult {
         self.0.fmt(fmt)
     }
 }
