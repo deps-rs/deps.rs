@@ -3,8 +3,6 @@
 #[macro_use]
 extern crate failure;
 #[macro_use]
-extern crate slog;
-#[macro_use]
 extern crate try_future;
 
 use std::env;
@@ -17,6 +15,7 @@ use hyper::server::Http;
 use hyper::Client;
 use hyper_tls::HttpsConnector;
 use slog::Drain;
+use slog::{info, o};
 use tokio_core::reactor::Core;
 
 mod engine;

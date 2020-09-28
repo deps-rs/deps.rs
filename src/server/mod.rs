@@ -8,6 +8,7 @@ use once_cell::sync::Lazy;
 use route_recognizer::{Params, Router};
 use semver::VersionReq;
 use slog::Logger;
+use slog::{error, o};
 use tokio_service::Service;
 
 mod assets;
