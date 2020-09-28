@@ -4,9 +4,9 @@
 [![dependency status](https://deps.rs/repo/github/srijs/deps.rs/status.svg)](https://deps.rs/repo/github/srijs/deps.rs)
 [![GitHub license](https://img.shields.io/github/license/srijs/deps.rs.svg)](https://github.com/srijs/deps.rs/blob/master/LICENSE)
 
-## Looking for maintainer(s)
+## Call for maintainer(s)
 
-I'm not able to put as much time towards this project as it may need or deserve. If you are interested in taking on maintainership, please let me know by commenting on [this issue](https://github.com/srijs/deps.rs/issues/40).
+A group of volunteers has recently picked up maintainership for this project. If you are interested in contributing to `deps.rs`, please let us know by commenting under [this issue](https://github.com/srijs/deps.rs/issues/40).
 
 ## Copyright and License
 
