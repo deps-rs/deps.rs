@@ -2,23 +2,24 @@ use std::str;
 use std::sync::Arc;
 
 use failure::Error;
-use futures::{Future, IntoFuture, Stream, future};
+use futures::{future, Future, IntoFuture, Stream};
 use hyper::{Error as HyperError, Method, Request, Response};
-use rustsec::ADVISORY_DB_URL;
 use rustsec::db::AdvisoryDatabase;
+use rustsec::ADVISORY_DB_URL;
 use tokio_service::Service;
 
 #[derive(Debug, Clone)]
 pub struct FetchAdvisoryDatabase<S>(pub S);
 
 impl<S> Service for FetchAdvisoryDatabase<S>
-    where S: Service<Request=Request, Response=Response, Error=HyperError> + Clone + 'static,
-          S::Future: 'static
+where
+    S: Service<Request = Request, Response = Response, Error = HyperError> + Clone + 'static,
+    S::Future: 'static,
 {
     type Request = ();
     type Response = Arc<AdvisoryDatabase>;
     type Error = Error;
-    type Future = Box<dyn Future<Item=Self::Response, Error=Self::Error>>;
+    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error>>;
 
     fn call(&self, _req: ()) -> Self::Future {
         let service = self.0.clone();
@@ -31,11 +32,17 @@ impl<S> Service for FetchAdvisoryDatabase<S>
             service.call(request).from_err().and_then(|response| {
                 let status = response.status();
                 if !status.is_success() {
-                    future::Either::A(future::err(format_err!("Status code {} when fetching advisory db", status)))
+                    future::Either::A(future::err(format_err!(
+                        "Status code {} when fetching advisory db",
+                        status
+                    )))
                 } else {
                     let body_future = response.body().concat2().from_err();
-                    let decode_future = body_future
-                        .and_then(|body| Ok(Arc::new(AdvisoryDatabase::from_toml(str::from_utf8(&body)?)?)));
+                    let decode_future = body_future.and_then(|body| {
+                        Ok(Arc::new(AdvisoryDatabase::from_toml(str::from_utf8(
+                            &body,
+                        )?)?))
+                    });
                     future::Either::B(decode_future)
                 }
             })

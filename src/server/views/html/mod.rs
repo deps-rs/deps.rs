@@ -1,11 +1,11 @@
 use std::time::Duration;
 
-use hyper::Response;
 use hyper::header::ContentType;
-use maud::{Markup, Render, html};
+use hyper::Response;
+use maud::{html, Markup, Render};
 
-pub mod index;
 pub mod error;
+pub mod index;
 pub mod status;
 
 use super::super::SELF_BASE_URL;
@@ -47,7 +47,8 @@ fn render_navbar() -> Markup {
 }
 
 fn render_footer(duration: Option<Duration>) -> Markup {
-    let duration_millis = duration.map(|d| d.as_secs() * 1000 + (d.subsec_nanos() / 1000 / 1000) as u64);
+    let duration_millis =
+        duration.map(|d| d.as_secs() * 1000 + (d.subsec_nanos() / 1000 / 1000) as u64);
 
     html! {
         footer class="footer" {

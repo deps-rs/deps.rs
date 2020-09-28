@@ -1,11 +1,11 @@
 use hyper::Response;
-use maud::{Markup, html};
 use indexmap::IndexMap;
+use maud::{html, Markup};
 
 use crate::engine::AnalyzeDependenciesOutcome;
-use crate::models::crates::{CrateName, AnalyzedDependency, AnalyzedDependencies};
-use crate::models::SubjectPath;
+use crate::models::crates::{AnalyzedDependencies, AnalyzedDependency, CrateName};
 use crate::models::repo::RepoSite;
+use crate::models::SubjectPath;
 
 use super::super::badge;
 
@@ -94,7 +94,7 @@ fn get_site_icon(site: &RepoSite) -> &'static str {
     match *site {
         RepoSite::Github => "fa-github",
         RepoSite::Gitlab => "fa-gitlab",
-        RepoSite::Bitbucket => "fa-bitbucket"
+        RepoSite::Bitbucket => "fa-bitbucket",
     }
 }
 
@@ -108,7 +108,7 @@ fn render_title(subject_path: &SubjectPath) -> Markup {
                     (format!(" {} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref()))
                 }
             }
-        },
+        }
         SubjectPath::Crate(ref crate_path) => {
             html! {
                 a href=(format!("https://crates.io/crates/{}/{}", crate_path.name.as_ref(), crate_path.version)) {
@@ -144,18 +144,26 @@ fn render_failure(subject_path: SubjectPath) -> Markup {
     }
 }
 
-fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, subject_path: SubjectPath) -> Markup {
+fn render_success(
+    analysis_outcome: AnalyzeDependenciesOutcome,
+    subject_path: SubjectPath,
+) -> Markup {
     let self_path = match subject_path {
-        SubjectPath::Repo(ref repo_path) =>
-            format!("repo/{}/{}/{}", repo_path.site.as_ref(), repo_path.qual.as_ref(), repo_path.name.as_ref()),
-        SubjectPath::Crate(ref crate_path) =>
+        SubjectPath::Repo(ref repo_path) => format!(
+            "repo/{}/{}/{}",
+            repo_path.site.as_ref(),
+            repo_path.qual.as_ref(),
+            repo_path.name.as_ref()
+        ),
+        SubjectPath::Crate(ref crate_path) => {
             format!("crate/{}/{}", crate_path.name.as_ref(), crate_path.version)
+        }
     };
     let status_base_url = format!("{}/{}", &super::SELF_BASE_URL as &str, self_path);
 
     let status_data_uri = badge::badge(Some(&analysis_outcome)).to_svg_data_uri();
 
-    let hero_class = if analysis_outcome.any_insecure()  {
+    let hero_class = if analysis_outcome.any_insecure() {
         "is-danger"
     } else if analysis_outcome.any_outdated() {
         "is-warning"
@@ -194,12 +202,17 @@ fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, subject_path: Su
     }
 }
 
-pub fn render(analysis_outcome: Option<AnalyzeDependenciesOutcome>, subject_path: SubjectPath) -> Response {
+pub fn render(
+    analysis_outcome: Option<AnalyzeDependenciesOutcome>,
+    subject_path: SubjectPath,
+) -> Response {
     let title = match subject_path {
-        SubjectPath::Repo(ref repo_path) =>
-            format!("{} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref()),
-        SubjectPath::Crate(ref crate_path) =>
+        SubjectPath::Repo(ref repo_path) => {
+            format!("{} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref())
+        }
+        SubjectPath::Crate(ref crate_path) => {
             format!("{} {}", crate_path.name.as_ref(), crate_path.version)
+        }
     };
 
     if let Some(outcome) = analysis_outcome {

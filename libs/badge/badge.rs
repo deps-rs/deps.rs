@@ -39,7 +39,7 @@ struct BadgeStaticData {
 
 static DATA: Lazy<BadgeStaticData> = Lazy::new(|| {
     let font = Font::try_from_bytes(FONT_DATA).expect("failed to parse font collection");
-    
+
     let v_metrics = font.v_metrics(SCALE);
     let offset = point(0.0, v_metrics.ascent);
 

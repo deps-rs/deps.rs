@@ -1,2 +1,2 @@
-pub mod html;
 pub mod badge;
+pub mod html;

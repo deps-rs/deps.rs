@@ -1,13 +1,13 @@
 use std::str;
 
 use failure::Error;
-use futures::{Future, Stream, IntoFuture, future};
+use futures::{future, Future, IntoFuture, Stream};
 use hyper::{Error as HyperError, Method, Request, Response, Uri};
-use tokio_service::Service;
 use semver::{Version, VersionReq};
-use serde_json;
+use serde::Deserialize;
+use tokio_service::Service;
 
-use crate::models::crates::{CrateName, CrateRelease, CrateDeps, CrateDep, CratePath};
+use crate::models::crates::{CrateDep, CrateDeps, CrateName, CratePath, CrateRelease};
 
 const CRATES_INDEX_BASE_URI: &str = "https://raw.githubusercontent.com/rust-lang/crates.io-index";
 const CRATES_API_BASE_URI: &str = "https://crates.io/api/v1";
@@ -17,7 +17,7 @@ struct RegistryPackageDep {
     name: String,
     req: VersionReq,
     #[serde(default)]
-    kind: Option<String>
+    kind: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -26,51 +26,63 @@ struct RegistryPackage {
     #[serde(default)]
     deps: Vec<RegistryPackageDep>,
     #[serde(default)]
-    yanked: bool
+    yanked: bool,
 }
 
-fn convert_pkgs(name: &CrateName, packages: Vec<RegistryPackage>) -> Result<QueryCrateResponse, Error> {
-    let releases = packages.into_iter().map(|package| {
-        let mut deps = CrateDeps::default();
-        for dep in package.deps {
-            match dep.kind.map(|k| k.clone()).unwrap_or_else(|| "normal".into()).as_ref() {
-                "normal" =>
-                    deps.main.insert(dep.name.parse()?, CrateDep::External(dep.req)),
-                "dev" =>
-                    deps.dev.insert(dep.name.parse()?, CrateDep::External(dep.req)),
-                _ => None
-            };
-        }
-        Ok(CrateRelease {
-            name: name.clone(),
-            version: package.vers,
-            deps: deps,
-            yanked: package.yanked
+fn convert_pkgs(
+    name: &CrateName,
+    packages: Vec<RegistryPackage>,
+) -> Result<QueryCrateResponse, Error> {
+    let releases = packages
+        .into_iter()
+        .map(|package| {
+            let mut deps = CrateDeps::default();
+            for dep in package.deps {
+                match dep
+                    .kind
+                    .map(|k| k.clone())
+                    .unwrap_or_else(|| "normal".into())
+                    .as_ref()
+                {
+                    "normal" => deps
+                        .main
+                        .insert(dep.name.parse()?, CrateDep::External(dep.req)),
+                    "dev" => deps
+                        .dev
+                        .insert(dep.name.parse()?, CrateDep::External(dep.req)),
+                    _ => None,
+                };
+            }
+            Ok(CrateRelease {
+                name: name.clone(),
+                version: package.vers,
+                deps: deps,
+                yanked: package.yanked,
+            })
         })
-    }).collect::<Result<_, Error>>()?;
+        .collect::<Result<_, Error>>()?;
 
-    Ok(QueryCrateResponse {
-        releases: releases
-    })
+    Ok(QueryCrateResponse { releases: releases })
 }
 
 pub struct QueryCrateResponse {
-    pub releases: Vec<CrateRelease>
+    pub releases: Vec<CrateRelease>,
 }
 
 #[derive(Debug, Clone)]
 pub struct QueryCrate<S>(pub S);
 
 impl<S> Service for QueryCrate<S>
-    where S: Service<Request=Request, Response=Response, Error=HyperError> + Clone + 'static,
-          S::Future: 'static
+where
+    S: Service<Request = Request, Response = Response, Error = HyperError> + Clone + 'static,
+    S::Future: 'static,
 {
     type Request = CrateName;
     type Response = QueryCrateResponse;
     type Error = Error;
-    type Future = Box<dyn Future<Item=Self::Response, Error=Self::Error>>;
+    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error>>;
 
-    fn call(&self,  crate_name: CrateName) -> Self::Future {
+    fn call(&self, crate_name: CrateName) -> Self::Future {
         let lower_name = crate_name.as_ref().to_lowercase();
 
         let path = match lower_name.len() {
@@ -80,8 +92,8 @@ impl<S> Service for QueryCrate<S>
             _ => format!("{}/{}/{}", &lower_name[0..2], &lower_name[2..4], lower_name),
         };
 
-        let uri = try_future_box!(format!("{}/master/{}", CRATES_INDEX_BASE_URI, path)
-            .parse::<Uri>());
+        let uri =
+            try_future_box!(format!("{}/master/{}", CRATES_INDEX_BASE_URI, path).parse::<Uri>());
 
         let request = Request::new(Method::Get, uri.clone());
 
@@ -94,7 +106,8 @@ impl<S> Service for QueryCrate<S>
             let body_future = response.body().concat2().from_err();
             let decode_future = body_future.and_then(move |body| {
                 let string_body = str::from_utf8(body.as_ref())?;
-                let packages = string_body.lines()
+                let packages = string_body
+                    .lines()
                     .map(|s| s.trim())
                     .filter(|s| !s.is_empty())
                     .map(|s| serde_json::from_str::<RegistryPackage>(s))
@@ -112,38 +125,48 @@ impl<S> Service for QueryCrate<S>
 #[derive(Deserialize)]
 struct SummaryResponseDetail {
     name: String,
-    max_version: Version
+    max_version: Version,
 }
 
 #[derive(Deserialize)]
 struct SummaryResponse {
-    most_downloaded: Vec<SummaryResponseDetail>
+    most_downloaded: Vec<SummaryResponseDetail>,
 }
 
 fn convert_summary(response: SummaryResponse) -> Result<Vec<CratePath>, Error> {
-    response.most_downloaded.into_iter().map(|detail| {
-        let name = detail.name.parse()?;
-        Ok(CratePath { name, version: detail.max_version })
-    }).collect()
+    response
+        .most_downloaded
+        .into_iter()
+        .map(|detail| {
+            let name = detail.name.parse()?;
+            Ok(CratePath {
+                name,
+                version: detail.max_version,
+            })
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone)]
 pub struct GetPopularCrates<S>(pub S);
 
 impl<S> Service for GetPopularCrates<S>
-    where S: Service<Request=Request, Response=Response, Error=HyperError> + Clone + 'static,
-          S::Future: 'static
+where
+    S: Service<Request = Request, Response = Response, Error = HyperError> + Clone + 'static,
+    S::Future: 'static,
 {
     type Request = ();
     type Response = Vec<CratePath>;
     type Error = Error;
-    type Future = Box<dyn Future<Item=Self::Response, Error=Self::Error>>;
+    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error>>;
 
     fn call(&self, _req: ()) -> Self::Future {
         let service = self.0.clone();
 
         let uri_future = format!("{}/summary", CRATES_API_BASE_URI)
-            .parse::<Uri>().into_future().from_err();
+            .parse::<Uri>()
+            .into_future()
+            .from_err();
 
         Box::new(uri_future.and_then(move |uri| {
             let request = Request::new(Method::Get, uri.clone());
@@ -151,7 +174,11 @@ impl<S> Service for GetPopularCrates<S>
             service.call(request).from_err().and_then(move |response| {
                 let status = response.status();
                 if !status.is_success() {
-                    future::Either::A(future::err(format_err!("Status code {} for URI {}", status, uri)))
+                    future::Either::A(future::err(format_err!(
+                        "Status code {} for URI {}",
+                        status,
+                        uri
+                    )))
                 } else {
                     let body_future = response.body().concat2().from_err();
                     let decode_future = body_future.and_then(|body| {

@@ -3,5 +3,5 @@ pub mod repo;
 
 pub enum SubjectPath {
     Repo(self::repo::RepoPath),
-    Crate(self::crates::CratePath)
+    Crate(self::crates::CratePath),
 }
