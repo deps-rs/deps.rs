@@ -12,7 +12,7 @@ use hyper::Client;
 use hyper_tls::HttpsConnector;
 use once_cell::sync::Lazy;
 use relative_path::{RelativePath, RelativePathBuf};
-use rustsec::db::AdvisoryDatabase;
+use rustsec::database::Database;
 use semver::VersionReq;
 use slog::Logger;
 use tokio_service::Service;
@@ -237,7 +237,7 @@ impl Engine {
             .call((repo_path.clone(), manifest_path))
     }
 
-    fn fetch_advisory_db(&self) -> impl Future<Item = Arc<AdvisoryDatabase>, Error = Error> {
+    fn fetch_advisory_db(&self) -> impl Future<Item = Arc<Database>, Error = Error> {
         self.fetch_advisory_db
             .call(())
             .from_err()

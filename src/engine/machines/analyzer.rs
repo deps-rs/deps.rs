@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rustsec::db::AdvisoryDatabase;
+use rustsec::database::{Database, Query};
 use semver::Version;
 
 use crate::models::crates::{
@@ -9,11 +9,11 @@ use crate::models::crates::{
 
 pub struct DependencyAnalyzer {
     deps: AnalyzedDependencies,
-    advisory_db: Option<Arc<AdvisoryDatabase>>,
+    advisory_db: Option<Arc<Database>>,
 }
 
 impl DependencyAnalyzer {
-    pub fn new(deps: &CrateDeps, advisory_db: Option<Arc<AdvisoryDatabase>>) -> DependencyAnalyzer {
+    pub fn new(deps: &CrateDeps, advisory_db: Option<Arc<Database>>) -> DependencyAnalyzer {
         DependencyAnalyzer {
             deps: AnalyzedDependencies::new(deps),
             advisory_db,
@@ -24,7 +24,7 @@ impl DependencyAnalyzer {
         name: &CrateName,
         dep: &mut AnalyzedDependency,
         ver: &Version,
-        advisory_db: Option<&AdvisoryDatabase>,
+        advisory_db: Option<&Database>,
     ) {
         if dep.required.matches(&ver) {
             if let Some(ref mut current_latest_that_matches) = dep.latest_that_matches {
@@ -35,8 +35,12 @@ impl DependencyAnalyzer {
                 dep.latest_that_matches = Some(ver.clone());
             }
 
+            let name: rustsec::cargo_lock::Name = name.as_ref().parse().unwrap();
+            let version: rustsec::cargo_lock::Version = ver.to_string().parse().unwrap();
+            let query = Query::new().package_version(name, version);
+
             if !advisory_db
-                .map(|db| db.find_vulns_for_crate(name.as_ref(), ver).is_empty())
+                .map(|db| db.query(&query).is_empty())
                 .unwrap_or(true)
             {
                 dep.insecure = true;
@@ -90,8 +94,9 @@ impl DependencyAnalyzer {
 
 #[cfg(test)]
 mod tests {
-    use super::DependencyAnalyzer;
-    use models::crates::{CrateDep, CrateDeps, CrateRelease};
+    use crate::models::crates::{CrateDep, CrateDeps, CrateRelease};
+
+    use super::*;
 
     #[test]
     fn tracks_latest_without_matching() {

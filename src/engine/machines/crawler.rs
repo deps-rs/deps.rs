@@ -118,8 +118,9 @@ mod tests {
     use relative_path::RelativePath;
     use semver::VersionReq;
 
-    use super::ManifestCrawler;
-    use models::crates::CrateDep;
+    use crate::models::crates::CrateDep;
+
+    use super::*;
 
     #[test]
     fn simple_package_manifest() {
