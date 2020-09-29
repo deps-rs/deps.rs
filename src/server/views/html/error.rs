@@ -1,7 +1,7 @@
-use hyper::Response;
+use hyper::{Body, Response};
 use maud::html;
 
-pub fn render(title: &str, descr: &str) -> Response {
+pub fn render(title: &str, descr: &str) -> Response<Body> {
     super::render_html(
         title,
         html! {

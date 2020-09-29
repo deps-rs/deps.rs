@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, ensure, Error};
 use futures::{future, future::done, Future, IntoFuture, Stream};
-use hyper::{Error as HyperError, Method, Request, Response};
+use hyper::{Body, Error as HyperError, Method, Request, Response};
 use rustsec::database::Database;
 use rustsec::repository::DEFAULT_URL;
 use tokio_service::Service;
@@ -13,13 +13,15 @@ pub struct FetchAdvisoryDatabase<S>(pub S);
 
 impl<S> Service for FetchAdvisoryDatabase<S>
 where
-    S: Service<Request = Request, Response = Response, Error = HyperError> + Clone + 'static,
+    S: Service<Request = Request<Body>, Response = Response<Body>, Error = HyperError>
+        + Clone
+        + 'static,
     S::Future: 'static,
 {
     type Request = ();
     type Response = Arc<Database>;
     type Error = Error;
-    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error>>;
+    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error> + Send>;
 
     fn call(&self, _req: ()) -> Self::Future {
         let service = self.0.clone();

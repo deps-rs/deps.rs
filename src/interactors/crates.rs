@@ -2,7 +2,7 @@ use std::str;
 
 use anyhow::{anyhow, ensure, Error};
 use futures::{future, Future, IntoFuture, Stream};
-use hyper::{Error as HyperError, Method, Request, Response, Uri};
+use hyper::{Body, Error as HyperError, Method, Request, Response, Uri};
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 use tokio_service::Service;
@@ -74,13 +74,15 @@ pub struct QueryCrate<S>(pub S);
 
 impl<S> Service for QueryCrate<S>
 where
-    S: Service<Request = Request, Response = Response, Error = HyperError> + Clone + 'static,
-    S::Future: 'static,
+    S: Service<Request = Request<Body>, Response = Response<Body>, Error = HyperError>
+        + Clone
+        + 'static,
+    S::Future: Send + 'static,
 {
     type Request = CrateName;
     type Response = QueryCrateResponse;
     type Error = Error;
-    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error>>;
+    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error> + Send>;
 
     fn call(&self, crate_name: CrateName) -> Self::Future {
         let lower_name = crate_name.as_ref().to_lowercase();
@@ -95,7 +97,7 @@ where
         let uri =
             try_future_box!(format!("{}/master/{}", CRATES_INDEX_BASE_URI, path).parse::<Uri>());
 
-        let request = Request::new(Method::Get, uri.clone());
+        let request = Request::get(uri.clone()).body(Body::empty()).unwrap();
 
         Box::new(self.0.call(request).from_err().and_then(move |response| {
             let status = response.status();
@@ -103,7 +105,7 @@ where
                 try_future!(Err(anyhow!("Status code {} for URI {}", status, uri)));
             }
 
-            let body_future = response.body().concat2().from_err();
+            let body_future = response.into_body().concat2().from_err();
             let decode_future = body_future.and_then(move |body| {
                 let string_body = str::from_utf8(body.as_ref())?;
                 let packages = string_body
@@ -152,42 +154,40 @@ pub struct GetPopularCrates<S>(pub S);
 
 impl<S> Service for GetPopularCrates<S>
 where
-    S: Service<Request = Request, Response = Response, Error = HyperError> + Clone + 'static,
-    S::Future: 'static,
+    S: Service<Request = Request<Body>, Response = Response<Body>, Error = HyperError>
+        + Clone
+        + 'static,
+    S::Future: Send + 'static,
 {
     type Request = ();
     type Response = Vec<CratePath>;
     type Error = Error;
-    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error>>;
+    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error> + Send>;
 
     fn call(&self, _req: ()) -> Self::Future {
         let service = self.0.clone();
 
-        let uri_future = format!("{}/summary", CRATES_API_BASE_URI)
+        let uri = format!("{}/summary", CRATES_API_BASE_URI)
             .parse::<Uri>()
-            .into_future()
-            .from_err();
+            .unwrap();
+        let request = Request::get(uri.clone()).body(Body::empty()).unwrap();
 
-        Box::new(uri_future.and_then(move |uri| {
-            let request = Request::new(Method::Get, uri.clone());
-
-            service.call(request).from_err().and_then(move |response| {
-                let status = response.status();
-                if !status.is_success() {
-                    future::Either::A(future::err(anyhow!(
-                        "Status code {} for URI {}",
-                        status,
-                        uri
-                    )))
-                } else {
-                    let body_future = response.body().concat2().from_err();
-                    let decode_future = body_future.and_then(|body| {
-                        let summary = serde_json::from_slice::<SummaryResponse>(&body)?;
-                        convert_summary(summary)
-                    });
-                    future::Either::B(decode_future)
-                }
-            })
+        Box::new(service.call(request).from_err().and_then(move |response| {
+            let status = response.status();
+            if !status.is_success() {
+                future::Either::A(future::err(anyhow!(
+                    "Status code {} for URI {}",
+                    status,
+                    uri
+                )))
+            } else {
+                let body_future = response.into_body().concat2().from_err();
+                let decode_future = body_future.and_then(|body| {
+                    let summary = serde_json::from_slice::<SummaryResponse>(&body)?;
+                    convert_summary(summary)
+                });
+                future::Either::B(decode_future)
+            }
         }))
     }
 }

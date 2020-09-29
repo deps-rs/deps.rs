@@ -1,7 +1,7 @@
 use std::time::Duration;
 
-use hyper::header::ContentType;
-use hyper::Response;
+use hyper::header::CONTENT_TYPE;
+use hyper::{Body, Response};
 use maud::{html, Markup, Render};
 
 pub mod error;
@@ -10,7 +10,7 @@ pub mod status;
 
 use super::super::SELF_BASE_URL;
 
-fn render_html<B: Render>(title: &str, body: B) -> Response {
+fn render_html<B: Render>(title: &str, body: B) -> Response<Body> {
     let rendered = html! {
         html {
             head {
@@ -27,9 +27,10 @@ fn render_html<B: Render>(title: &str, body: B) -> Response {
         }
     };
 
-    Response::new()
-        .with_header(ContentType::html())
-        .with_body(rendered.0)
+    Response::builder()
+        .header(CONTENT_TYPE, "text/html; charset=utf-8")
+        .body(Body::from(rendered.0))
+        .unwrap()
 }
 
 fn render_navbar() -> Markup {

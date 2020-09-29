@@ -2,14 +2,14 @@ use std::env;
 use std::sync::Arc;
 
 use futures::{future, Future, IntoFuture};
-use hyper::header::{ContentType, Location};
-use hyper::{Error as HyperError, Method, Request, Response, StatusCode};
+use hyper::header::{CONTENT_TYPE, LOCATION};
+use hyper::service::Service;
+use hyper::{Body, Error as HyperError, Method, Request, Response, StatusCode};
 use once_cell::sync::Lazy;
 use route_recognizer::{Params, Router};
 use semver::VersionReq;
 use slog::Logger;
 use slog::{error, o};
-use tokio_service::Service;
 
 mod assets;
 mod views;
@@ -83,12 +83,12 @@ impl Server {
 }
 
 impl Service for Server {
-    type Request = Request;
-    type Response = Response;
-    type Error = HyperError;
-    type Future = Box<dyn Future<Item = Response, Error = HyperError>>;
+    type ReqBody = Body;
+    type ResBody = Body;
+    type Error = hyper::Error;
+    type Future = Box<dyn Future<Item = Response<Self::ResBody>, Error = Self::Error> + Send>;
 
-    fn call(&self, req: Request) -> Self::Future {
+    fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
         let logger = self
             .logger
             .new(o!("http_path" => req.uri().path().to_owned()));
@@ -96,17 +96,17 @@ impl Service for Server {
         if let Ok(route_match) = self.router.recognize(req.uri().path()) {
             match route_match.handler {
                 &Route::Index => {
-                    if *req.method() == Method::Get {
+                    if *req.method() == Method::GET {
                         return Box::new(self.index(req, route_match.params, logger));
                     }
                 }
                 &Route::RepoStatus(format) => {
-                    if *req.method() == Method::Get {
+                    if *req.method() == Method::GET {
                         return Box::new(self.repo_status(req, route_match.params, logger, format));
                     }
                 }
                 &Route::CrateStatus(format) => {
-                    if *req.method() == Method::Get {
+                    if *req.method() == Method::GET {
                         return Box::new(self.crate_status(
                             req,
                             route_match.params,
@@ -116,31 +116,31 @@ impl Service for Server {
                     }
                 }
                 &Route::CrateRedirect => {
-                    if *req.method() == Method::Get {
+                    if *req.method() == Method::GET {
                         return Box::new(self.crate_redirect(req, route_match.params, logger));
                     }
                 }
                 &Route::Static(file) => {
-                    if *req.method() == Method::Get {
+                    if *req.method() == Method::GET {
                         return Box::new(future::ok(Server::static_file(file)));
                     }
                 }
             }
         }
 
-        let mut response = Response::new();
-        response.set_status(StatusCode::NotFound);
-        Box::new(future::ok(response))
+        let mut response = Response::builder();
+        response.status(StatusCode::NOT_FOUND);
+        Box::new(future::ok(response.body(Body::empty()).unwrap()))
     }
 }
 
 impl Server {
     fn index(
         &self,
-        _req: Request,
+        _req: Request<Body>,
         _params: Params,
         logger: Logger,
-    ) -> impl Future<Item = Response, Error = HyperError> {
+    ) -> impl Future<Item = Response<Body>, Error = HyperError> + Send {
         self.engine
             .get_popular_repos()
             .join(self.engine.get_popular_crates())
@@ -149,7 +149,7 @@ impl Server {
                     error!(logger, "error: {}", err);
                     let mut response =
                         views::html::error::render("Could not retrieve popular items", "");
-                    response.set_status(StatusCode::InternalServerError);
+                    *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
                     future::ok(response)
                 }
                 Ok((popular_repos, popular_crates)) => {
@@ -160,11 +160,11 @@ impl Server {
 
     fn repo_status(
         &self,
-        _req: Request,
+        _req: Request<Body>,
         params: Params,
         logger: Logger,
         format: StatusFormat,
-    ) -> impl Future<Item = Response, Error = HyperError> {
+    ) -> impl Future<Item = Response<Body>, Error = HyperError> + Send {
         let server = self.clone();
 
         let site = params.find("site").expect("route param 'site' not found");
@@ -180,7 +180,7 @@ impl Server {
                         "Could not parse repository path",
                         "Please make sure to provide a valid repository path.",
                     );
-                    response.set_status(StatusCode::BadRequest);
+                    *response.status_mut() = StatusCode::BAD_REQUEST;
                     future::Either::A(future::ok(response))
                 }
                 Ok(repo_path) => future::Either::B(
@@ -212,10 +212,10 @@ impl Server {
 
     fn crate_redirect(
         &self,
-        _req: Request,
+        _req: Request<Body>,
         params: Params,
         logger: Logger,
-    ) -> impl Future<Item = Response, Error = HyperError> {
+    ) -> impl Future<Item = Response<Body>, Error = HyperError> + Send {
         let engine = self.engine.clone();
 
         let name = params.find("name").expect("route param 'name' not found");
@@ -229,7 +229,7 @@ impl Server {
                         "Could not parse crate name",
                         "Please make sure to provide a valid crate name.",
                     );
-                    response.set_status(StatusCode::BadRequest);
+                    *response.status_mut() = StatusCode::BAD_REQUEST;
                     future::Either::A(future::ok(response))
                 }
                 Ok(crate_name) => future::Either::B(
@@ -242,7 +242,7 @@ impl Server {
                                     "Could not fetch crate information",
                                     "Please make sure to provide a valid crate name.",
                                 );
-                                response.set_status(StatusCode::NotFound);
+                                *response.status_mut() = StatusCode::NOT_FOUND;
                                 future::ok(response)
                             }
                             Ok(None) => {
@@ -250,19 +250,21 @@ impl Server {
                                     "Could not fetch crate information",
                                     "Please make sure to provide a valid crate name.",
                                 );
-                                response.set_status(StatusCode::NotFound);
+                                *response.status_mut() = StatusCode::NOT_FOUND;
                                 future::ok(response)
                             }
                             Ok(Some(release)) => {
-                                let mut response = Response::new();
-                                response.set_status(StatusCode::TemporaryRedirect);
+                                let mut response = Response::builder();
+                                response.status(StatusCode::TEMPORARY_REDIRECT);
                                 let url = format!(
                                     "{}/crate/{}/{}",
                                     &SELF_BASE_URL as &str,
                                     release.name.as_ref(),
                                     release.version
                                 );
-                                response.headers_mut().set(Location::new(url));
+                                response.header(LOCATION, url);
+
+                                let response = response.body(Body::empty()).unwrap();
                                 future::ok(response)
                             }
                         }),
@@ -272,11 +274,11 @@ impl Server {
 
     fn crate_status(
         &self,
-        _req: Request,
+        _req: Request<Body>,
         params: Params,
         logger: Logger,
         format: StatusFormat,
-    ) -> impl Future<Item = Response, Error = HyperError> {
+    ) -> impl Future<Item = Response<Body>, Error = HyperError> + Send {
         let server = self.clone();
 
         let name = params.find("name").expect("route param 'name' not found");
@@ -293,7 +295,7 @@ impl Server {
                         "Could not parse crate path",
                         "Please make sure to provide a valid crate name and version.",
                     );
-                    response.set_status(StatusCode::BadRequest);
+                    *response.status_mut() = StatusCode::BAD_REQUEST;
                     future::Either::A(future::ok(response))
                 }
                 Ok(crate_path) => future::Either::B(
@@ -327,21 +329,23 @@ impl Server {
         analysis_outcome: Option<AnalyzeDependenciesOutcome>,
         format: StatusFormat,
         subject_path: SubjectPath,
-    ) -> Response {
+    ) -> Response<Body> {
         match format {
             StatusFormat::Svg => views::badge::response(analysis_outcome.as_ref()),
             StatusFormat::Html => views::html::status::render(analysis_outcome, subject_path),
         }
     }
 
-    fn static_file(file: StaticFile) -> Response {
+    fn static_file(file: StaticFile) -> Response<Body> {
         match file {
-            StaticFile::StyleCss => Response::new()
-                .with_header(ContentType("text/css".parse().unwrap()))
-                .with_body(assets::STATIC_STYLE_CSS),
-            StaticFile::FaviconPng => Response::new()
-                .with_header(ContentType("image/png".parse().unwrap()))
-                .with_body(assets::STATIC_FAVICON_PNG.to_vec()),
+            StaticFile::StyleCss => Response::builder()
+                .header(CONTENT_TYPE, "text/css")
+                .body(Body::from(assets::STATIC_STYLE_CSS))
+                .unwrap(),
+            StaticFile::FaviconPng => Response::builder()
+                .header(CONTENT_TYPE, "image/png")
+                .body(Body::from(assets::STATIC_FAVICON_PNG))
+                .unwrap(),
         }
     }
 }
