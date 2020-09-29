@@ -1,8 +1,8 @@
+use anyhow::{anyhow, ensure, Error};
 use hyper::Uri;
 use relative_path::RelativePathBuf;
-use failure::Error;
 
-use ::models::repo::RepoPath;
+use crate::models::repo::RepoPath;
 
 const GITLAB_USER_CONTENT_BASE_URI: &'static str = "https://gitlab.com";
 
@@ -15,10 +15,12 @@ pub fn get_manifest_uri(repo_path: &RepoPath, path: &RelativePathBuf) -> Result<
     } else {
         path_str
     };
-    Ok(format!("{}/{}/{}/raw/HEAD/{}",
+    Ok(format!(
+        "{}/{}/{}/raw/HEAD/{}",
         GITLAB_USER_CONTENT_BASE_URI,
         repo_path.qual.as_ref(),
         repo_path.name.as_ref(),
         slash_path
-    ).parse::<Uri>()?)
+    )
+    .parse::<Uri>()?)
 }

@@ -1,11 +1,11 @@
 use hyper::Response;
-use maud::{Markup, html};
 use indexmap::IndexMap;
+use maud::{html, Markup};
 
-use ::engine::AnalyzeDependenciesOutcome;
-use ::models::crates::{CrateName, AnalyzedDependency, AnalyzedDependencies};
-use ::models::SubjectPath;
-use ::models::repo::RepoSite;
+use crate::engine::AnalyzeDependenciesOutcome;
+use crate::models::crates::{AnalyzedDependencies, AnalyzedDependency, CrateName};
+use crate::models::repo::RepoSite;
+use crate::models::SubjectPath;
 
 use super::super::badge;
 
@@ -13,11 +13,11 @@ fn dependency_tables(crate_name: CrateName, deps: AnalyzedDependencies) -> Marku
     html! {
         h2 class="title is-3" {
             "Crate "
-            code (crate_name.as_ref())
+            code { (crate_name.as_ref()) }
         }
 
         @if deps.main.is_empty() && deps.dev.is_empty() && deps.build.is_empty() {
-            p class="notification has-text-centered" "No external dependencies! 🙌"
+            p class="notification has-text-centered" { "No external dependencies! 🙌" }
         }
 
         @if !deps.main.is_empty() {
@@ -40,7 +40,7 @@ fn dependency_table(title: &str, deps: IndexMap<CrateName, AnalyzedDependency>) 
     let count_outdated = deps.iter().filter(|&(_, dep)| dep.is_outdated()).count();
 
     html! {
-        h3 class="title is-4" (title)
+        h3 class="title is-4" { (title) }
         p class="subtitle is-5" {
             @if count_insecure > 0 {
                 (format!(" ({} total, {} insecure)", count_total, count_insecure))
@@ -54,33 +54,33 @@ fn dependency_table(title: &str, deps: IndexMap<CrateName, AnalyzedDependency>) 
         table class="table is-fullwidth is-striped is-hoverable" {
             thead {
                 tr {
-                    th "Crate"
-                    th class="has-text-right" "Required"
-                    th class="has-text-right" "Latest"
-                    th class="has-text-right" "Status"
+                    th { "Crate" }
+                    th class="has-text-right" { "Required" }
+                    th class="has-text-right" { "Latest" }
+                    th class="has-text-right" { "Status" }
                 }
             }
             tbody {
                 @for (name, dep) in deps {
                     tr {
                         td {
-                            a href=(format!("https://crates.io/crates/{}", name.as_ref())) (name.as_ref())
+                            a href=(format!("https://crates.io/crates/{}", name.as_ref())) { (name.as_ref()) }
                         }
-                        td class="has-text-right" code (dep.required.to_string())
+                        td class="has-text-right" { code { (dep.required.to_string()) } }
                         td class="has-text-right" {
                             @if let Some(ref latest) = dep.latest {
-                                code (latest.to_string())
+                                code { (latest.to_string()) }
                             } @else {
                                 "N/A"
                             }
                         }
                         td class="has-text-right" {
                             @if dep.insecure {
-                                span class="tag is-danger" "insecure"
+                                span class="tag is-danger" { "insecure" }
                             } @else if dep.is_outdated() {
-                                span class="tag is-warning" "out of date"
+                                span class="tag is-warning" { "out of date" }
                             } @else {
-                                span class="tag is-success" "up to date"
+                                span class="tag is-success" { "up to date" }
                             }
                         }
                     }
@@ -94,7 +94,7 @@ fn get_site_icon(site: &RepoSite) -> &'static str {
     match *site {
         RepoSite::Github => "fa-github",
         RepoSite::Gitlab => "fa-gitlab",
-        RepoSite::Bitbucket => "fa-bitbucket"
+        RepoSite::Bitbucket => "fa-bitbucket",
     }
 }
 
@@ -104,15 +104,15 @@ fn render_title(subject_path: &SubjectPath) -> Markup {
             let site_icon = get_site_icon(&repo_path.site);
             html! {
                 a href=(format!("{}/{}/{}", repo_path.site.to_base_uri(), repo_path.qual.as_ref(), repo_path.name.as_ref())) {
-                    i class=(format!("fa {}", site_icon)) ""
+                    i class=(format!("fa {}", site_icon)) { "" }
                     (format!(" {} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref()))
                 }
             }
-        },
+        }
         SubjectPath::Crate(ref crate_path) => {
             html! {
                 a href=(format!("https://crates.io/crates/{}/{}", crate_path.name.as_ref(), crate_path.version)) {
-                    i class="fa fa-cube" ""
+                    i class="fa fa-cube" { "" }
                     (format!(" {} {}", crate_path.name.as_ref(), crate_path.version))
                 }
             }
@@ -123,7 +123,7 @@ fn render_title(subject_path: &SubjectPath) -> Markup {
 fn render_failure(subject_path: SubjectPath) -> Markup {
     html! {
         section class="hero is-light" {
-            div class="hero-head" (super::render_navbar())
+            div class="hero-head" { (super::render_navbar()) }
             div class="hero-body" {
                 div class="container" {
                     h1 class="title is-1" {
@@ -135,8 +135,8 @@ fn render_failure(subject_path: SubjectPath) -> Markup {
         section class="section" {
             div class="container" {
                 div class="notification is-danger" {
-                    h2 class="title is-3" "Failed to analyze repository"
-                    p "The repository you requested might be structured in an uncommon way that is not yet supported."
+                    h2 class="title is-3" { "Failed to analyze repository" }
+                    p { "The repository you requested might be structured in an uncommon way that is not yet supported." }
                 }
             }
         }
@@ -144,18 +144,26 @@ fn render_failure(subject_path: SubjectPath) -> Markup {
     }
 }
 
-fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, subject_path: SubjectPath) -> Markup {
+fn render_success(
+    analysis_outcome: AnalyzeDependenciesOutcome,
+    subject_path: SubjectPath,
+) -> Markup {
     let self_path = match subject_path {
-        SubjectPath::Repo(ref repo_path) =>
-            format!("repo/{}/{}/{}", repo_path.site.as_ref(), repo_path.qual.as_ref(), repo_path.name.as_ref()),
-        SubjectPath::Crate(ref crate_path) =>
+        SubjectPath::Repo(ref repo_path) => format!(
+            "repo/{}/{}/{}",
+            repo_path.site.as_ref(),
+            repo_path.qual.as_ref(),
+            repo_path.name.as_ref()
+        ),
+        SubjectPath::Crate(ref crate_path) => {
             format!("crate/{}/{}", crate_path.name.as_ref(), crate_path.version)
+        }
     };
     let status_base_url = format!("{}/{}", &super::SELF_BASE_URL as &str, self_path);
 
     let status_data_uri = badge::badge(Some(&analysis_outcome)).to_svg_data_uri();
 
-    let hero_class = if analysis_outcome.any_insecure()  {
+    let hero_class = if analysis_outcome.any_insecure() {
         "is-danger"
     } else if analysis_outcome.any_outdated() {
         "is-warning"
@@ -165,7 +173,7 @@ fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, subject_path: Su
 
     html! {
         section class=(format!("hero {}", hero_class)) {
-            div class="hero-head" (super::render_navbar())
+            div class="hero-head" { (super::render_navbar()) }
             div class="hero-body" {
                 div class="container" {
                     h1 class="title is-1" {
@@ -194,12 +202,17 @@ fn render_success(analysis_outcome: AnalyzeDependenciesOutcome, subject_path: Su
     }
 }
 
-pub fn render(analysis_outcome: Option<AnalyzeDependenciesOutcome>, subject_path: SubjectPath) -> Response {
+pub fn render(
+    analysis_outcome: Option<AnalyzeDependenciesOutcome>,
+    subject_path: SubjectPath,
+) -> Response {
     let title = match subject_path {
-        SubjectPath::Repo(ref repo_path) =>
-            format!("{} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref()),
-        SubjectPath::Crate(ref crate_path) =>
+        SubjectPath::Repo(ref repo_path) => {
+            format!("{} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref())
+        }
+        SubjectPath::Crate(ref crate_path) => {
             format!("{} {}", crate_path.name.as_ref(), crate_path.version)
+        }
     };
 
     if let Some(outcome) = analysis_outcome {

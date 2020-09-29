@@ -1,18 +1,18 @@
 use std::str::FromStr;
 
-use failure::Error;
+use anyhow::{anyhow, ensure, Error};
 
 #[derive(Clone, Debug)]
 pub struct Repository {
     pub path: RepoPath,
-    pub description: String
+    pub description: String,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct RepoPath {
     pub site: RepoSite,
     pub qual: RepoQualifier,
-    pub name: RepoName
+    pub name: RepoName,
 }
 
 impl RepoPath {
@@ -20,7 +20,7 @@ impl RepoPath {
         Ok(RepoPath {
             site: site.parse()?,
             qual: qual.parse()?,
-            name: name.parse()?
+            name: name.parse()?,
         })
     }
 }
@@ -50,7 +50,7 @@ impl FromStr for RepoSite {
             "github" => Ok(RepoSite::Github),
             "gitlab" => Ok(RepoSite::Gitlab),
             "bitbucket" => Ok(RepoSite::Bitbucket),
-            _ => Err(format_err!("unknown repo site identifier"))
+            _ => Err(anyhow!("unknown repo site identifier")),
         }
     }
 }
@@ -72,9 +72,9 @@ impl FromStr for RepoQualifier {
     type Err = Error;
 
     fn from_str(input: &str) -> Result<RepoQualifier, Error> {
-        let is_valid = input.chars().all(|c| {
-            c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_'
-        });
+        let is_valid = input
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_');
 
         ensure!(is_valid, "invalid repo qualifier");
         Ok(RepoQualifier(input.to_string()))
@@ -94,9 +94,9 @@ impl FromStr for RepoName {
     type Err = Error;
 
     fn from_str(input: &str) -> Result<RepoName, Error> {
-        let is_valid = input.chars().all(|c| {
-            c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_'
-        });
+        let is_valid = input
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_');
 
         ensure!(is_valid, "invalid repo name");
         Ok(RepoName(input.to_string()))

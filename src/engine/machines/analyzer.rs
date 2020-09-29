@@ -1,24 +1,31 @@
 use std::sync::Arc;
 
-use rustsec::db::AdvisoryDatabase;
+use rustsec::database::{Database, Query};
 use semver::Version;
 
-use ::models::crates::{CrateDeps, CrateRelease, CrateName, AnalyzedDependency, AnalyzedDependencies};
+use crate::models::crates::{
+    AnalyzedDependencies, AnalyzedDependency, CrateDeps, CrateName, CrateRelease,
+};
 
 pub struct DependencyAnalyzer {
     deps: AnalyzedDependencies,
-    advisory_db: Option<Arc<AdvisoryDatabase>>
+    advisory_db: Option<Arc<Database>>,
 }
 
 impl DependencyAnalyzer {
-    pub fn new(deps: &CrateDeps, advisory_db: Option<Arc<AdvisoryDatabase>>) -> DependencyAnalyzer {
+    pub fn new(deps: &CrateDeps, advisory_db: Option<Arc<Database>>) -> DependencyAnalyzer {
         DependencyAnalyzer {
             deps: AnalyzedDependencies::new(deps),
-            advisory_db
+            advisory_db,
         }
     }
 
-    fn process_single(name: &CrateName, dep: &mut AnalyzedDependency, ver: &Version, advisory_db: Option<&AdvisoryDatabase>) {
+    fn process_single(
+        name: &CrateName,
+        dep: &mut AnalyzedDependency,
+        ver: &Version,
+        advisory_db: Option<&Database>,
+    ) {
         if dep.required.matches(&ver) {
             if let Some(ref mut current_latest_that_matches) = dep.latest_that_matches {
                 if *current_latest_that_matches < *ver {
@@ -28,7 +35,14 @@ impl DependencyAnalyzer {
                 dep.latest_that_matches = Some(ver.clone());
             }
 
-            if !advisory_db.map(|db| db.find_vulns_for_crate(name.as_ref(), ver).is_empty()).unwrap_or(true) {
+            let name: rustsec::cargo_lock::Name = name.as_ref().parse().unwrap();
+            let version: rustsec::cargo_lock::Version = ver.to_string().parse().unwrap();
+            let query = Query::new().package_version(name, version);
+
+            if !advisory_db
+                .map(|db| db.query(&query).is_empty())
+                .unwrap_or(true)
+            {
                 dep.insecure = true;
             }
         }
@@ -43,17 +57,32 @@ impl DependencyAnalyzer {
         }
     }
 
-    pub fn process<I: IntoIterator<Item=CrateRelease>>(&mut self, releases: I) {
+    pub fn process<I: IntoIterator<Item = CrateRelease>>(&mut self, releases: I) {
         let advisory_db = self.advisory_db.as_ref().map(|r| r.as_ref());
         for release in releases.into_iter().filter(|r| !r.yanked) {
             if let Some(main_dep) = self.deps.main.get_mut(&release.name) {
-                DependencyAnalyzer::process_single(&release.name, main_dep, &release.version, advisory_db)
+                DependencyAnalyzer::process_single(
+                    &release.name,
+                    main_dep,
+                    &release.version,
+                    advisory_db,
+                )
             }
             if let Some(dev_dep) = self.deps.dev.get_mut(&release.name) {
-                DependencyAnalyzer::process_single(&release.name, dev_dep, &release.version, advisory_db)
+                DependencyAnalyzer::process_single(
+                    &release.name,
+                    dev_dep,
+                    &release.version,
+                    advisory_db,
+                )
             }
             if let Some(build_dep) = self.deps.build.get_mut(&release.name) {
-                DependencyAnalyzer::process_single(&release.name, build_dep, &release.version, advisory_db)
+                DependencyAnalyzer::process_single(
+                    &release.name,
+                    build_dep,
+                    &release.version,
+                    advisory_db,
+                )
             }
         }
     }
@@ -65,75 +94,157 @@ impl DependencyAnalyzer {
 
 #[cfg(test)]
 mod tests {
-    use models::crates::{CrateDep, CrateDeps, CrateRelease};
-    use super::DependencyAnalyzer;
+    use crate::models::crates::{CrateDep, CrateDeps, CrateRelease};
+
+    use super::*;
 
     #[test]
     fn tracks_latest_without_matching() {
         let mut deps = CrateDeps::default();
-        deps.main.insert("hyper".parse().unwrap(), CrateDep::External("^0.11.0".parse().unwrap()));
+        deps.main.insert(
+            "hyper".parse().unwrap(),
+            CrateDep::External("^0.11.0".parse().unwrap()),
+        );
 
         let mut analyzer = DependencyAnalyzer::new(&deps, None);
         analyzer.process(vec![
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.0".parse().unwrap(), deps: Default::default(), yanked: false },
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.1".parse().unwrap(), deps: Default::default(), yanked: false }
+            CrateRelease {
+                name: "hyper".parse().unwrap(),
+                version: "0.10.0".parse().unwrap(),
+                deps: Default::default(),
+                yanked: false,
+            },
+            CrateRelease {
+                name: "hyper".parse().unwrap(),
+                version: "0.10.1".parse().unwrap(),
+                deps: Default::default(),
+                yanked: false,
+            },
         ]);
 
         let analyzed = analyzer.finalize();
 
-        assert_eq!(analyzed.main.get("hyper").unwrap().latest_that_matches, None);
-        assert_eq!(analyzed.main.get("hyper").unwrap().latest, Some("0.10.1".parse().unwrap()));
+        assert_eq!(
+            analyzed.main.get("hyper").unwrap().latest_that_matches,
+            None
+        );
+        assert_eq!(
+            analyzed.main.get("hyper").unwrap().latest,
+            Some("0.10.1".parse().unwrap())
+        );
     }
 
     #[test]
     fn tracks_latest_that_matches() {
         let mut deps = CrateDeps::default();
-        deps.main.insert("hyper".parse().unwrap(), CrateDep::External("^0.10.0".parse().unwrap()));
+        deps.main.insert(
+            "hyper".parse().unwrap(),
+            CrateDep::External("^0.10.0".parse().unwrap()),
+        );
 
         let mut analyzer = DependencyAnalyzer::new(&deps, None);
         analyzer.process(vec![
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.0".parse().unwrap(), deps: Default::default(), yanked: false },
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.1".parse().unwrap(), deps: Default::default(), yanked: false },
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.11.0".parse().unwrap(), deps: Default::default(), yanked: false }
+            CrateRelease {
+                name: "hyper".parse().unwrap(),
+                version: "0.10.0".parse().unwrap(),
+                deps: Default::default(),
+                yanked: false,
+            },
+            CrateRelease {
+                name: "hyper".parse().unwrap(),
+                version: "0.10.1".parse().unwrap(),
+                deps: Default::default(),
+                yanked: false,
+            },
+            CrateRelease {
+                name: "hyper".parse().unwrap(),
+                version: "0.11.0".parse().unwrap(),
+                deps: Default::default(),
+                yanked: false,
+            },
         ]);
 
         let analyzed = analyzer.finalize();
 
-        assert_eq!(analyzed.main.get("hyper").unwrap().latest_that_matches, Some("0.10.1".parse().unwrap()));
-        assert_eq!(analyzed.main.get("hyper").unwrap().latest, Some("0.11.0".parse().unwrap()));
+        assert_eq!(
+            analyzed.main.get("hyper").unwrap().latest_that_matches,
+            Some("0.10.1".parse().unwrap())
+        );
+        assert_eq!(
+            analyzed.main.get("hyper").unwrap().latest,
+            Some("0.11.0".parse().unwrap())
+        );
     }
 
     #[test]
     fn skips_yanked_releases() {
         let mut deps = CrateDeps::default();
-        deps.main.insert("hyper".parse().unwrap(), CrateDep::External("^0.10.0".parse().unwrap()));
+        deps.main.insert(
+            "hyper".parse().unwrap(),
+            CrateDep::External("^0.10.0".parse().unwrap()),
+        );
 
         let mut analyzer = DependencyAnalyzer::new(&deps, None);
         analyzer.process(vec![
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.0".parse().unwrap(), deps: Default::default(), yanked: false },
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.1".parse().unwrap(), deps: Default::default(), yanked: true },
+            CrateRelease {
+                name: "hyper".parse().unwrap(),
+                version: "0.10.0".parse().unwrap(),
+                deps: Default::default(),
+                yanked: false,
+            },
+            CrateRelease {
+                name: "hyper".parse().unwrap(),
+                version: "0.10.1".parse().unwrap(),
+                deps: Default::default(),
+                yanked: true,
+            },
         ]);
 
         let analyzed = analyzer.finalize();
 
-        assert_eq!(analyzed.main.get("hyper").unwrap().latest_that_matches, Some("0.10.0".parse().unwrap()));
-        assert_eq!(analyzed.main.get("hyper").unwrap().latest, Some("0.10.0".parse().unwrap()));
+        assert_eq!(
+            analyzed.main.get("hyper").unwrap().latest_that_matches,
+            Some("0.10.0".parse().unwrap())
+        );
+        assert_eq!(
+            analyzed.main.get("hyper").unwrap().latest,
+            Some("0.10.0".parse().unwrap())
+        );
     }
 
     #[test]
     fn skips_prereleases() {
         let mut deps = CrateDeps::default();
-        deps.main.insert("hyper".parse().unwrap(), CrateDep::External("^0.10.0".parse().unwrap()));
+        deps.main.insert(
+            "hyper".parse().unwrap(),
+            CrateDep::External("^0.10.0".parse().unwrap()),
+        );
 
         let mut analyzer = DependencyAnalyzer::new(&deps, None);
         analyzer.process(vec![
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.0".parse().unwrap(), deps: Default::default(), yanked: false },
-            CrateRelease { name: "hyper".parse().unwrap(), version: "0.10.1-alpha".parse().unwrap(), deps: Default::default(), yanked: false },
+            CrateRelease {
+                name: "hyper".parse().unwrap(),
+                version: "0.10.0".parse().unwrap(),
+                deps: Default::default(),
+                yanked: false,
+            },
+            CrateRelease {
+                name: "hyper".parse().unwrap(),
+                version: "0.10.1-alpha".parse().unwrap(),
+                deps: Default::default(),
+                yanked: false,
+            },
         ]);
 
         let analyzed = analyzer.finalize();
 
-        assert_eq!(analyzed.main.get("hyper").unwrap().latest_that_matches, Some("0.10.0".parse().unwrap()));
-        assert_eq!(analyzed.main.get("hyper").unwrap().latest, Some("0.10.0".parse().unwrap()));
+        assert_eq!(
+            analyzed.main.get("hyper").unwrap().latest_that_matches,
+            Some("0.10.0".parse().unwrap())
+        );
+        assert_eq!(
+            analyzed.main.get("hyper").unwrap().latest,
+            Some("0.10.0".parse().unwrap())
+        );
     }
 }
