@@ -2,7 +2,7 @@ use std::str;
 
 use anyhow::{anyhow, ensure, Error};
 use futures::{future, Future, IntoFuture, Stream};
-use hyper::{Body, Error as HyperError, Method, Request, Response, Uri};
+use hyper::{Body, Error as HyperError, Method, Request, Response, Uri, header::USER_AGENT};
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 use tokio_service::Service;
@@ -97,7 +97,9 @@ where
         let uri =
             try_future_box!(format!("{}/master/{}", CRATES_INDEX_BASE_URI, path).parse::<Uri>());
 
-        let request = Request::get(uri.clone()).body(Body::empty()).unwrap();
+        let request = Request::get(uri.clone())
+            .header(USER_AGENT, "deps.rs")
+            .body(Body::empty()).unwrap();
 
         Box::new(self.0.call(request).from_err().and_then(move |response| {
             let status = response.status();
@@ -170,7 +172,9 @@ where
         let uri = format!("{}/summary", CRATES_API_BASE_URI)
             .parse::<Uri>()
             .unwrap();
-        let request = Request::get(uri.clone()).body(Body::empty()).unwrap();
+        let request = Request::get(uri.clone())
+            .header(USER_AGENT, "deps.rs")
+            .body(Body::empty()).unwrap();
 
         Box::new(service.call(request).from_err().and_then(move |response| {
             let status = response.status();

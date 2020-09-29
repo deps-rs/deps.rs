@@ -1,6 +1,6 @@
 use anyhow::{anyhow, ensure, Error};
 use futures::{Future, Stream};
-use hyper::{Body, Error as HyperError, Method, Request, Response};
+use hyper::{Body, Error as HyperError, Method, Request, Response, header::USER_AGENT};
 use relative_path::RelativePathBuf;
 use tokio_service::Service;
 
@@ -35,7 +35,9 @@ where
             &RepoSite::Bitbucket => try_future_box!(bitbucket::get_manifest_uri(&repo_path, &path)),
         };
 
-        let request = Request::get(uri.clone()).body(Body::empty()).unwrap();
+        let request = Request::get(uri.clone())
+            .header(USER_AGENT, "deps.rs")
+            .body(Body::empty()).unwrap();
 
         Box::new(self.0.call(request).from_err().and_then(move |response| {
             let status = response.status();
