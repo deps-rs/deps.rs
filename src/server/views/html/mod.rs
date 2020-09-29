@@ -57,12 +57,12 @@ fn render_footer(duration: Option<Duration>) -> Markup {
                     p {
                         strong { "Deps.rs" }
                         " is a service for the Rust community. It is open source on "
-                        a href="https://github.com/srijs/deps.rs" { "GitHub" }
+                        a href="https://github.com/deps-rs/deps.rs" { "GitHub" }
                         "."
                     }
                     p {
                         "Please report any issues on the "
-                        a href="https://github.com/srijs/deps.rs/issues" { "issue tracker" }
+                        a href="https://github.com/deps-rs/deps.rs/issues" { "issue tracker" }
                         "."
                     }
                     @if let Some(millis) = duration_millis {
