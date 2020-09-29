@@ -1,6 +1,6 @@
 use anyhow::{anyhow, ensure, Error};
 use futures::{Future, Stream};
-use hyper::{Error as HyperError, Method, Request, Response};
+use hyper::{Body, Error as HyperError, Method, Request, Response};
 use relative_path::RelativePathBuf;
 use tokio_service::Service;
 
@@ -17,13 +17,15 @@ pub struct RetrieveFileAtPath<S>(pub S);
 
 impl<S> Service for RetrieveFileAtPath<S>
 where
-    S: Service<Request = Request, Response = Response, Error = HyperError> + Clone + 'static,
-    S::Future: 'static,
+    S: Service<Request = Request<Body>, Response = Response<Body>, Error = HyperError>
+        + Clone
+        + 'static,
+    S::Future: Send + 'static,
 {
     type Request = (RepoPath, RelativePathBuf);
     type Response = String;
     type Error = Error;
-    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error>>;
+    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error> + Send>;
 
     fn call(&self, req: Self::Request) -> Self::Future {
         let (repo_path, path) = req;
@@ -33,7 +35,7 @@ where
             &RepoSite::Bitbucket => try_future_box!(bitbucket::get_manifest_uri(&repo_path, &path)),
         };
 
-        let request = Request::new(Method::Get, uri.clone());
+        let request = Request::get(uri.clone()).body(Body::empty()).unwrap();
 
         Box::new(self.0.call(request).from_err().and_then(move |response| {
             let status = response.status();
@@ -41,7 +43,7 @@ where
                 try_future!(Err(anyhow!("Status code {} for URI {}", status, uri)));
             }
 
-            let body_future = response.body().concat2().from_err();
+            let body_future = response.into_body().concat2().from_err();
 
             body_future
                 .and_then(|body| String::from_utf8(body.to_vec()).map_err(|err| err.into()))

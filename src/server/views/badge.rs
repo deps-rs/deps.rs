@@ -1,6 +1,6 @@
 use badge::{Badge, BadgeOptions};
-use hyper::header::ContentType;
-use hyper::Response;
+use hyper::header::CONTENT_TYPE;
+use hyper::{Body, Response};
 
 use crate::engine::AnalyzeDependenciesOutcome;
 
@@ -47,8 +47,11 @@ pub fn badge(analysis_outcome: Option<&AnalyzeDependenciesOutcome>) -> Badge {
     Badge::new(opts)
 }
 
-pub fn response(analysis_outcome: Option<&AnalyzeDependenciesOutcome>) -> Response {
-    Response::new()
-        .with_header(ContentType("image/svg+xml;charset=utf-8".parse().unwrap()))
-        .with_body(badge(analysis_outcome).to_svg().into_bytes())
+pub fn response(analysis_outcome: Option<&AnalyzeDependenciesOutcome>) -> Response<Body> {
+    let badge = badge(analysis_outcome).to_svg();
+
+    Response::builder()
+        .header(CONTENT_TYPE, "image/svg+xml; charset=utf-8")
+        .body(Body::from(badge))
+        .unwrap()
 }

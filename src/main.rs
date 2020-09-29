@@ -1,7 +1,6 @@
 #![deny(rust_2018_idioms)]
 #![allow(unused)]
 
-
 #[macro_use]
 extern crate try_future;
 
@@ -11,7 +10,8 @@ use std::sync::Mutex;
 
 use cadence::{QueuingMetricSink, UdpMetricSink};
 use futures::{Future, Stream};
-use hyper::server::Http;
+use hyper::server::conn::AddrStream;
+use hyper::service::{make_service_fn, service_fn_ok};
 use hyper::Client;
 use hyper_tls::HttpsConnector;
 use slog::Drain;
@@ -48,11 +48,9 @@ fn main() {
 
     let handle = core.handle();
 
-    let connector = HttpsConnector::new(4, &handle).expect("failed to create https connector");
+    let connector = HttpsConnector::new(4).expect("failed to create https connector");
 
-    let client = Client::configure()
-        .connector(connector)
-        .build(&core.handle());
+    let client = Client::builder().build(connector);
 
     let port = env::var("PORT")
         .unwrap_or_else(|_| "8080".to_string())
@@ -61,29 +59,18 @@ fn main() {
 
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
 
-    let http = Http::new();
-
     let mut engine = Engine::new(client.clone(), logger.clone());
     engine.set_metrics(metrics);
 
     let server = Server::new(logger.clone(), engine);
-
-    let serve = http
-        .serve_addr_handle(&addr, &handle, move || Ok(server.clone()))
-        .expect("failed to bind server");
-
-    let serving = serve.for_each(move |conn| {
-        let conn_logger = logger.clone();
-        handle.spawn(conn.then(move |res| {
-            if let Err(err) = res {
-                info!(conn_logger, "server connection error: {}", err)
-            }
-            Ok(())
-        }));
-        Ok(())
+    let make_svc = make_service_fn(move |socket: &AddrStream| {
+        let server = server.clone();
+        futures::future::ok::<_, hyper::Error>(server)
     });
+    let server = hyper::Server::bind(&addr).serve(make_svc);
 
     println!("Server running on port {}", port);
-
-    core.run(serving).expect("server failed");
+    hyper::rt::run(server.map_err(|e| {
+        eprintln!("server error: {}", e);
+    }));
 }

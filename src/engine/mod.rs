@@ -2,13 +2,13 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use anyhow::{anyhow, ensure, Error};
 use cadence::prelude::*;
 use cadence::{MetricSink, NopMetricSink, StatsdClient};
-use anyhow::{anyhow, ensure, Error};
 use futures::future::join_all;
 use futures::{future, Future};
-use hyper::client::HttpConnector;
-use hyper::Client;
+use hyper::client::{HttpConnector, ResponseFuture};
+use hyper::{Body, Client, Request, Response};
 use hyper_tls::HttpsConnector;
 use once_cell::sync::Lazy;
 use relative_path::{RelativePath, RelativePathBuf};
@@ -35,30 +35,56 @@ use self::fut::CrawlManifestFuture;
 
 type HttpClient = Client<HttpsConnector<HttpConnector>>;
 
+// workaround for hyper 0.12 not implementing Service for Client
+#[derive(Debug, Clone)]
+struct ServiceHttpClient(HttpClient);
+
+impl Service for ServiceHttpClient {
+    type Request = Request<Body>;
+    type Response = Response<Body>;
+    type Error = hyper::Error;
+    type Future = ResponseFuture;
+
+    fn call(&self, req: Self::Request) -> Self::Future {
+        self.0.request(req)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Engine {
     client: HttpClient,
     logger: Logger,
     metrics: StatsdClient,
-
-    query_crate: Arc<Cache<QueryCrate<HttpClient>>>,
-    get_popular_crates: Arc<Cache<GetPopularCrates<HttpClient>>>,
-    get_popular_repos: Arc<Cache<GetPopularRepos<HttpClient>>>,
-    retrieve_file_at_path: Arc<RetrieveFileAtPath<HttpClient>>,
-    fetch_advisory_db: Arc<Cache<FetchAdvisoryDatabase<HttpClient>>>,
+    query_crate: Arc<Cache<QueryCrate<ServiceHttpClient>>>,
+    get_popular_crates: Arc<Cache<GetPopularCrates<ServiceHttpClient>>>,
+    get_popular_repos: Arc<Cache<GetPopularRepos<ServiceHttpClient>>>,
+    retrieve_file_at_path: Arc<RetrieveFileAtPath<ServiceHttpClient>>,
+    fetch_advisory_db: Arc<Cache<FetchAdvisoryDatabase<ServiceHttpClient>>>,
 }
 
 impl Engine {
     pub fn new(client: Client<HttpsConnector<HttpConnector>>, logger: Logger) -> Engine {
         let metrics = StatsdClient::from_sink("engine", NopMetricSink);
 
-        let query_crate = Cache::new(QueryCrate(client.clone()), Duration::from_secs(300), 500);
-        let get_popular_crates =
-            Cache::new(GetPopularCrates(client.clone()), Duration::from_secs(10), 1);
-        let get_popular_repos =
-            Cache::new(GetPopularRepos(client.clone()), Duration::from_secs(10), 1);
+        let service_client = ServiceHttpClient(client.clone());
+
+        let query_crate = Cache::new(
+            QueryCrate(service_client.clone()),
+            Duration::from_secs(300),
+            500,
+        );
+        let get_popular_crates = Cache::new(
+            GetPopularCrates(service_client.clone()),
+            Duration::from_secs(10),
+            1,
+        );
+        let get_popular_repos = Cache::new(
+            GetPopularRepos(service_client.clone()),
+            Duration::from_secs(10),
+            1,
+        );
         let fetch_advisory_db = Cache::new(
-            FetchAdvisoryDatabase(client.clone()),
+            FetchAdvisoryDatabase(service_client.clone()),
             Duration::from_secs(300),
             1,
         );
@@ -67,11 +93,10 @@ impl Engine {
             client: client.clone(),
             logger,
             metrics,
-
             query_crate: Arc::new(query_crate),
             get_popular_crates: Arc::new(get_popular_crates),
             get_popular_repos: Arc::new(get_popular_repos),
-            retrieve_file_at_path: Arc::new(RetrieveFileAtPath(client)),
+            retrieve_file_at_path: Arc::new(RetrieveFileAtPath(service_client)),
             fetch_advisory_db: Arc::new(fetch_advisory_db),
         }
     }
@@ -107,7 +132,7 @@ impl AnalyzeDependenciesOutcome {
 }
 
 impl Engine {
-    pub fn get_popular_repos(&self) -> impl Future<Item = Vec<Repository>, Error = Error> {
+    pub fn get_popular_repos(&self) -> impl Future<Item = Vec<Repository>, Error = Error> + Send {
         self.get_popular_repos.call(()).from_err().map(|repos| {
             repos
                 .iter()
@@ -117,7 +142,7 @@ impl Engine {
         })
     }
 
-    pub fn get_popular_crates(&self) -> impl Future<Item = Vec<CratePath>, Error = Error> {
+    pub fn get_popular_crates(&self) -> impl Future<Item = Vec<CratePath>, Error = Error> + Send {
         self.get_popular_crates
             .call(())
             .from_err()
@@ -127,7 +152,7 @@ impl Engine {
     pub fn analyze_repo_dependencies(
         &self,
         repo_path: RepoPath,
-    ) -> impl Future<Item = AnalyzeDependenciesOutcome, Error = Error> {
+    ) -> impl Future<Item = AnalyzeDependenciesOutcome, Error = Error> + Send {
         let start = Instant::now();
 
         let entry_point = RelativePath::new("/").to_relative_path_buf();
@@ -164,7 +189,7 @@ impl Engine {
     pub fn analyze_crate_dependencies(
         &self,
         crate_path: CratePath,
-    ) -> impl Future<Item = AnalyzeDependenciesOutcome, Error = Error> {
+    ) -> impl Future<Item = AnalyzeDependenciesOutcome, Error = Error> + Send {
         let start = Instant::now();
 
         let query_future = self.query_crate.call(crate_path.name.clone()).from_err();
@@ -199,7 +224,7 @@ impl Engine {
         &self,
         name: CrateName,
         req: VersionReq,
-    ) -> impl Future<Item = Option<CrateRelease>, Error = Error> {
+    ) -> impl Future<Item = Option<CrateRelease>, Error = Error> + Send {
         self.query_crate
             .call(name)
             .from_err()
@@ -231,13 +256,13 @@ impl Engine {
         &self,
         repo_path: &RepoPath,
         path: &RelativePathBuf,
-    ) -> impl Future<Item = String, Error = Error> {
+    ) -> impl Future<Item = String, Error = Error> + Send {
         let manifest_path = path.join(RelativePath::new("Cargo.toml"));
         self.retrieve_file_at_path
             .call((repo_path.clone(), manifest_path))
     }
 
-    fn fetch_advisory_db(&self) -> impl Future<Item = Arc<Database>, Error = Error> {
+    fn fetch_advisory_db(&self) -> impl Future<Item = Arc<Database>, Error = Error> + Send {
         self.fetch_advisory_db
             .call(())
             .from_err()
