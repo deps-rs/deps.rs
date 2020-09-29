@@ -1,0 +1,28 @@
+name: Premerge
+
+on:
+  pull_request:
+    types: [opened, synchronized, reopened]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v2
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Build check
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+
+      - name: Tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
