@@ -1,35 +1,36 @@
-use std::str;
-use std::sync::Arc;
+use std::{pin::Pin, sync::Arc, task::Context, task::Poll};
 
-use anyhow::{anyhow, ensure, Error};
-use futures::{future, future::done, Future, IntoFuture, Stream};
-use hyper::{Body, Error as HyperError, Method, Request, Response};
+use anyhow::Error;
+use futures::{future::ready, Future};
+use hyper::{service::Service, Body, Error as HyperError, Request, Response};
 use rustsec::database::Database;
-use rustsec::repository::DEFAULT_URL;
-use tokio_service::Service;
 
 #[derive(Debug, Clone)]
 pub struct FetchAdvisoryDatabase<S>(pub S);
 
-impl<S> Service for FetchAdvisoryDatabase<S>
+impl<S> Service<()> for FetchAdvisoryDatabase<S>
 where
-    S: Service<Request = Request<Body>, Response = Response<Body>, Error = HyperError>
-        + Clone
-        + 'static,
+    S: Service<Request<Body>, Response = Response<Body>, Error = HyperError> + Clone,
     S::Future: 'static,
 {
-    type Request = ();
     type Response = Arc<Database>;
     type Error = Error;
-    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error> + Send>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
-    fn call(&self, _req: ()) -> Self::Future {
-        let service = self.0.clone();
+    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        // TODO: should be this when async client is used again
+        // self.0.poll_ready(cx).map_err(|err| err.into())
+        Poll::Ready(Ok(()))
+    }
 
-        Box::new(done(
+    // TODO: make fetch async again
+    fn call(&mut self, _req: ()) -> Self::Future {
+        let _service = self.0.clone();
+
+        Box::pin(ready(
             rustsec::Database::fetch()
                 .map(|db| Arc::new(db))
-                .map_err(|err| anyhow!("err fetching rustsec DB")),
+                .map_err(|err| err.into()),
         ))
     }
 }
@@ -39,7 +40,7 @@ where
 
 // impl<S> Service for FetchAdvisoryDatabase<S>
 // where
-//     S: Service<Request = Request, Response = Response, Error = HyperError> + Clone + 'static,
+//     S: Service<Request = Request, Response = Response, Error = HyperError> + Clone,
 //     S::Future: 'static,
 // {
 //     type Request = ();

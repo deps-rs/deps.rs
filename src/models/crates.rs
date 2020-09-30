@@ -1,7 +1,6 @@
-use std::borrow::Borrow;
-use std::str::FromStr;
+use std::{borrow::Borrow, str::FromStr};
 
-use anyhow::{anyhow, ensure, Error};
+use anyhow::{anyhow, Error};
 use indexmap::IndexMap;
 use relative_path::RelativePathBuf;
 use semver::{Version, VersionReq};

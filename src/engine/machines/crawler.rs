@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::{anyhow, ensure, Error};
+use anyhow::Error;
 use indexmap::IndexMap;
 use relative_path::RelativePathBuf;
 
