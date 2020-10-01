@@ -224,7 +224,7 @@ impl Engine {
                 let analyzed_deps =
                     analyze_dependencies(engine.clone(), release.deps.clone()).await?;
 
-                let crates = vec![(crate_path.name, analyzed_deps)].into_iter().collect();
+                let crates = vec![(crate_path.name, analyzed_deps)];
                 let duration = start.elapsed();
 
                 Ok(AnalyzeDependenciesOutcome { crates, duration })
