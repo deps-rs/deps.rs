@@ -36,7 +36,7 @@ where
     fn call(&mut self, req: (RepoPath, RelativePathBuf)) -> Self::Future {
         let (repo_path, path) = req;
 
-        let uri = repo_path.to_usercontent_file_url(&path);
+        let uri = repo_path.to_usercontent_file_uri(&path);
         let uri = match uri {
             Ok(uri) => uri,
             Err(error) => return Box::pin(err(error)),

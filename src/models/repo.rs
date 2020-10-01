@@ -26,7 +26,7 @@ impl RepoPath {
         })
     }
 
-    pub fn to_usercontent_file_url(&self, path: &RelativePath) -> Result<Uri, Error> {
+    pub fn to_usercontent_file_uri(&self, path: &RelativePath) -> Result<Uri, Error> {
         let url = format!(
             "{}/{}/{}/{}/{}",
             self.site.to_usercontent_base_uri(),
@@ -157,7 +157,7 @@ mod tests {
         for (input, expected) in &paths {
             let repo = RepoPath::from_parts("github", "deps-rs", "deps.rs").unwrap();
             let out = repo
-                .to_usercontent_file_url(RelativePath::new(input))
+                .to_usercontent_file_uri(RelativePath::new(input))
                 .unwrap();
 
             let exp = format!(
@@ -170,7 +170,7 @@ mod tests {
         for (input, expected) in &paths {
             let repo = RepoPath::from_parts("gitlab", "deps-rs", "deps.rs").unwrap();
             let out = repo
-                .to_usercontent_file_url(RelativePath::new(input))
+                .to_usercontent_file_uri(RelativePath::new(input))
                 .unwrap();
 
             let exp = format!("https://gitlab.com/deps-rs/deps.rs/raw/HEAD/{}", expected);
@@ -180,7 +180,7 @@ mod tests {
         for (input, expected) in &paths {
             let repo = RepoPath::from_parts("bitbucket", "deps-rs", "deps.rs").unwrap();
             let out = repo
-                .to_usercontent_file_url(RelativePath::new(input))
+                .to_usercontent_file_uri(RelativePath::new(input))
                 .unwrap();
 
             let exp = format!(
