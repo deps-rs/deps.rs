@@ -100,9 +100,7 @@ impl App {
                     }
                 }
                 &Route::CrateStatus(format) => {
-                    println!("route");
                     if *req.method() == Method::GET {
-                        println!("get");
                         return self
                             .crate_status(req, route_match.params, logger, format)
                             .await;
@@ -288,8 +286,6 @@ impl App {
 
         let crate_path_result = CratePath::from_parts(name, version);
 
-        println!("crate path {:?}", &crate_path_result);
-
         match crate_path_result {
             Err(err) => {
                 error!(logger, "error: {}", err);
@@ -301,14 +297,10 @@ impl App {
                 Ok(response)
             }
             Ok(crate_path) => {
-                println!("crate path ok");
-
                 let analyze_result = server
                     .engine
                     .analyze_crate_dependencies(crate_path.clone())
                     .await;
-
-                println!("results analyzed {:?}", &analyze_result);
 
                 match analyze_result {
                     Err(err) => {
@@ -321,15 +313,11 @@ impl App {
                         Ok(response)
                     }
                     Ok(analysis_outcome) => {
-                        println!("analysis ok");
-
                         let response = App::status_format_analysis(
                             Some(analysis_outcome),
                             format,
                             SubjectPath::Crate(crate_path),
                         );
-
-                        println!("response created");
 
                         Ok(response)
                     }

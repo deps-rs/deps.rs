@@ -103,9 +103,6 @@ where
         };
 
         let uri = format!("{}/master/{}", CRATES_INDEX_BASE_URI, path);
-
-        println!("analyze from uri {:?}", &uri);
-
         let uri = uri.parse::<Uri>().expect("TODO: MAP ERROR PROPERLY");
 
         let request = Request::get(uri.clone())
@@ -133,7 +130,7 @@ where
                             .lines()
                             .map(|s| s.trim())
                             .filter(|s| !s.is_empty())
-                            .map(|s| serde_json::from_str::<RegistryPackage>(s))
+                            .map(serde_json::from_str)
                             .collect::<Result<_, _>>(),
                     )
                     .err_into()

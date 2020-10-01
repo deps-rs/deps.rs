@@ -38,16 +38,16 @@ where
     fn call(&mut self, req: (RepoPath, RelativePathBuf)) -> Self::Future {
         let (repo_path, path) = req;
         let uri = match &repo_path.site {
-            &RepoSite::Github => github::get_manifest_uri(&repo_path, &path),
-            &RepoSite::Gitlab => gitlab::get_manifest_uri(&repo_path, &path),
-            &RepoSite::Bitbucket => bitbucket::get_manifest_uri(&repo_path, &path),
+            RepoSite::Github => github::get_manifest_uri(&repo_path, &path),
+            RepoSite::Gitlab => gitlab::get_manifest_uri(&repo_path, &path),
+            RepoSite::Bitbucket => bitbucket::get_manifest_uri(&repo_path, &path),
         };
 
-        if let Err(error) = uri {
-            return Box::pin(err(error));
-        }
+        let uri = match uri {
+            Ok(uri) => uri,
+            Err(error) => return Box::pin(err(error)),
+        };
 
-        let uri = uri.unwrap();
         let request = Request::get(uri.clone())
             .header(USER_AGENT, "deps.rs")
             .body(Body::empty())

@@ -201,8 +201,6 @@ impl Engine {
     ) -> Result<AnalyzeDependenciesOutcome, Error> {
         let start = Instant::now();
 
-        println!("analyze deps");
-
         let query_response = self
             .query_crate
             .lock()
