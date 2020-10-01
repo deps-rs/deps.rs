@@ -8,25 +8,11 @@ use futures::{
 use hyper::{
     body, header::USER_AGENT, service::Service, Body, Error as HyperError, Request, Response, Uri,
 };
-use relative_path::RelativePathBuf;
 use serde::Deserialize;
 
 use crate::models::repo::{RepoPath, Repository};
 
 const GITHUB_API_BASE_URI: &'static str = "https://api.github.com";
-const GITHUB_USER_CONTENT_BASE_URI: &'static str = "https://raw.githubusercontent.com";
-
-pub fn get_manifest_uri(repo_path: &RepoPath, path: &RelativePathBuf) -> Result<Uri, Error> {
-    let path_str: &str = path.as_ref();
-    Ok(format!(
-        "{}/{}/{}/HEAD/{}",
-        GITHUB_USER_CONTENT_BASE_URI,
-        repo_path.qual.as_ref(),
-        repo_path.name.as_ref(),
-        path_str
-    )
-    .parse::<Uri>()?)
-}
 
 #[derive(Deserialize)]
 struct GithubSearchResponse {
