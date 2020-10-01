@@ -1,6 +1,8 @@
 use std::str::FromStr;
 
 use anyhow::{anyhow, ensure, Error};
+use hyper::Uri;
+use relative_path::RelativePath;
 
 #[derive(Clone, Debug)]
 pub struct Repository {
@@ -23,6 +25,19 @@ impl RepoPath {
             name: name.parse()?,
         })
     }
+
+    pub fn to_usercontent_file_url(&self, path: &RelativePath) -> Result<Uri, Error> {
+        let url = format!(
+            "{}/{}/{}/{}/{}",
+            self.site.to_usercontent_base_uri(),
+            self.qual.as_ref(),
+            self.name.as_ref(),
+            self.site.to_usercontent_repo_suffix(),
+            path.normalize()
+        );
+
+        Ok(url.parse::<Uri>()?)
+    }
 }
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
@@ -38,6 +53,21 @@ impl RepoSite {
             &RepoSite::Github => "https://github.com",
             &RepoSite::Gitlab => "https://gitlab.com",
             &RepoSite::Bitbucket => "https://bitbucket.org",
+        }
+    }
+
+    pub fn to_usercontent_base_uri(&self) -> &'static str {
+        match self {
+            RepoSite::Github => "https://raw.githubusercontent.com",
+            RepoSite::Gitlab => "https://gitlab.com",
+            RepoSite::Bitbucket => "https://bitbucket.org",
+        }
+    }
+
+    pub fn to_usercontent_repo_suffix(&self) -> &'static str {
+        match self {
+            RepoSite::Github => "HEAD",
+            RepoSite::Gitlab | RepoSite::Bitbucket => "raw/HEAD",
         }
     }
 }
@@ -106,5 +136,58 @@ impl FromStr for RepoName {
 impl AsRef<str> for RepoName {
     fn as_ref(&self) -> &str {
         self.0.as_ref()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn correct_raw_url_generation() {
+        let paths = [
+            ("Cargo.toml", "Cargo.toml"),
+            ("/Cargo.toml", "Cargo.toml"),
+            ("libs/badge/Cargo.toml", "libs/badge/Cargo.toml"),
+            ("/libs/badge/Cargo.toml", "libs/badge/Cargo.toml"),
+            ("src/../libs/badge/Cargo.toml", "libs/badge/Cargo.toml"),
+            ("/src/../libs/badge/Cargo.toml", "libs/badge/Cargo.toml"),
+        ];
+
+        for (input, expected) in &paths {
+            let repo = RepoPath::from_parts("github", "deps-rs", "deps.rs").unwrap();
+            let out = repo
+                .to_usercontent_file_url(RelativePath::new(input))
+                .unwrap();
+
+            let exp = format!(
+                "https://raw.githubusercontent.com/deps-rs/deps.rs/HEAD/{}",
+                expected
+            );
+            assert_eq!(out.to_string(), exp);
+        }
+
+        for (input, expected) in &paths {
+            let repo = RepoPath::from_parts("gitlab", "deps-rs", "deps.rs").unwrap();
+            let out = repo
+                .to_usercontent_file_url(RelativePath::new(input))
+                .unwrap();
+
+            let exp = format!("https://gitlab.com/deps-rs/deps.rs/raw/HEAD/{}", expected);
+            assert_eq!(out.to_string(), exp);
+        }
+
+        for (input, expected) in &paths {
+            let repo = RepoPath::from_parts("bitbucket", "deps-rs", "deps.rs").unwrap();
+            let out = repo
+                .to_usercontent_file_url(RelativePath::new(input))
+                .unwrap();
+
+            let exp = format!(
+                "https://bitbucket.org/deps-rs/deps.rs/raw/HEAD/{}",
+                expected
+            );
+            assert_eq!(out.to_string(), exp);
+        }
     }
 }
