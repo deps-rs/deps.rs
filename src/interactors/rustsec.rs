@@ -1,7 +1,7 @@
-use std::{pin::Pin, sync::Arc, task::Context, task::Poll};
+use std::{sync::Arc, task::Context, task::Poll};
 
 use anyhow::Error;
-use futures::{future::ready, Future};
+use futures::{future::ready, future::BoxFuture};
 use hyper::{service::Service, Body, Error as HyperError, Request, Response};
 use rustsec::database::Database;
 
@@ -15,7 +15,7 @@ where
 {
     type Response = Arc<Database>;
     type Error = Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         // TODO: should be this when async client is used again
@@ -28,9 +28,7 @@ where
         let _service = self.0.clone();
 
         Box::pin(ready(
-            rustsec::Database::fetch()
-                .map(|db| Arc::new(db))
-                .map_err(|err| err.into()),
+            rustsec::Database::fetch().map(Arc::new).map_err(Into::into),
         ))
     }
 }

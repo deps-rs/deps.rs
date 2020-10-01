@@ -43,7 +43,7 @@ where
     pub fn new(service: S, duration: Duration, capacity: usize) -> Cache<S, Req> {
         Cache {
             inner: service,
-            duration: duration,
+            duration,
             cache: Mutex::new(LruCache::new(capacity)),
         }
     }
@@ -77,7 +77,7 @@ where
         //     }
         // }
 
-        self.inner.call(req.clone())
+        self.inner.call(req)
         // .and_then(|response| {
         //     // cache.insert(req, (now + self.duration, response.clone()));
         //     ok(response)

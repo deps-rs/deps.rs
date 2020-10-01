@@ -86,36 +86,33 @@ impl App {
             .new(o!("http_path" => req.uri().path().to_owned()));
 
         if let Ok(route_match) = self.router.recognize(req.uri().path()) {
-            match route_match.handler {
-                &Route::Index => {
-                    if *req.method() == Method::GET {
-                        return self.index(req, route_match.params, logger).await;
-                    }
+            match (req.method(), route_match.handler) {
+                (&Method::GET, Route::Index) => {
+                    return self.index(req, route_match.params, logger).await;
                 }
-                &Route::RepoStatus(format) => {
-                    if *req.method() == Method::GET {
-                        return self
-                            .repo_status(req, route_match.params, logger, format)
-                            .await;
-                    }
+
+                (&Method::GET, Route::RepoStatus(format)) => {
+                    return self
+                        .repo_status(req, route_match.params, logger, *format)
+                        .await;
                 }
-                &Route::CrateStatus(format) => {
-                    if *req.method() == Method::GET {
-                        return self
-                            .crate_status(req, route_match.params, logger, format)
-                            .await;
-                    }
+
+                (&Method::GET, Route::CrateStatus(format)) => {
+                    return self
+                        .crate_status(req, route_match.params, logger, *format)
+                        .await;
                 }
-                &Route::CrateRedirect => {
-                    if *req.method() == Method::GET {
-                        return self.crate_redirect(req, route_match.params, logger).await;
-                    }
+
+                (&Method::GET, Route::CrateRedirect) => {
+                    return self.crate_redirect(req, route_match.params, logger).await;
                 }
-                &Route::Static(file) => {
-                    if *req.method() == Method::GET {
-                        return Ok(App::static_file(file));
-                    }
+
+                (&Method::GET, Route::Static(file)) => {
+                    return Ok(App::static_file(*file));
                 }
+
+                // fall through to 404
+                _ => {}
             }
         }
 

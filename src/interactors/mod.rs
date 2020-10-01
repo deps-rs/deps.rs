@@ -1,9 +1,8 @@
-use std::{future::Future, task::Poll};
-use std::{pin::Pin, task::Context};
+use std::{task::Context, task::Poll};
 
 use anyhow::{anyhow, Error};
 use futures::{
-    future::{err, ok, ready},
+    future::{err, ok, ready, BoxFuture},
     TryFutureExt,
 };
 use hyper::{
@@ -27,7 +26,7 @@ where
 {
     type Response = String;
     type Error = Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.0.poll_ready(cx).map_err(|err| err.into())
