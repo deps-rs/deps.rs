@@ -6,8 +6,7 @@ use crate::engine::AnalyzeDependenciesOutcome;
 use crate::models::crates::{AnalyzedDependencies, AnalyzedDependency, CrateName};
 use crate::models::repo::RepoSite;
 use crate::models::SubjectPath;
-
-use super::super::badge;
+use crate::server::views::badge;
 
 fn dependency_tables(crate_name: CrateName, deps: AnalyzedDependencies) -> Markup {
     html! {

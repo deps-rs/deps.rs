@@ -1,22 +1,20 @@
 #![deny(rust_2018_idioms)]
-#![allow(unused)]
+#![warn(missing_debug_implementations)]
 
-#[macro_use]
-extern crate try_future;
-
-use std::env;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
-use std::sync::Mutex;
+use std::{
+    env,
+    net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket},
+    sync::Mutex,
+};
 
 use cadence::{QueuingMetricSink, UdpMetricSink};
-use futures::{Future, Stream};
-use hyper::server::conn::AddrStream;
-use hyper::service::{make_service_fn, service_fn_ok};
-use hyper::Client;
+use hyper::{
+    server::conn::AddrStream,
+    service::{make_service_fn, service_fn},
+    Client, Server,
+};
 use hyper_tls::HttpsConnector;
-use slog::Drain;
-use slog::{info, o};
-use tokio_core::reactor::Core;
+use slog::{o, Drain};
 
 mod engine;
 mod interactors;
@@ -26,7 +24,7 @@ mod server;
 mod utils;
 
 use self::engine::Engine;
-use self::server::Server;
+use self::server::App;
 
 fn init_metrics() -> QueuingMetricSink {
     let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
@@ -36,21 +34,15 @@ fn init_metrics() -> QueuingMetricSink {
     QueuingMetricSink::from(sink)
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let logger = slog::Logger::root(
         Mutex::new(slog_json::Json::default(std::io::stderr())).map(slog::Fuse),
         o!("version" => env!("CARGO_PKG_VERSION")),
     );
 
     let metrics = init_metrics();
-
-    let mut core = Core::new().expect("failed to create event loop");
-
-    let handle = core.handle();
-
-    let connector = HttpsConnector::new(4).expect("failed to create https connector");
-
-    let client = Client::builder().build(connector);
+    let client = Client::builder().build(HttpsConnector::new());
 
     let port = env::var("PORT")
         .unwrap_or_else(|_| "8080".to_string())
@@ -62,15 +54,23 @@ fn main() {
     let mut engine = Engine::new(client.clone(), logger.clone());
     engine.set_metrics(metrics);
 
-    let server = Server::new(logger.clone(), engine);
-    let make_svc = make_service_fn(move |socket: &AddrStream| {
-        let server = server.clone();
-        futures::future::ok::<_, hyper::Error>(server)
+    let make_svc = make_service_fn(move |_socket: &AddrStream| {
+        let logger = logger.clone();
+        let engine = engine.clone();
+
+        async move {
+            let server = App::new(logger.clone(), engine.clone());
+            Ok::<_, hyper::Error>(service_fn(move |req| {
+                let server = server.clone();
+                async move { server.handle(req).await }
+            }))
+        }
     });
-    let server = hyper::Server::bind(&addr).serve(make_svc);
+    let server = Server::bind(&addr).serve(make_svc);
 
     println!("Server running on port {}", port);
-    hyper::rt::run(server.map_err(|e| {
+
+    if let Err(e) = server.await {
         eprintln!("server error: {}", e);
-    }));
+    }
 }

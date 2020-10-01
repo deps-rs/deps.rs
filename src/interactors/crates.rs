@@ -1,11 +1,17 @@
-use std::str;
+use std::pin::Pin;
+use std::{future::Future, task::Poll};
+use std::{str, task::Context};
 
-use anyhow::{anyhow, ensure, Error};
-use futures::{future, Future, IntoFuture, Stream};
-use hyper::{Body, Error as HyperError, Method, Request, Response, Uri, header::USER_AGENT};
+use anyhow::{anyhow, Error};
+use futures::{
+    future::{err, ok, ready},
+    TryFutureExt,
+};
+use hyper::{
+    body, header::USER_AGENT, service::Service, Body, Error as HyperError, Request, Response, Uri,
+};
 use semver::{Version, VersionReq};
 use serde::Deserialize;
-use tokio_service::Service;
 
 use crate::models::crates::{CrateDep, CrateDeps, CrateName, CratePath, CrateRelease};
 
@@ -65,6 +71,7 @@ fn convert_pkgs(
     Ok(QueryCrateResponse { releases: releases })
 }
 
+#[derive(Debug, Clone)]
 pub struct QueryCrateResponse {
     pub releases: Vec<CrateRelease>,
 }
@@ -72,19 +79,20 @@ pub struct QueryCrateResponse {
 #[derive(Debug, Clone)]
 pub struct QueryCrate<S>(pub S);
 
-impl<S> Service for QueryCrate<S>
+impl<S> Service<CrateName> for QueryCrate<S>
 where
-    S: Service<Request = Request<Body>, Response = Response<Body>, Error = HyperError>
-        + Clone
-        + 'static,
+    S: Service<Request<Body>, Response = Response<Body>, Error = HyperError> + Clone,
     S::Future: Send + 'static,
 {
-    type Request = CrateName;
     type Response = QueryCrateResponse;
     type Error = Error;
-    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error> + Send>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
-    fn call(&self, crate_name: CrateName) -> Self::Future {
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.0.poll_ready(cx).map_err(|err| err.into())
+    }
+
+    fn call(&mut self, crate_name: CrateName) -> Self::Future {
         let lower_name = crate_name.as_ref().to_lowercase();
 
         let path = match lower_name.len() {
@@ -94,35 +102,41 @@ where
             _ => format!("{}/{}/{}", &lower_name[0..2], &lower_name[2..4], lower_name),
         };
 
-        let uri =
-            try_future_box!(format!("{}/master/{}", CRATES_INDEX_BASE_URI, path).parse::<Uri>());
+        let uri = format!("{}/master/{}", CRATES_INDEX_BASE_URI, path);
+        let uri = uri.parse::<Uri>().expect("TODO: MAP ERROR PROPERLY");
 
         let request = Request::get(uri.clone())
             .header(USER_AGENT, "deps.rs")
-            .body(Body::empty()).unwrap();
+            .body(Body::empty())
+            .unwrap();
 
-        Box::new(self.0.call(request).from_err().and_then(move |response| {
-            let status = response.status();
-            if !status.is_success() {
-                try_future!(Err(anyhow!("Status code {} for URI {}", status, uri)));
-            }
+        Box::pin(
+            self.0
+                .call(request)
+                .map_err(|err| err.into())
+                .and_then(move |response| {
+                    let status = response.status();
+                    if !status.is_success() {
+                        return err(anyhow!("Status code {} for URI {}", status, uri));
+                    }
 
-            let body_future = response.into_body().concat2().from_err();
-            let decode_future = body_future.and_then(move |body| {
-                let string_body = str::from_utf8(body.as_ref())?;
-                let packages = string_body
-                    .lines()
-                    .map(|s| s.trim())
-                    .filter(|s| !s.is_empty())
-                    .map(|s| serde_json::from_str::<RegistryPackage>(s))
-                    .collect::<Result<_, _>>()?;
-                Ok(packages)
-            });
-
-            decode_future
-                .and_then(move |pkgs| convert_pkgs(&crate_name, pkgs))
-                .into()
-        }))
+                    ok(response)
+                })
+                .and_then(|response| body::to_bytes(response.into_body()).err_into())
+                .and_then(|body| ready(String::from_utf8(body.to_vec())).err_into())
+                .and_then(|string_body| {
+                    ready(
+                        string_body
+                            .lines()
+                            .map(|s| s.trim())
+                            .filter(|s| !s.is_empty())
+                            .map(serde_json::from_str)
+                            .collect::<Result<_, _>>(),
+                    )
+                    .err_into()
+                })
+                .and_then(move |pkgs| ready(convert_pkgs(&crate_name, pkgs))),
+        )
     }
 }
 
@@ -154,44 +168,46 @@ fn convert_summary(response: SummaryResponse) -> Result<Vec<CratePath>, Error> {
 #[derive(Debug, Clone)]
 pub struct GetPopularCrates<S>(pub S);
 
-impl<S> Service for GetPopularCrates<S>
+impl<S> Service<()> for GetPopularCrates<S>
 where
-    S: Service<Request = Request<Body>, Response = Response<Body>, Error = HyperError>
-        + Clone
-        + 'static,
+    S: Service<Request<Body>, Response = Response<Body>, Error = HyperError> + Clone,
     S::Future: Send + 'static,
 {
-    type Request = ();
     type Response = Vec<CratePath>;
     type Error = Error;
-    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error> + Send>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
-    fn call(&self, _req: ()) -> Self::Future {
-        let service = self.0.clone();
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.0.poll_ready(cx).map_err(|err| err.into())
+    }
 
-        let uri = format!("{}/summary", CRATES_API_BASE_URI)
-            .parse::<Uri>()
-            .unwrap();
+    fn call(&mut self, _req: ()) -> Self::Future {
+        let mut service = self.0.clone();
+
+        let uri = format!("{}/summary", CRATES_API_BASE_URI);
+        let uri = uri.parse::<Uri>().unwrap();
         let request = Request::get(uri.clone())
             .header(USER_AGENT, "deps.rs")
-            .body(Body::empty()).unwrap();
+            .body(Body::empty())
+            .unwrap();
 
-        Box::new(service.call(request).from_err().and_then(move |response| {
-            let status = response.status();
-            if !status.is_success() {
-                future::Either::A(future::err(anyhow!(
-                    "Status code {} for URI {}",
-                    status,
-                    uri
-                )))
-            } else {
-                let body_future = response.into_body().concat2().from_err();
-                let decode_future = body_future.and_then(|body| {
-                    let summary = serde_json::from_slice::<SummaryResponse>(&body)?;
-                    convert_summary(summary)
-                });
-                future::Either::B(decode_future)
-            }
-        }))
+        Box::pin(
+            service
+                .call(request)
+                .map_err(|err| err.into())
+                .and_then(move |response| {
+                    let status = response.status();
+                    if !status.is_success() {
+                        err(anyhow!("Status code {} for URI {}", status, uri))
+                    } else {
+                        ok(response)
+                    }
+                })
+                .and_then(|response| body::to_bytes(response.into_body()).err_into())
+                .and_then(|bytes| {
+                    ready(serde_json::from_slice::<SummaryResponse>(&bytes)).err_into()
+                })
+                .and_then(|summary| ready(convert_summary(summary)).err_into()),
+        )
     }
 }

@@ -1,51 +1,57 @@
-use std::collections::HashSet;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::{
+    collections::HashSet,
+    panic::RefUnwindSafe,
+    sync::{Arc, Mutex},
+    task::{Context, Poll},
+    time::{Duration, Instant},
+};
 
-use anyhow::{anyhow, ensure, Error};
-use cadence::prelude::*;
+use anyhow::{anyhow, Error};
 use cadence::{MetricSink, NopMetricSink, StatsdClient};
-use futures::future::join_all;
-use futures::{future, Future};
-use hyper::client::{HttpConnector, ResponseFuture};
-use hyper::{Body, Client, Request, Response};
+use futures::{future::try_join_all, stream::FuturesUnordered, Future, FutureExt, Stream};
+use hyper::{
+    client::{HttpConnector, ResponseFuture},
+    service::Service,
+    Body, Client, Request, Response,
+};
 use hyper_tls::HttpsConnector;
 use once_cell::sync::Lazy;
 use relative_path::{RelativePath, RelativePathBuf};
 use rustsec::database::Database;
 use semver::VersionReq;
 use slog::Logger;
-use tokio_service::Service;
-
-use crate::utils::cache::Cache;
-
-use crate::models::crates::{AnalyzedDependencies, CrateName, CratePath, CrateRelease};
-use crate::models::repo::{RepoPath, Repository};
 
 use crate::interactors::crates::{GetPopularCrates, QueryCrate};
 use crate::interactors::github::GetPopularRepos;
 use crate::interactors::rustsec::FetchAdvisoryDatabase;
 use crate::interactors::RetrieveFileAtPath;
+use crate::models::crates::{AnalyzedDependencies, CrateName, CratePath, CrateRelease};
+use crate::models::repo::{RepoPath, Repository};
+use crate::utils::cache::Cache;
 
 mod fut;
 mod machines;
 
-use self::fut::AnalyzeDependenciesFuture;
+use self::fut::analyze_dependencies;
 use self::fut::CrawlManifestFuture;
 
 type HttpClient = Client<HttpsConnector<HttpConnector>>;
+// type HttpClient = Client<HttpConnector>;
 
 // workaround for hyper 0.12 not implementing Service for Client
 #[derive(Debug, Clone)]
 struct ServiceHttpClient(HttpClient);
 
-impl Service for ServiceHttpClient {
-    type Request = Request<Body>;
+impl Service<Request<Body>> for ServiceHttpClient {
     type Response = Response<Body>;
     type Error = hyper::Error;
     type Future = ResponseFuture;
 
-    fn call(&self, req: Self::Request) -> Self::Future {
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.0.poll_ready(cx).map_err(|err| err.into())
+    }
+
+    fn call(&mut self, req: Request<Body>) -> Self::Future {
         self.0.request(req)
     }
 }
@@ -55,15 +61,16 @@ pub struct Engine {
     client: HttpClient,
     logger: Logger,
     metrics: StatsdClient,
-    query_crate: Arc<Cache<QueryCrate<ServiceHttpClient>>>,
-    get_popular_crates: Arc<Cache<GetPopularCrates<ServiceHttpClient>>>,
-    get_popular_repos: Arc<Cache<GetPopularRepos<ServiceHttpClient>>>,
-    retrieve_file_at_path: Arc<RetrieveFileAtPath<ServiceHttpClient>>,
-    fetch_advisory_db: Arc<Cache<FetchAdvisoryDatabase<ServiceHttpClient>>>,
+    // TODO: use futures aware mutex
+    query_crate: Arc<Mutex<Cache<QueryCrate<ServiceHttpClient>, CrateName>>>,
+    get_popular_crates: Arc<Mutex<Cache<GetPopularCrates<ServiceHttpClient>, ()>>>,
+    get_popular_repos: Arc<Mutex<Cache<GetPopularRepos<ServiceHttpClient>, ()>>>,
+    retrieve_file_at_path: Arc<Mutex<RetrieveFileAtPath<ServiceHttpClient>>>,
+    fetch_advisory_db: Arc<Mutex<Cache<FetchAdvisoryDatabase<ServiceHttpClient>, ()>>>,
 }
 
 impl Engine {
-    pub fn new(client: Client<HttpsConnector<HttpConnector>>, logger: Logger) -> Engine {
+    pub fn new(client: HttpClient, logger: Logger) -> Engine {
         let metrics = StatsdClient::from_sink("engine", NopMetricSink);
 
         let service_client = ServiceHttpClient(client.clone());
@@ -93,19 +100,20 @@ impl Engine {
             client: client.clone(),
             logger,
             metrics,
-            query_crate: Arc::new(query_crate),
-            get_popular_crates: Arc::new(get_popular_crates),
-            get_popular_repos: Arc::new(get_popular_repos),
-            retrieve_file_at_path: Arc::new(RetrieveFileAtPath(service_client)),
-            fetch_advisory_db: Arc::new(fetch_advisory_db),
+            query_crate: Arc::new(Mutex::new(query_crate)),
+            get_popular_crates: Arc::new(Mutex::new(get_popular_crates)),
+            get_popular_repos: Arc::new(Mutex::new(get_popular_repos)),
+            retrieve_file_at_path: Arc::new(Mutex::new(RetrieveFileAtPath(service_client))),
+            fetch_advisory_db: Arc::new(Mutex::new(fetch_advisory_db)),
         }
     }
 
-    pub fn set_metrics<M: MetricSink + Send + Sync + 'static>(&mut self, sink: M) {
+    pub fn set_metrics<M: MetricSink + Send + Sync + RefUnwindSafe + 'static>(&mut self, sink: M) {
         self.metrics = StatsdClient::from_sink("engine", sink);
     }
 }
 
+#[derive(Debug)]
 pub struct AnalyzeDependenciesOutcome {
     pub crates: Vec<(CrateName, AnalyzedDependencies)>,
     pub duration: Duration,
@@ -132,141 +140,150 @@ impl AnalyzeDependenciesOutcome {
 }
 
 impl Engine {
-    pub fn get_popular_repos(&self) -> impl Future<Item = Vec<Repository>, Error = Error> + Send {
-        self.get_popular_repos.call(()).from_err().map(|repos| {
-            repos
-                .iter()
-                .filter(|repo| !POPULAR_REPO_BLOCK_LIST.contains(&repo.path))
-                .cloned()
-                .collect()
-        })
+    pub async fn get_popular_repos(&self) -> Result<Vec<Repository>, Error> {
+        let repos = self.get_popular_repos.lock().unwrap().call(());
+        let repos = repos.await?;
+
+        let filtered_repos = repos
+            .iter()
+            .filter(|repo| !POPULAR_REPO_BLOCK_LIST.contains(&repo.path))
+            .cloned()
+            .collect();
+
+        Ok(filtered_repos)
     }
 
-    pub fn get_popular_crates(&self) -> impl Future<Item = Vec<CratePath>, Error = Error> + Send {
-        self.get_popular_crates
-            .call(())
-            .from_err()
-            .map(|crates| crates.clone())
+    pub async fn get_popular_crates(&self) -> Result<Vec<CratePath>, Error> {
+        let crates = self.get_popular_crates.lock().unwrap().call(());
+        let crates = crates.await?;
+        Ok(crates.clone())
     }
 
-    pub fn analyze_repo_dependencies(
+    pub async fn analyze_repo_dependencies(
         &self,
         repo_path: RepoPath,
-    ) -> impl Future<Item = AnalyzeDependenciesOutcome, Error = Error> + Send {
+    ) -> Result<AnalyzeDependenciesOutcome, Error> {
         let start = Instant::now();
 
         let entry_point = RelativePath::new("/").to_relative_path_buf();
-        let manifest_future = CrawlManifestFuture::new(self, repo_path.clone(), entry_point);
-
         let engine = self.clone();
-        manifest_future.and_then(move |manifest_output| {
-            let engine_for_analyze = engine.clone();
-            let futures = manifest_output
-                .crates
-                .into_iter()
-                .map(move |(crate_name, deps)| {
-                    let analyzed_deps_future =
-                        AnalyzeDependenciesFuture::new(engine_for_analyze.clone(), deps);
 
-                    analyzed_deps_future.map(move |analyzed_deps| (crate_name, analyzed_deps))
-                });
+        let manifest_future = CrawlManifestFuture::new(self, repo_path.clone(), entry_point);
+        let manifest_output = manifest_future.await?;
 
-            join_all(futures).and_then(move |crates| {
-                let duration = start.elapsed();
-                engine
-                    .metrics
-                    .time_duration_with_tags("analyze_duration", duration)
-                    .with_tag("repo_site", repo_path.site.as_ref())
-                    .with_tag("repo_qual", repo_path.qual.as_ref())
-                    .with_tag("repo_name", repo_path.name.as_ref())
-                    .send()?;
-
-                Ok(AnalyzeDependenciesOutcome { crates, duration })
+        let engine_for_analyze = engine.clone();
+        let futures = manifest_output
+            .crates
+            .into_iter()
+            .map(|(crate_name, deps)| async {
+                let analyzed_deps = analyze_dependencies(engine_for_analyze.clone(), deps).await?;
+                Ok::<_, Error>((crate_name, analyzed_deps))
             })
-        })
+            .collect::<Vec<_>>();
+
+        let crates = try_join_all(futures).await?;
+
+        let duration = start.elapsed();
+        // engine
+        //     .metrics
+        //     .time_duration_with_tags("analyze_duration", duration)
+        //     .with_tag("repo_site", repo_path.site.as_ref())
+        //     .with_tag("repo_qual", repo_path.qual.as_ref())
+        //     .with_tag("repo_name", repo_path.name.as_ref())
+        //     .send()?;
+
+        Ok(AnalyzeDependenciesOutcome { crates, duration })
     }
 
-    pub fn analyze_crate_dependencies(
+    pub async fn analyze_crate_dependencies(
         &self,
         crate_path: CratePath,
-    ) -> impl Future<Item = AnalyzeDependenciesOutcome, Error = Error> + Send {
+    ) -> Result<AnalyzeDependenciesOutcome, Error> {
         let start = Instant::now();
 
-        let query_future = self.query_crate.call(crate_path.name.clone()).from_err();
+        let query_response = self
+            .query_crate
+            .lock()
+            .unwrap()
+            .call(crate_path.name.clone());
+        let query_response = query_response.await?;
 
         let engine = self.clone();
-        query_future.and_then(move |query_response| {
-            match query_response
-                .releases
-                .iter()
-                .find(|release| release.version == crate_path.version)
-            {
-                None => future::Either::A(future::err(anyhow!(
-                    "could not find crate release with version {}",
-                    crate_path.version
-                ))),
-                Some(release) => {
-                    let analyzed_deps_future =
-                        AnalyzeDependenciesFuture::new(engine.clone(), release.deps.clone());
 
-                    future::Either::B(analyzed_deps_future.map(move |analyzed_deps| {
-                        let crates = vec![(crate_path.name, analyzed_deps)].into_iter().collect();
-                        let duration = start.elapsed();
+        match query_response
+            .releases
+            .iter()
+            .find(|release| release.version == crate_path.version)
+        {
+            None => Err(anyhow!(
+                "could not find crate release with version {}",
+                crate_path.version
+            )),
 
-                        AnalyzeDependenciesOutcome { crates, duration }
-                    }))
-                }
+            Some(release) => {
+                let analyzed_deps =
+                    analyze_dependencies(engine.clone(), release.deps.clone()).await?;
+
+                let crates = vec![(crate_path.name, analyzed_deps)];
+                let duration = start.elapsed();
+
+                Ok(AnalyzeDependenciesOutcome { crates, duration })
             }
-        })
+        }
     }
 
-    pub fn find_latest_crate_release(
+    pub async fn find_latest_crate_release(
         &self,
         name: CrateName,
         req: VersionReq,
-    ) -> impl Future<Item = Option<CrateRelease>, Error = Error> + Send {
-        self.query_crate
-            .call(name)
-            .from_err()
-            .map(move |query_response| {
-                query_response
-                    .releases
-                    .iter()
-                    .filter(|release| req.matches(&release.version))
-                    .max_by(|r1, r2| r1.version.cmp(&r2.version))
-                    .cloned()
-            })
+    ) -> Result<Option<CrateRelease>, Error> {
+        let query_response = self.query_crate.lock().unwrap().call(name);
+        let query_response = query_response.await?;
+
+        let latest = query_response
+            .releases
+            .iter()
+            .filter(|release| req.matches(&release.version))
+            .max_by(|r1, r2| r1.version.cmp(&r2.version))
+            .cloned();
+
+        Ok(latest)
     }
 
     fn fetch_releases<I: IntoIterator<Item = CrateName>>(
         &self,
         names: I,
-    ) -> impl Iterator<Item = impl Future<Item = Vec<CrateRelease>, Error = Error>> {
+    ) -> impl Stream<Item = Result<Vec<CrateRelease>, Error>> {
         let engine = self.clone();
-        names.into_iter().map(move |name| {
-            engine
-                .query_crate
-                .call(name)
-                .from_err()
-                .map(|resp| resp.releases.clone())
-        })
+
+        names
+            .into_iter()
+            .map(|name| {
+                engine
+                    .query_crate
+                    .lock()
+                    .unwrap()
+                    .call(name)
+                    .map(|resp| resp.map(|r| r.releases.clone()))
+            })
+            .collect::<FuturesUnordered<_>>()
     }
 
     fn retrieve_manifest_at_path(
         &self,
         repo_path: &RepoPath,
         path: &RelativePathBuf,
-    ) -> impl Future<Item = String, Error = Error> + Send {
+    ) -> impl Future<Output = Result<String, Error>> {
         let manifest_path = path.join(RelativePath::new("Cargo.toml"));
+
         self.retrieve_file_at_path
+            .lock()
+            .unwrap()
             .call((repo_path.clone(), manifest_path))
     }
 
-    fn fetch_advisory_db(&self) -> impl Future<Item = Arc<Database>, Error = Error> + Send {
-        self.fetch_advisory_db
-            .call(())
-            .from_err()
-            .map(|db| db.clone())
+    fn fetch_advisory_db(&self) -> impl Future<Output = Result<Arc<Database>, Error>> {
+        self.fetch_advisory_db.lock().unwrap().call(())
     }
 }
 

@@ -8,7 +8,7 @@ pub mod error;
 pub mod index;
 pub mod status;
 
-use super::super::SELF_BASE_URL;
+use crate::server::SELF_BASE_URL;
 
 fn render_html<B: Render>(title: &str, body: B) -> Response<Body> {
     let rendered = html! {
