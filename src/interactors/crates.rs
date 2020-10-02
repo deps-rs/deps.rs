@@ -89,8 +89,7 @@ impl QueryCrate {
             _ => format!("{}/{}/{}", &lower_name[0..2], &lower_name[2..4], lower_name),
         };
 
-        // TODO: "master" should be "HEAD"? lots of repos moving to "main"
-        let url = format!("{}/master/{}", CRATES_INDEX_BASE_URI, path);
+        let url = format!("{}/HEAD/{}", CRATES_INDEX_BASE_URI, path);
         let res = client.get(&url).send().await?.error_for_status()?;
 
         let string_body = res.text().await?;

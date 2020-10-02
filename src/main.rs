@@ -33,6 +33,8 @@ use self::server::App;
 /// Future crate's BoxFuture without the explicit lifetime parameter.
 pub type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 
+const DEPS_RS_UA: &str = "deps.rs";
+
 fn init_metrics() -> QueuingMetricSink {
     let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
     socket.set_nonblocking(true).unwrap();
@@ -51,7 +53,7 @@ async fn main() {
     let metrics = init_metrics();
 
     let client = reqwest::Client::builder()
-        .user_agent("deps.rs testing")
+        .user_agent(DEPS_RS_UA)
         .redirect(RedirectPolicy::limited(5))
         .timeout(Duration::from_secs(5))
         .build()
