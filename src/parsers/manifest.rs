@@ -11,6 +11,7 @@ struct CargoTomlComplexDependency {
     git: Option<String>,
     path: Option<RelativePathBuf>,
     version: Option<String>,
+    package: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -68,9 +69,10 @@ fn convert_dependency(
                         .map(|parsed_name| (parsed_name, CrateDep::Internal(path)))
                 })
             } else {
-                cplx.version.map(|string| {
+                cplx.version.as_deref().map(|version| {
+                    let name = cplx.package.as_deref().unwrap_or(&name);
                     name.parse::<CrateName>().and_then(|parsed_name| {
-                        string
+                        version
                             .parse::<VersionReq>()
                             .map_err(|err| err.into())
                             .map(|version| (parsed_name, CrateDep::External(version)))
@@ -163,6 +165,31 @@ symbolic-common = { version = "2.0.6", path = "common" }
                 assert_eq!(members.len(), 0);
             }
             _ => panic!("expected mixed manifest"),
+        }
+    }
+
+    #[test]
+    fn parse_manifest_with_renamed_deps() {
+        let toml = r#"[package]
+name = "symbolic"
+
+[dependencies]
+symbolic-common_crate = { version = "2.0.6", package = "symbolic-common" }
+"#;
+
+        let manifest = parse_manifest_toml(toml).unwrap();
+
+        match manifest {
+            CrateManifest::Package(name, deps) => {
+                assert_eq!(name.as_ref(), "symbolic");
+                assert_eq!(deps.main.len(), 1);
+                assert_eq!(deps.dev.len(), 0);
+                assert_eq!(deps.build.len(), 0);
+
+                let name: CrateName = "symbolic-common".parse().unwrap();
+                assert!(deps.main.get(&name).is_some());
+            }
+            _ => panic!("expected package manifest"),
         }
     }
 }

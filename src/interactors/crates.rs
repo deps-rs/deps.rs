@@ -22,6 +22,8 @@ struct RegistryPackageDep {
     req: VersionReq,
     #[serde(default)]
     kind: Option<String>,
+    #[serde(default)]
+    package: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -42,13 +44,10 @@ fn convert_pkgs(
         .map(|package| {
             let mut deps = CrateDeps::default();
             for dep in package.deps {
-                match dep.kind.unwrap_or_else(|| "normal".into()).as_ref() {
-                    "normal" => deps
-                        .main
-                        .insert(dep.name.parse()?, CrateDep::External(dep.req)),
-                    "dev" => deps
-                        .dev
-                        .insert(dep.name.parse()?, CrateDep::External(dep.req)),
+                let name = dep.package.as_deref().unwrap_or(&dep.name).parse()?;
+                match dep.kind.as_deref().unwrap_or("normal") {
+                    "normal" => deps.main.insert(name, CrateDep::External(dep.req)),
+                    "dev" => deps.dev.insert(name, CrateDep::External(dep.req)),
                     _ => None,
                 };
             }
