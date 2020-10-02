@@ -1,10 +1,8 @@
-use std::pin::Pin;
-use std::{future::Future, task::Poll};
-use std::{str, task::Context};
+use std::{str, task::Context, task::Poll};
 
 use anyhow::{anyhow, Error};
 use futures::{
-    future::{err, ok, ready},
+    future::{err, ok, ready, BoxFuture},
     TryFutureExt,
 };
 use hyper::{
@@ -44,12 +42,7 @@ fn convert_pkgs(
         .map(|package| {
             let mut deps = CrateDeps::default();
             for dep in package.deps {
-                match dep
-                    .kind
-                    .map(|k| k.clone())
-                    .unwrap_or_else(|| "normal".into())
-                    .as_ref()
-                {
+                match dep.kind.unwrap_or_else(|| "normal".into()).as_ref() {
                     "normal" => deps
                         .main
                         .insert(dep.name.parse()?, CrateDep::External(dep.req)),
@@ -62,13 +55,13 @@ fn convert_pkgs(
             Ok(CrateRelease {
                 name: name.clone(),
                 version: package.vers,
-                deps: deps,
+                deps,
                 yanked: package.yanked,
             })
         })
         .collect::<Result<_, Error>>()?;
 
-    Ok(QueryCrateResponse { releases: releases })
+    Ok(QueryCrateResponse { releases })
 }
 
 #[derive(Debug, Clone)]
@@ -86,7 +79,7 @@ where
 {
     type Response = QueryCrateResponse;
     type Error = Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.0.poll_ready(cx).map_err(|err| err.into())
@@ -175,7 +168,7 @@ where
 {
     type Response = Vec<CratePath>;
     type Error = Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.0.poll_ready(cx).map_err(|err| err.into())

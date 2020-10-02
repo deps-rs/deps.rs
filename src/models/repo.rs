@@ -50,9 +50,9 @@ pub enum RepoSite {
 impl RepoSite {
     pub fn to_base_uri(&self) -> &'static str {
         match self {
-            &RepoSite::Github => "https://github.com",
-            &RepoSite::Gitlab => "https://gitlab.com",
-            &RepoSite::Bitbucket => "https://bitbucket.org",
+            RepoSite::Github => "https://github.com",
+            RepoSite::Gitlab => "https://gitlab.com",
+            RepoSite::Bitbucket => "https://bitbucket.org",
         }
     }
 
@@ -88,9 +88,9 @@ impl FromStr for RepoSite {
 impl AsRef<str> for RepoSite {
     fn as_ref(&self) -> &str {
         match self {
-            &RepoSite::Github => "github",
-            &RepoSite::Gitlab => "gitlab",
-            &RepoSite::Bitbucket => "bitbucket",
+            RepoSite::Github => "github",
+            RepoSite::Gitlab => "gitlab",
+            RepoSite::Bitbucket => "bitbucket",
         }
     }
 }

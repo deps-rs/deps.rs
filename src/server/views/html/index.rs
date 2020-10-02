@@ -48,7 +48,7 @@ fn popular_table(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>)
                             tr {
                                 td {
                                     a href=(format!("{}/crate/{}/{}", &super::SELF_BASE_URL as &str, crate_path.name.as_ref(), crate_path.version)) {
-                                        (format!("{}", crate_path.name.as_ref()))
+                                        (crate_path.name.as_ref().to_string())
                                     }
                                 }
                                 td class="has-text-right" {

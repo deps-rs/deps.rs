@@ -46,7 +46,7 @@ pub async fn analyze_dependencies(
     let deps_iter = main_deps.chain(dev_deps).chain(build_deps);
     let mut releases = engine.fetch_releases(deps_iter);
 
-    for release in releases.next().await {
+    while let Some(release) = releases.next().await {
         let release = release?;
         analyzer.process(release)
     }

@@ -73,11 +73,7 @@ pub enum CrateDep {
 
 impl CrateDep {
     pub fn is_external(&self) -> bool {
-        if let &CrateDep::External(_) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, CrateDep::External(_))
     }
 }
 
@@ -124,7 +120,7 @@ impl AnalyzedDependencies {
             .main
             .iter()
             .filter_map(|(name, dep)| {
-                if let &CrateDep::External(ref req) = dep {
+                if let CrateDep::External(ref req) = dep {
                     Some((name.clone(), AnalyzedDependency::new(req.clone())))
                 } else {
                     None
@@ -135,7 +131,7 @@ impl AnalyzedDependencies {
             .dev
             .iter()
             .filter_map(|(name, dep)| {
-                if let &CrateDep::External(ref req) = dep {
+                if let CrateDep::External(ref req) = dep {
                     Some((name.clone(), AnalyzedDependency::new(req.clone())))
                 } else {
                     None
@@ -146,7 +142,7 @@ impl AnalyzedDependencies {
             .build
             .iter()
             .filter_map(|(name, dep)| {
-                if let &CrateDep::External(ref req) = dep {
+                if let CrateDep::External(ref req) = dep {
                     Some((name.clone(), AnalyzedDependency::new(req.clone())))
                 } else {
                     None

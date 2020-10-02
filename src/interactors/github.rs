@@ -1,8 +1,8 @@
-use std::{future::Future, pin::Pin, task::Context, task::Poll};
+use std::{task::Context, task::Poll};
 
 use anyhow::{anyhow, Error};
 use futures::{
-    future::{err, ok, ready},
+    future::{err, ok, ready, BoxFuture},
     TryFutureExt,
 };
 use hyper::{
@@ -12,7 +12,7 @@ use serde::Deserialize;
 
 use crate::models::repo::{RepoPath, Repository};
 
-const GITHUB_API_BASE_URI: &'static str = "https://api.github.com";
+const GITHUB_API_BASE_URI: &str = "https://api.github.com";
 
 #[derive(Deserialize)]
 struct GithubSearchResponse {
@@ -41,7 +41,7 @@ where
 {
     type Response = Vec<Repository>;
     type Error = Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.0.poll_ready(cx).map_err(|err| err.into())

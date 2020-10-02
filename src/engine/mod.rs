@@ -48,7 +48,7 @@ impl Service<Request<Body>> for ServiceHttpClient {
     type Future = ResponseFuture;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.0.poll_ready(cx).map_err(|err| err.into())
+        self.0.poll_ready(cx)
     }
 
     fn call(&mut self, req: Request<Body>) -> Self::Future {
@@ -97,7 +97,7 @@ impl Engine {
         );
 
         Engine {
-            client: client.clone(),
+            client,
             logger,
             metrics,
             query_crate: Arc::new(Mutex::new(query_crate)),
@@ -156,7 +156,7 @@ impl Engine {
     pub async fn get_popular_crates(&self) -> Result<Vec<CratePath>, Error> {
         let crates = self.get_popular_crates.lock().unwrap().call(());
         let crates = crates.await?;
-        Ok(crates.clone())
+        Ok(crates)
     }
 
     pub async fn analyze_repo_dependencies(
@@ -264,7 +264,7 @@ impl Engine {
                     .lock()
                     .unwrap()
                     .call(name)
-                    .map(|resp| resp.map(|r| r.releases.clone()))
+                    .map(|resp| resp.map(|r| r.releases))
             })
             .collect::<FuturesUnordered<_>>()
     }

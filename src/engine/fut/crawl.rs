@@ -1,7 +1,7 @@
 use std::{future::Future, mem, pin::Pin, task::Context, task::Poll};
 
 use anyhow::Error;
-use futures::{ready, Stream};
+use futures::{future::BoxFuture, ready, Stream};
 use futures::{stream::FuturesOrdered, FutureExt};
 use relative_path::RelativePathBuf;
 
@@ -17,9 +17,7 @@ pub struct CrawlManifestFuture {
     engine: Engine,
     crawler: ManifestCrawler,
     #[pin]
-    futures: FuturesOrdered<
-        Pin<Box<dyn Future<Output = Result<(RelativePathBuf, String), Error>> + Send>>,
-    >,
+    futures: FuturesOrdered<BoxFuture<'static, Result<(RelativePathBuf, String), Error>>>,
 }
 
 impl CrawlManifestFuture {
@@ -63,7 +61,7 @@ impl Future for CrawlManifestFuture {
                     let future: Pin<Box<dyn Future<Output = _> + Send>> = Box::pin(
                         self.engine
                             .retrieve_manifest_at_path(&self.repo_path, &path)
-                            .map(move |contents| contents.map(|c| ((path, c)))),
+                            .map(move |contents| contents.map(|c| (path, c))),
                     );
                     self.futures.push(future);
                 }
@@ -71,7 +69,7 @@ impl Future for CrawlManifestFuture {
                 self.poll(cx)
             }
 
-            Some(Err(err)) => Poll::Ready(Err(err.into())),
+            Some(Err(err)) => Poll::Ready(Err(err)),
         }
     }
 }

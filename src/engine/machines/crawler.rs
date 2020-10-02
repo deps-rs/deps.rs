@@ -85,7 +85,7 @@ impl ManifestCrawler {
             .chain(deps.dev.iter())
             .chain(deps.build.iter())
         {
-            if let &CrateDep::Internal(ref path) = dep {
+            if let CrateDep::Internal(ref path) = dep {
                 self.register_interest(base_path, path, output);
             }
         }

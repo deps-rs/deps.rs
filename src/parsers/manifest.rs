@@ -51,35 +51,30 @@ fn convert_dependency(
     cargo_dep: (String, CargoTomlDependency),
 ) -> Option<Result<(CrateName, CrateDep), Error>> {
     match cargo_dep {
-        (name, CargoTomlDependency::Simple(string)) => Some(
-            name.parse::<CrateName>()
-                .map_err(|err| err.into())
-                .and_then(|parsed_name| {
-                    string
-                        .parse::<VersionReq>()
-                        .map_err(|err| err.into())
-                        .map(|version| (parsed_name, CrateDep::External(version)))
-                }),
-        ),
+        (name, CargoTomlDependency::Simple(string)) => {
+            Some(name.parse::<CrateName>().and_then(|parsed_name| {
+                string
+                    .parse::<VersionReq>()
+                    .map_err(|err| err.into())
+                    .map(|version| (parsed_name, CrateDep::External(version)))
+            }))
+        }
         (name, CargoTomlDependency::Complex(cplx)) => {
             if cplx.git.is_some() {
                 None
             } else if cplx.path.is_some() {
                 cplx.path.map(|path| {
                     name.parse::<CrateName>()
-                        .map_err(|err| err.into())
                         .map(|parsed_name| (parsed_name, CrateDep::Internal(path)))
                 })
             } else {
                 cplx.version.map(|string| {
-                    name.parse::<CrateName>()
-                        .map_err(|err| err.into())
-                        .and_then(|parsed_name| {
-                            string
-                                .parse::<VersionReq>()
-                                .map_err(|err| err.into())
-                                .map(|version| (parsed_name, CrateDep::External(version)))
-                        })
+                    name.parse::<CrateName>().and_then(|parsed_name| {
+                        string
+                            .parse::<VersionReq>()
+                            .map_err(|err| err.into())
+                            .map(|version| (parsed_name, CrateDep::External(version)))
+                    })
                 })
             }
         }
