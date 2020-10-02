@@ -3,17 +3,21 @@
 
 use std::{
     env,
+    future::Future,
     net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket},
+    pin::Pin,
     sync::Mutex,
+    time::Duration,
 };
 
 use cadence::{QueuingMetricSink, UdpMetricSink};
 use hyper::{
     server::conn::AddrStream,
     service::{make_service_fn, service_fn},
-    Client, Server,
+    Server,
 };
-use hyper_tls::HttpsConnector;
+
+use reqwest::redirect::Policy as RedirectPolicy;
 use slog::{o, Drain};
 
 mod engine;
@@ -25,6 +29,9 @@ mod utils;
 
 use self::engine::Engine;
 use self::server::App;
+
+/// Future crate's BoxFuture without the explicit lifetime parameter.
+pub type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 
 fn init_metrics() -> QueuingMetricSink {
     let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
@@ -42,7 +49,13 @@ async fn main() {
     );
 
     let metrics = init_metrics();
-    let client = Client::builder().build(HttpsConnector::new());
+
+    let client = reqwest::Client::builder()
+        .user_agent("deps.rs testing")
+        .redirect(RedirectPolicy::limited(5))
+        .timeout(Duration::from_secs(5))
+        .build()
+        .unwrap();
 
     let port = env::var("PORT")
         .unwrap_or_else(|_| "8080".to_string())
