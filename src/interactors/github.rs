@@ -1,6 +1,6 @@
 use std::task::{Context, Poll};
 
-use anyhow::{anyhow, Error};
+use anyhow::Error;
 
 use futures::FutureExt as _;
 use hyper::service::Service;
@@ -45,15 +45,8 @@ impl GetPopularRepos {
             "{}/search/repositories?q=language:rust&sort=stars",
             GITHUB_API_BASE_URI
         );
-        let res = client.get(&url).send().await?;
 
-        if !res.status().is_success() {
-            return Err(anyhow!(
-                "Status code {} for popular repo search",
-                res.status()
-            ));
-        }
-
+        let res = client.get(&url).send().await?.error_for_status()?;
         let summary: GithubSearchResponse = res.json().await?;
 
         summary

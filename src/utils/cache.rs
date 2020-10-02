@@ -1,7 +1,6 @@
 use std::{
     fmt::{Debug, Formatter, Result as FmtResult},
     hash::Hash,
-    sync::Mutex,
     time::{Duration, Instant},
 };
 
@@ -9,6 +8,7 @@ use derive_more::{Display, Error, From};
 use hyper::service::Service;
 use lru_cache::LruCache;
 use slog::{debug, Logger};
+use tokio::sync::Mutex;
 
 #[derive(Debug, Clone, Display, From, Error)]
 pub struct CacheError<E> {
@@ -58,7 +58,7 @@ where
         let now = Instant::now();
 
         {
-            let mut cache = self.cache.lock().expect("cache lock poisoned");
+            let mut cache = self.cache.lock().await;
 
             if let Some((ref valid_until, ref cached_response)) = cache.get_mut(&req) {
                 if *valid_until > now {
@@ -73,7 +73,7 @@ where
         let fresh = self.inner.call(req.clone()).await?;
 
         {
-            let mut cache = self.cache.lock().expect("cache lock poisoned");
+            let mut cache = self.cache.lock().await;
             cache.insert(req, (now + self.duration, fresh.clone()));
         }
 

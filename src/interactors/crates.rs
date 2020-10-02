@@ -1,6 +1,6 @@
 use std::{str, task::Context, task::Poll};
 
-use anyhow::{anyhow, Error};
+use anyhow::Error;
 use futures::FutureExt as _;
 use hyper::service::Service;
 use semver::{Version, VersionReq};
@@ -91,11 +91,7 @@ impl QueryCrate {
 
         // TODO: "master" should be "HEAD"? lots of repos moving to "main"
         let url = format!("{}/master/{}", CRATES_INDEX_BASE_URI, path);
-        let res = client.get(&url).send().await?;
-
-        if !res.status().is_success() {
-            return Err(anyhow!("Status code {} for URI {}", res.status(), url));
-        }
+        let res = client.get(&url).send().await?.error_for_status()?;
 
         let string_body = res.text().await?;
 
@@ -162,11 +158,7 @@ impl GetPopularCrates {
 
     pub async fn query(client: reqwest::Client) -> anyhow::Result<Vec<CratePath>> {
         let url = format!("{}/summary", CRATES_API_BASE_URI);
-        let res = client.get(&url).send().await?;
-
-        if !res.status().is_success() {
-            return Err(anyhow!("Status code {} for URI {}", res.status(), url));
-        }
+        let res = client.get(&url).send().await?.error_for_status()?;
 
         let summary: SummaryResponse = res.json().await?;
         convert_summary(summary)
