@@ -9,7 +9,6 @@ pub async fn analyze_dependencies(
     deps: CrateDeps,
 ) -> Result<AnalyzedDependencies, Error> {
     let advisory_db = engine.fetch_advisory_db().await?;
-
     let mut analyzer = DependencyAnalyzer::new(&deps, Some(advisory_db));
 
     let main_deps =

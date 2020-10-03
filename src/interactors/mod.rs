@@ -1,66 +1,53 @@
-use std::{task::Context, task::Poll};
+use std::task::{Context, Poll};
 
 use anyhow::{anyhow, Error};
-use futures::{
-    future::{err, ok, ready, BoxFuture},
-    TryFutureExt,
-};
-use hyper::{
-    body, header::USER_AGENT, service::Service, Body, Error as HyperError, Request, Response,
-};
+use futures::FutureExt as _;
+use hyper::service::Service;
 use relative_path::RelativePathBuf;
 
-use crate::models::repo::RepoPath;
+use crate::{models::repo::RepoPath, BoxFuture};
 
 pub mod crates;
 pub mod github;
 pub mod rustsec;
 
 #[derive(Debug, Clone)]
-pub struct RetrieveFileAtPath<S>(pub S);
+pub struct RetrieveFileAtPath {
+    client: reqwest::Client,
+}
 
-impl<S> Service<(RepoPath, RelativePathBuf)> for RetrieveFileAtPath<S>
-where
-    S: Service<Request<Body>, Response = Response<Body>, Error = HyperError> + Clone,
-    S::Future: Send + 'static,
-{
-    type Response = String;
-    type Error = Error;
-    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
-
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.0.poll_ready(cx).map_err(|err| err.into())
+impl RetrieveFileAtPath {
+    pub fn new(client: reqwest::Client) -> Self {
+        Self { client }
     }
 
-    fn call(&mut self, req: (RepoPath, RelativePathBuf)) -> Self::Future {
-        let (repo_path, path) = req;
+    pub async fn query(
+        client: reqwest::Client,
+        repo_path: RepoPath,
+        path: RelativePathBuf,
+    ) -> anyhow::Result<String> {
+        let url = repo_path.to_usercontent_file_url(&path);
+        let res = client.get(&url).send().await?;
 
-        let uri = repo_path.to_usercontent_file_uri(&path);
-        let uri = match uri {
-            Ok(uri) => uri,
-            Err(error) => return Box::pin(err(error)),
-        };
+        if !res.status().is_success() {
+            return Err(anyhow!("Status code {} for URI {}", res.status(), url));
+        }
 
-        let request = Request::get(uri.clone())
-            .header(USER_AGENT, "deps.rs")
-            .body(Body::empty())
-            .unwrap();
+        Ok(res.text().await?)
+    }
+}
 
-        Box::pin(
-            self.0
-                .call(request)
-                .err_into()
-                .and_then(move |response| {
-                    let status = response.status();
+impl Service<(RepoPath, RelativePathBuf)> for RetrieveFileAtPath {
+    type Response = String;
+    type Error = Error;
+    type Future = BoxFuture<Result<Self::Response, Self::Error>>;
 
-                    if status.is_success() {
-                        ok(response)
-                    } else {
-                        err(anyhow!("Status code {} for URI {}", status, uri))
-                    }
-                })
-                .and_then(|response| body::to_bytes(response.into_body()).err_into())
-                .and_then(|bytes| ready(String::from_utf8(bytes.to_vec())).err_into()),
-        )
+    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, (repo_path, path): (RepoPath, RelativePathBuf)) -> Self::Future {
+        let client = self.client.clone();
+        Self::query(client, repo_path, path).boxed()
     }
 }
