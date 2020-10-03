@@ -1,25 +1,21 @@
 use std::{
     collections::HashSet,
     panic::RefUnwindSafe,
-    sync::{Arc, Mutex},
-    task::{Context, Poll},
+    sync::Arc,
     time::{Duration, Instant},
 };
 
 use anyhow::{anyhow, Error};
 use cadence::{MetricSink, NopMetricSink, StatsdClient};
-use futures::{future::try_join_all, stream::FuturesUnordered, Future, FutureExt, Stream};
-use hyper::{
-    client::{HttpConnector, ResponseFuture},
-    service::Service,
-    Body, Client, Request, Response,
-};
-use hyper_tls::HttpsConnector;
+use futures::{future::try_join_all, stream, StreamExt};
+use hyper::service::Service;
 use once_cell::sync::Lazy;
 use relative_path::{RelativePath, RelativePathBuf};
 use rustsec::database::Database;
 use semver::VersionReq;
 use slog::Logger;
+use stream::BoxStream;
+use tokio::sync::Mutex;
 
 use crate::interactors::crates::{GetPopularCrates, QueryCrate};
 use crate::interactors::github::GetPopularRepos;
@@ -33,77 +29,57 @@ mod fut;
 mod machines;
 
 use self::fut::analyze_dependencies;
-use self::fut::CrawlManifestFuture;
-
-type HttpClient = Client<HttpsConnector<HttpConnector>>;
-// type HttpClient = Client<HttpConnector>;
-
-// workaround for hyper 0.12 not implementing Service for Client
-#[derive(Debug, Clone)]
-struct ServiceHttpClient(HttpClient);
-
-impl Service<Request<Body>> for ServiceHttpClient {
-    type Response = Response<Body>;
-    type Error = hyper::Error;
-    type Future = ResponseFuture;
-
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.0.poll_ready(cx)
-    }
-
-    fn call(&mut self, req: Request<Body>) -> Self::Future {
-        self.0.request(req)
-    }
-}
+use self::fut::crawl_manifest;
 
 #[derive(Clone, Debug)]
 pub struct Engine {
-    client: HttpClient,
+    client: reqwest::Client,
     logger: Logger,
     metrics: StatsdClient,
-    // TODO: use futures aware mutex
-    query_crate: Arc<Mutex<Cache<QueryCrate<ServiceHttpClient>, CrateName>>>,
-    get_popular_crates: Arc<Mutex<Cache<GetPopularCrates<ServiceHttpClient>, ()>>>,
-    get_popular_repos: Arc<Mutex<Cache<GetPopularRepos<ServiceHttpClient>, ()>>>,
-    retrieve_file_at_path: Arc<Mutex<RetrieveFileAtPath<ServiceHttpClient>>>,
-    fetch_advisory_db: Arc<Mutex<Cache<FetchAdvisoryDatabase<ServiceHttpClient>, ()>>>,
+    query_crate: Arc<Mutex<Cache<QueryCrate, CrateName>>>,
+    get_popular_crates: Arc<Mutex<Cache<GetPopularCrates, ()>>>,
+    get_popular_repos: Arc<Mutex<Cache<GetPopularRepos, ()>>>,
+    retrieve_file_at_path: Arc<Mutex<RetrieveFileAtPath>>,
+    fetch_advisory_db: Arc<Mutex<Cache<FetchAdvisoryDatabase, ()>>>,
 }
 
 impl Engine {
-    pub fn new(client: HttpClient, logger: Logger) -> Engine {
+    pub fn new(client: reqwest::Client, logger: Logger) -> Engine {
         let metrics = StatsdClient::from_sink("engine", NopMetricSink);
 
-        let service_client = ServiceHttpClient(client.clone());
-
         let query_crate = Cache::new(
-            QueryCrate(service_client.clone()),
+            QueryCrate::new(client.clone()),
             Duration::from_secs(300),
             500,
+            logger.clone(),
         );
         let get_popular_crates = Cache::new(
-            GetPopularCrates(service_client.clone()),
-            Duration::from_secs(10),
+            GetPopularCrates::new(client.clone()),
+            Duration::from_secs(120),
             1,
+            logger.clone(),
         );
         let get_popular_repos = Cache::new(
-            GetPopularRepos(service_client.clone()),
-            Duration::from_secs(10),
+            GetPopularRepos::new(client.clone()),
+            Duration::from_secs(120),
             1,
+            logger.clone(),
         );
         let fetch_advisory_db = Cache::new(
-            FetchAdvisoryDatabase(service_client.clone()),
-            Duration::from_secs(300),
+            FetchAdvisoryDatabase::new(client.clone()),
+            Duration::from_secs(1800),
             1,
+            logger.clone(),
         );
 
         Engine {
-            client,
+            client: client.clone(),
             logger,
             metrics,
             query_crate: Arc::new(Mutex::new(query_crate)),
             get_popular_crates: Arc::new(Mutex::new(get_popular_crates)),
             get_popular_repos: Arc::new(Mutex::new(get_popular_repos)),
-            retrieve_file_at_path: Arc::new(Mutex::new(RetrieveFileAtPath(service_client))),
+            retrieve_file_at_path: Arc::new(Mutex::new(RetrieveFileAtPath::new(client))),
             fetch_advisory_db: Arc::new(Mutex::new(fetch_advisory_db)),
         }
     }
@@ -141,8 +117,10 @@ impl AnalyzeDependenciesOutcome {
 
 impl Engine {
     pub async fn get_popular_repos(&self) -> Result<Vec<Repository>, Error> {
-        let repos = self.get_popular_repos.lock().unwrap().call(());
-        let repos = repos.await?;
+        let repos = {
+            let mut lock = self.get_popular_repos.lock().await;
+            lock.cached_query(()).await?
+        };
 
         let filtered_repos = repos
             .iter()
@@ -154,8 +132,8 @@ impl Engine {
     }
 
     pub async fn get_popular_crates(&self) -> Result<Vec<CratePath>, Error> {
-        let crates = self.get_popular_crates.lock().unwrap().call(());
-        let crates = crates.await?;
+        let mut lock = self.get_popular_crates.lock().await;
+        let crates = lock.cached_query(()).await?;
         Ok(crates)
     }
 
@@ -168,8 +146,7 @@ impl Engine {
         let entry_point = RelativePath::new("/").to_relative_path_buf();
         let engine = self.clone();
 
-        let manifest_future = CrawlManifestFuture::new(self, repo_path.clone(), entry_point);
-        let manifest_output = manifest_future.await?;
+        let manifest_output = crawl_manifest(self.clone(), repo_path.clone(), entry_point).await?;
 
         let engine_for_analyze = engine.clone();
         let futures = manifest_output
@@ -201,12 +178,10 @@ impl Engine {
     ) -> Result<AnalyzeDependenciesOutcome, Error> {
         let start = Instant::now();
 
-        let query_response = self
-            .query_crate
-            .lock()
-            .unwrap()
-            .call(crate_path.name.clone());
-        let query_response = query_response.await?;
+        let query_response = {
+            let mut lock = self.query_crate.lock().await;
+            lock.cached_query(crate_path.name.clone()).await?
+        };
 
         let engine = self.clone();
 
@@ -237,8 +212,10 @@ impl Engine {
         name: CrateName,
         req: VersionReq,
     ) -> Result<Option<CrateRelease>, Error> {
-        let query_response = self.query_crate.lock().unwrap().call(name);
-        let query_response = query_response.await?;
+        let query_response = {
+            let mut lock = self.query_crate.lock().await;
+            lock.cached_query(name).await?
+        };
 
         let latest = query_response
             .releases
@@ -250,41 +227,44 @@ impl Engine {
         Ok(latest)
     }
 
-    fn fetch_releases<I: IntoIterator<Item = CrateName>>(
-        &self,
-        names: I,
-    ) -> impl Stream<Item = Result<Vec<CrateRelease>, Error>> {
+    fn fetch_releases<'a, I>(&'a self, names: I) -> BoxStream<'a, anyhow::Result<Vec<CrateRelease>>>
+    where
+        I: IntoIterator<Item = CrateName>,
+        <I as IntoIterator>::IntoIter: Send + 'a,
+    {
         let engine = self.clone();
 
-        names
-            .into_iter()
-            .map(|name| {
-                engine
-                    .query_crate
-                    .lock()
-                    .unwrap()
-                    .call(name)
-                    .map(|resp| resp.map(|r| r.releases))
-            })
-            .collect::<FuturesUnordered<_>>()
+        let s = stream::iter(names)
+            .zip(stream::repeat(engine))
+            .map(resolve_crate_with_engine)
+            .buffer_unordered(25);
+
+        Box::pin(s)
     }
 
-    fn retrieve_manifest_at_path(
+    async fn retrieve_manifest_at_path(
         &self,
         repo_path: &RepoPath,
         path: &RelativePathBuf,
-    ) -> impl Future<Output = Result<String, Error>> {
+    ) -> Result<String, Error> {
         let manifest_path = path.join(RelativePath::new("Cargo.toml"));
 
-        self.retrieve_file_at_path
-            .lock()
-            .unwrap()
-            .call((repo_path.clone(), manifest_path))
+        let mut lock = self.retrieve_file_at_path.lock().await;
+        Ok(lock.call((repo_path.clone(), manifest_path)).await?)
     }
 
-    fn fetch_advisory_db(&self) -> impl Future<Output = Result<Arc<Database>, Error>> {
-        self.fetch_advisory_db.lock().unwrap().call(())
+    async fn fetch_advisory_db(&self) -> Result<Arc<Database>, Error> {
+        let mut lock = self.fetch_advisory_db.lock().await;
+        Ok(lock.cached_query(()).await?)
     }
+}
+
+async fn resolve_crate_with_engine(
+    (crate_name, engine): (CrateName, Engine),
+) -> anyhow::Result<Vec<CrateRelease>> {
+    let mut lock = engine.query_crate.lock().await;
+    let crate_res = lock.cached_query(crate_name).await?;
+    Ok(crate_res.releases)
 }
 
 static POPULAR_REPO_BLOCK_LIST: Lazy<HashSet<RepoPath>> = Lazy::new(|| {

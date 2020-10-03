@@ -1,7 +1,6 @@
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 use anyhow::{anyhow, ensure, Error};
-use hyper::Uri;
 use relative_path::RelativePath;
 
 #[derive(Clone, Debug)]
@@ -26,17 +25,27 @@ impl RepoPath {
         })
     }
 
-    pub fn to_usercontent_file_uri(&self, path: &RelativePath) -> Result<Uri, Error> {
-        let url = format!(
+    pub fn to_usercontent_file_url(&self, path: &RelativePath) -> String {
+        format!(
             "{}/{}/{}/{}/{}",
             self.site.to_usercontent_base_uri(),
             self.qual.as_ref(),
             self.name.as_ref(),
             self.site.to_usercontent_repo_suffix(),
             path.normalize()
-        );
+        )
+    }
+}
 
-        Ok(url.parse::<Uri>()?)
+impl fmt::Display for RepoPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} => {}/{}",
+            self.site.as_ref(),
+            self.qual.as_ref(),
+            self.name.as_ref()
+        )
     }
 }
 
@@ -156,9 +165,7 @@ mod tests {
 
         for (input, expected) in &paths {
             let repo = RepoPath::from_parts("github", "deps-rs", "deps.rs").unwrap();
-            let out = repo
-                .to_usercontent_file_uri(RelativePath::new(input))
-                .unwrap();
+            let out = repo.to_usercontent_file_url(RelativePath::new(input));
 
             let exp = format!(
                 "https://raw.githubusercontent.com/deps-rs/deps.rs/HEAD/{}",
@@ -169,9 +176,7 @@ mod tests {
 
         for (input, expected) in &paths {
             let repo = RepoPath::from_parts("gitlab", "deps-rs", "deps.rs").unwrap();
-            let out = repo
-                .to_usercontent_file_uri(RelativePath::new(input))
-                .unwrap();
+            let out = repo.to_usercontent_file_url(RelativePath::new(input));
 
             let exp = format!("https://gitlab.com/deps-rs/deps.rs/raw/HEAD/{}", expected);
             assert_eq!(out.to_string(), exp);
@@ -179,9 +184,7 @@ mod tests {
 
         for (input, expected) in &paths {
             let repo = RepoPath::from_parts("bitbucket", "deps-rs", "deps.rs").unwrap();
-            let out = repo
-                .to_usercontent_file_uri(RelativePath::new(input))
-                .unwrap();
+            let out = repo.to_usercontent_file_url(RelativePath::new(input));
 
             let exp = format!(
                 "https://bitbucket.org/deps-rs/deps.rs/raw/HEAD/{}",

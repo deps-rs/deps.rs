@@ -1,16 +1,15 @@
-use std::{task::Context, task::Poll};
+use std::task::{Context, Poll};
 
-use anyhow::{anyhow, Error};
-use futures::{
-    future::{err, ok, ready, BoxFuture},
-    TryFutureExt,
-};
-use hyper::{
-    body, header::USER_AGENT, service::Service, Body, Error as HyperError, Request, Response, Uri,
-};
+use anyhow::Error;
+
+use futures::FutureExt as _;
+use hyper::service::Service;
 use serde::Deserialize;
 
-use crate::models::repo::{RepoPath, Repository};
+use crate::{
+    models::repo::{RepoPath, Repository},
+    BoxFuture,
+};
 
 const GITHUB_API_BASE_URI: &str = "https://api.github.com";
 
@@ -32,65 +31,50 @@ struct GithubOwner {
 }
 
 #[derive(Debug, Clone)]
-pub struct GetPopularRepos<S>(pub S);
+pub struct GetPopularRepos {
+    client: reqwest::Client,
+}
 
-impl<S> Service<()> for GetPopularRepos<S>
-where
-    S: Service<Request<Body>, Response = Response<Body>, Error = HyperError> + Clone,
-    S::Future: Send + 'static,
-{
+impl GetPopularRepos {
+    pub fn new(client: reqwest::Client) -> Self {
+        Self { client }
+    }
+
+    pub async fn query(client: reqwest::Client) -> anyhow::Result<Vec<Repository>> {
+        let url = format!(
+            "{}/search/repositories?q=language:rust&sort=stars",
+            GITHUB_API_BASE_URI
+        );
+
+        let res = client.get(&url).send().await?.error_for_status()?;
+        let summary: GithubSearchResponse = res.json().await?;
+
+        summary
+            .items
+            .into_iter()
+            .map(|item| {
+                let path = RepoPath::from_parts("github", &item.owner.login, &item.name)?;
+
+                Ok(Repository {
+                    path,
+                    description: item.description,
+                })
+            })
+            .collect::<Result<Vec<_>, Error>>()
+    }
+}
+
+impl Service<()> for GetPopularRepos {
     type Response = Vec<Repository>;
     type Error = Error;
-    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
+    type Future = BoxFuture<Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.0.poll_ready(cx).map_err(|err| err.into())
+    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        Poll::Ready(Ok(()))
     }
 
     fn call(&mut self, _req: ()) -> Self::Future {
-        let uri = format!(
-            "{}/search/repositories?q=language:rust&sort=stars",
-            GITHUB_API_BASE_URI
-        )
-        .parse::<Uri>()
-        .expect("TODO: handle error properly");
-
-        let request = Request::get(uri)
-            .header(USER_AGENT, "deps.rs")
-            .body(Body::empty())
-            .unwrap();
-
-        Box::pin(
-            self.0
-                .call(request)
-                .err_into()
-                .and_then(|response| {
-                    let status = response.status();
-                    if !status.is_success() {
-                        return err(anyhow!("Status code {} for popular repo search", status));
-                    }
-
-                    ok(response)
-                })
-                .and_then(|response| body::to_bytes(response.into_body()).err_into())
-                .and_then(|bytes| ready(serde_json::from_slice(bytes.as_ref())).err_into())
-                .and_then(|search_response: GithubSearchResponse| {
-                    ready(
-                        search_response
-                            .items
-                            .into_iter()
-                            .map(|item| {
-                                let path =
-                                    RepoPath::from_parts("github", &item.owner.login, &item.name)?;
-
-                                Ok(Repository {
-                                    path,
-                                    description: item.description,
-                                })
-                            })
-                            .collect::<Result<Vec<_>, Error>>(),
-                    )
-                }),
-        )
+        let client = self.client.clone();
+        Self::query(client).boxed()
     }
 }
