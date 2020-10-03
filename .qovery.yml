@@ -5,6 +5,9 @@ application:
   publicly_accessible: true
 routers:
 - name: main
+  custom_domains:
+  - branch: setup-cd-with-qovery
+    domain: deps.rm.rs
   routes:
   - application_name: deps-rs
     paths:
