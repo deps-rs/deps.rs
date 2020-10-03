@@ -21,6 +21,5 @@ RUN set -eux; \
 COPY . /src
 RUN cargo install --path /src
 
-EXPOSE 8080/tcp
+EXPOSE 8080
 CMD "/usr/local/cargo/bin/shiny-robots"
-
