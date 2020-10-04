@@ -4,8 +4,7 @@ use base64::display::Base64Display;
 use once_cell::sync::Lazy;
 use rusttype::{point, Font, Point, PositionedGlyph, Scale};
 
-const FONT_DATA: &'static [u8] =
-    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/DejaVuSans.ttf"));
+const FONT_DATA: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/DejaVuSans.ttf"));
 const FONT_SIZE: f32 = 11.;
 const SCALE: Scale = Scale {
     x: FONT_SIZE,
@@ -45,7 +44,7 @@ static DATA: Lazy<BadgeStaticData> = Lazy::new(|| {
 
     BadgeStaticData {
         font,
-        scale: SCALE.clone(),
+        scale: SCALE,
         offset,
     }
 });
