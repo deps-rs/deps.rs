@@ -30,3 +30,28 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
+
+  linting:
+    if: ${{ github.ref != 'main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v2
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2020-09-27
+          default: true
+          components: rustfmt, clippy
+
+      - name: format
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+      - name: clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
