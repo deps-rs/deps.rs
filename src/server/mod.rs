@@ -52,7 +52,7 @@ impl App {
         router.add("/", Route::Index);
 
         router.add("/static/style.css", Route::Static(StaticFile::StyleCss));
-        router.add("/static/favicon.png", Route::Static(StaticFile::FaviconPng));
+        router.add("/static/logo.svg", Route::Static(StaticFile::FaviconPng));
 
         router.add(
             "/repo/:site/:qual/:name",
@@ -345,8 +345,8 @@ impl App {
                 .body(Body::from(assets::STATIC_STYLE_CSS))
                 .unwrap(),
             StaticFile::FaviconPng => Response::builder()
-                .header(CONTENT_TYPE, "image/png")
-                .body(Body::from(assets::STATIC_FAVICON_PNG))
+                .header(CONTENT_TYPE, "image/svg+xml")
+                .body(Body::from(assets::STATIC_FAVICON))
                 .unwrap(),
         }
     }
