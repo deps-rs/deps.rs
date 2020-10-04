@@ -1,4 +1,7 @@
-use std::task::{Context, Poll};
+use std::{
+    fmt,
+    task::{Context, Poll},
+};
 
 use anyhow::{anyhow, Error};
 use futures::FutureExt as _;
@@ -11,7 +14,7 @@ pub mod crates;
 pub mod github;
 pub mod rustsec;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct RetrieveFileAtPath {
     client: reqwest::Client,
 }
@@ -49,5 +52,11 @@ impl Service<(RepoPath, RelativePathBuf)> for RetrieveFileAtPath {
     fn call(&mut self, (repo_path, path): (RepoPath, RelativePathBuf)) -> Self::Future {
         let client = self.client.clone();
         Self::query(client, repo_path, path).boxed()
+    }
+}
+
+impl fmt::Debug for RetrieveFileAtPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("RetrieveFileAtPath")
     }
 }
