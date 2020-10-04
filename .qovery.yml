@@ -8,6 +8,8 @@ routers:
   custom_domains:
   - branch: setup-cd-with-qovery
     domain: deps.rm.rs
+  - branch: main
+    domain: deps.rs
   routes:
   - application_name: deps-rs
     paths:
