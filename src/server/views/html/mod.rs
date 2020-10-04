@@ -17,7 +17,7 @@ fn render_html<B: Render>(title: &str, body: B) -> Response<Body> {
                 meta charset="utf-8";
                 meta name="viewport" content="width=device-width, initial-scale=1";
                 title { (format!("{} - Deps.rs", title)) }
-                link rel="icon" type="image/png" href="/static/favicon.png";
+                link rel="icon" type="image/png" href="/static/logo.svg";
                 link rel="stylesheet" type="text/css" href="/static/style.css";
                 link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600";
                 link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Source+Code+Pro";

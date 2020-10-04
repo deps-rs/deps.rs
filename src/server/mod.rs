@@ -52,7 +52,7 @@ impl App {
         router.add("/", Route::Index);
 
         router.add("/static/style.css", Route::Static(StaticFile::StyleCss));
-        router.add("/static/favicon.png", Route::Static(StaticFile::FaviconPng));
+        router.add("/static/logo.svg", Route::Static(StaticFile::FaviconPng));
 
         router.add(
             "/repo/:site/:qual/:name",
