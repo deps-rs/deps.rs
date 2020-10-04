@@ -1,6 +1,7 @@
 use std::{
     fmt,
     hash::Hash,
+    sync::Arc,
     time::{Duration, Instant},
 };
 
@@ -15,6 +16,7 @@ pub struct CacheError<E> {
     inner: E,
 }
 
+#[derive(Clone)]
 pub struct Cache<S, Req>
 where
     S: Service<Req>,
@@ -22,7 +24,7 @@ where
 {
     inner: S,
     duration: Duration,
-    cache: Mutex<LruCache<Req, (Instant, S::Response)>>,
+    cache: Arc<Mutex<LruCache<Req, (Instant, S::Response)>>>,
     logger: Logger,
 }
 
@@ -41,7 +43,7 @@ where
 
 impl<S, Req> Cache<S, Req>
 where
-    S: Service<Req> + fmt::Debug,
+    S: Service<Req> + fmt::Debug + Clone,
     S::Response: Clone,
     Req: Clone + Eq + Hash + fmt::Debug,
 {
@@ -49,12 +51,12 @@ where
         Cache {
             inner: service,
             duration,
-            cache: Mutex::new(LruCache::new(capacity)),
+            cache: Arc::new(Mutex::new(LruCache::new(capacity))),
             logger,
         }
     }
 
-    pub async fn cached_query(&mut self, req: Req) -> Result<S::Response, S::Error> {
+    pub async fn cached_query(&self, req: Req) -> Result<S::Response, S::Error> {
         let now = Instant::now();
 
         {
@@ -79,7 +81,8 @@ where
             "req" => format!("{:?}", &req)
         );
 
-        let fresh = self.inner.call(req.clone()).await?;
+        let mut service = self.inner.clone();
+        let fresh = service.call(req.clone()).await?;
 
         {
             let mut cache = self.cache.lock().await;
