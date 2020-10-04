@@ -2,9 +2,9 @@ name: Premerge
 
 on:
   pull_request:
-    types: [opened, synchronized, reopened]
+    branches: [main]
   push:
-    branches: [ main ]
+    branches: [main]
   schedule:
     - cron: 0 0 1 * *
 
