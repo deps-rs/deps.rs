@@ -1,8 +1,4 @@
-use std::{
-    fmt,
-    sync::Arc,
-    time::Duration,
-};
+use std::{fmt, sync::Arc, time::Duration};
 
 use derive_more::{Display, Error, From};
 use hyper::service::Service;
