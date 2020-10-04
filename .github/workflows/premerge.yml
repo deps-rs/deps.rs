@@ -3,6 +3,10 @@ name: Premerge
 on:
   pull_request:
     types: [opened, synchronized, reopened]
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: 0 0 1 * *
 
 jobs:
   build-and-test:
