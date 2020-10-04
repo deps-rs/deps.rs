@@ -346,7 +346,7 @@ impl App {
                 .unwrap(),
             StaticFile::FaviconPng => Response::builder()
                 .header(CONTENT_TYPE, "image/png")
-                .body(Body::from(assets::STATIC_FAVICON_PNG))
+                .body(Body::from(assets::STATIC_FAVICON))
                 .unwrap(),
         }
     }
