@@ -1,5 +1,5 @@
 use std::{
-    fmt::{Debug, Formatter, Result as FmtResult},
+    fmt,
     hash::Hash,
     time::{Duration, Instant},
 };
@@ -26,12 +26,12 @@ where
     logger: Logger,
 }
 
-impl<S, Req> Debug for Cache<S, Req>
+impl<S, Req> fmt::Debug for Cache<S, Req>
 where
-    S: Service<Req> + Debug,
+    S: Service<Req> + fmt::Debug,
     Req: Hash + Eq,
 {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> FmtResult {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("Cache")
             .field("inner", &self.inner)
             .field("duration", &self.duration)
@@ -41,9 +41,9 @@ where
 
 impl<S, Req> Cache<S, Req>
 where
-    S: Service<Req>,
+    S: Service<Req> + fmt::Debug,
     S::Response: Clone,
-    Req: Clone + Eq + Hash,
+    Req: Clone + Eq + Hash + fmt::Debug,
 {
     pub fn new(service: S, duration: Duration, capacity: usize, logger: Logger) -> Cache<S, Req> {
         Cache {
@@ -62,13 +62,22 @@ where
 
             if let Some((ref valid_until, ref cached_response)) = cache.get_mut(&req) {
                 if *valid_until > now {
-                    debug!(self.logger, "cache hit");
+                    debug!(
+                        self.logger, "cache hit";
+                        "svc" => format!("{:?}", self.inner),
+                        "req" => format!("{:?}", &req)
+                    );
+
                     return Ok(cached_response.clone());
                 }
             }
         }
 
-        debug!(self.logger, "cache miss");
+        debug!(
+            self.logger, "cache miss";
+            "svc" => format!("{:?}", self.inner),
+            "req" => format!("{:?}", &req)
+        );
 
         let fresh = self.inner.call(req.clone()).await?;
 

@@ -1,4 +1,4 @@
-use std::{sync::Arc, task::Context, task::Poll};
+use std::{fmt, sync::Arc, task::Context, task::Poll};
 
 use anyhow::Error;
 use futures::FutureExt as _;
@@ -7,7 +7,7 @@ use rustsec::database::Database;
 
 use crate::BoxFuture;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct FetchAdvisoryDatabase {
     client: reqwest::Client,
 }
@@ -35,5 +35,11 @@ impl Service<()> for FetchAdvisoryDatabase {
     fn call(&mut self, _req: ()) -> Self::Future {
         let client = self.client.clone();
         Self::fetch(client).boxed()
+    }
+}
+
+impl fmt::Debug for FetchAdvisoryDatabase {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("FetchAdvisoryDatabase")
     }
 }

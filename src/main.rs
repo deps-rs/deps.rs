@@ -6,7 +6,6 @@ use std::{
     future::Future,
     net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket},
     pin::Pin,
-    sync::Mutex,
     time::Duration,
 };
 
@@ -18,7 +17,7 @@ use hyper::{
 };
 
 use reqwest::redirect::Policy as RedirectPolicy;
-use slog::{o, Drain};
+use slog::{error, info, o, Drain, Logger};
 
 mod engine;
 mod interactors;
@@ -43,12 +42,17 @@ fn init_metrics() -> QueuingMetricSink {
     QueuingMetricSink::from(sink)
 }
 
+fn init_root_logger() -> Logger {
+    let decorator = slog_term::TermDecorator::new().build();
+    let drain = slog_term::FullFormat::new(decorator).build().fuse();
+    let drain = slog_async::Async::new(drain).build().fuse();
+
+    Logger::root(drain, o!())
+}
+
 #[tokio::main]
 async fn main() {
-    let logger = slog::Logger::root(
-        Mutex::new(slog_json::Json::default(std::io::stderr())).map(slog::Fuse),
-        o!("version" => env!("CARGO_PKG_VERSION")),
-    );
+    let logger = init_root_logger();
 
     let metrics = init_metrics();
 
@@ -66,12 +70,13 @@ async fn main() {
 
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
 
-    let mut engine = Engine::new(client.clone(), logger.clone());
+    let mut engine = Engine::new(client.clone(), logger.new(o!()));
     engine.set_metrics(metrics);
 
+    let svc_logger = logger.new(o!());
     let make_svc = make_service_fn(move |_socket: &AddrStream| {
-        let logger = logger.clone();
         let engine = engine.clone();
+        let logger = svc_logger.clone();
 
         async move {
             let server = App::new(logger.clone(), engine.clone());
@@ -83,9 +88,9 @@ async fn main() {
     });
     let server = Server::bind(&addr).serve(make_svc);
 
-    println!("Server running on port {}", port);
+    info!(logger, "Server running on port {}", port);
 
     if let Err(e) = server.await {
-        eprintln!("server error: {}", e);
+        error!(logger, "server error: {}", e);
     }
 }

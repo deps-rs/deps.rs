@@ -1,4 +1,4 @@
-use std::{str, task::Context, task::Poll};
+use std::{fmt, str, task::Context, task::Poll};
 
 use anyhow::Error;
 use futures::FutureExt as _;
@@ -66,7 +66,7 @@ pub struct QueryCrateResponse {
     pub releases: Vec<CrateRelease>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct QueryCrate {
     client: reqwest::Client,
 }
@@ -102,6 +102,12 @@ impl QueryCrate {
             .collect::<Result<_, _>>()?;
 
         convert_pkgs(&crate_name, pkgs)
+    }
+}
+
+impl fmt::Debug for QueryCrate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("QueryCrate")
     }
 }
 
@@ -145,7 +151,7 @@ fn convert_summary(response: SummaryResponse) -> Result<Vec<CratePath>, Error> {
         .collect()
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Default)]
 pub struct GetPopularCrates {
     client: reqwest::Client,
 }
@@ -164,6 +170,11 @@ impl GetPopularCrates {
     }
 }
 
+impl fmt::Debug for GetPopularCrates {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("GetPopularCrates")
+    }
+}
 impl Service<()> for GetPopularCrates {
     type Response = Vec<CratePath>;
     type Error = Error;

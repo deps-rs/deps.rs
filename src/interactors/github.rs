@@ -1,4 +1,7 @@
-use std::task::{Context, Poll};
+use std::{
+    fmt,
+    task::{Context, Poll},
+};
 
 use anyhow::Error;
 
@@ -30,7 +33,7 @@ struct GithubOwner {
     login: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct GetPopularRepos {
     client: reqwest::Client,
 }
@@ -61,6 +64,12 @@ impl GetPopularRepos {
                 })
             })
             .collect::<Result<Vec<_>, Error>>()
+    }
+}
+
+impl fmt::Debug for GetPopularRepos {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("GetPopularRepos")
     }
 }
 
