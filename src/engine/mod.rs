@@ -15,7 +15,6 @@ use rustsec::database::Database;
 use semver::VersionReq;
 use slog::Logger;
 use stream::BoxStream;
-use tokio::sync::Mutex;
 
 use crate::interactors::crates::{GetPopularCrates, QueryCrate};
 use crate::interactors::github::GetPopularRepos;
@@ -36,11 +35,11 @@ pub struct Engine {
     client: reqwest::Client,
     logger: Logger,
     metrics: StatsdClient,
-    query_crate: Arc<Mutex<Cache<QueryCrate, CrateName>>>,
-    get_popular_crates: Arc<Mutex<Cache<GetPopularCrates, ()>>>,
-    get_popular_repos: Arc<Mutex<Cache<GetPopularRepos, ()>>>,
-    retrieve_file_at_path: Arc<Mutex<RetrieveFileAtPath>>,
-    fetch_advisory_db: Arc<Mutex<Cache<FetchAdvisoryDatabase, ()>>>,
+    query_crate: Cache<QueryCrate, CrateName>,
+    get_popular_crates: Cache<GetPopularCrates, ()>,
+    get_popular_repos: Cache<GetPopularRepos, ()>,
+    retrieve_file_at_path: RetrieveFileAtPath,
+    fetch_advisory_db: Cache<FetchAdvisoryDatabase, ()>,
 }
 
 impl Engine {
@@ -65,6 +64,7 @@ impl Engine {
             1,
             logger.clone(),
         );
+        let retrieve_file_at_path = RetrieveFileAtPath::new(client.clone());
         let fetch_advisory_db = Cache::new(
             FetchAdvisoryDatabase::new(client.clone()),
             Duration::from_secs(1800),
@@ -73,14 +73,14 @@ impl Engine {
         );
 
         Engine {
-            client: client.clone(),
+            client,
             logger,
             metrics,
-            query_crate: Arc::new(Mutex::new(query_crate)),
-            get_popular_crates: Arc::new(Mutex::new(get_popular_crates)),
-            get_popular_repos: Arc::new(Mutex::new(get_popular_repos)),
-            retrieve_file_at_path: Arc::new(Mutex::new(RetrieveFileAtPath::new(client))),
-            fetch_advisory_db: Arc::new(Mutex::new(fetch_advisory_db)),
+            query_crate,
+            get_popular_crates,
+            get_popular_repos,
+            retrieve_file_at_path,
+            fetch_advisory_db,
         }
     }
 
@@ -117,10 +117,7 @@ impl AnalyzeDependenciesOutcome {
 
 impl Engine {
     pub async fn get_popular_repos(&self) -> Result<Vec<Repository>, Error> {
-        let repos = {
-            let mut lock = self.get_popular_repos.lock().await;
-            lock.cached_query(()).await?
-        };
+        let repos = self.get_popular_repos.cached_query(()).await?;
 
         let filtered_repos = repos
             .iter()
@@ -132,8 +129,7 @@ impl Engine {
     }
 
     pub async fn get_popular_crates(&self) -> Result<Vec<CratePath>, Error> {
-        let mut lock = self.get_popular_crates.lock().await;
-        let crates = lock.cached_query(()).await?;
+        let crates = self.get_popular_crates.cached_query(()).await?;
         Ok(crates)
     }
 
@@ -178,10 +174,10 @@ impl Engine {
     ) -> Result<AnalyzeDependenciesOutcome, Error> {
         let start = Instant::now();
 
-        let query_response = {
-            let mut lock = self.query_crate.lock().await;
-            lock.cached_query(crate_path.name.clone()).await?
-        };
+        let query_response = self
+            .query_crate
+            .cached_query(crate_path.name.clone())
+            .await?;
 
         let engine = self.clone();
 
@@ -212,10 +208,7 @@ impl Engine {
         name: CrateName,
         req: VersionReq,
     ) -> Result<Option<CrateRelease>, Error> {
-        let query_response = {
-            let mut lock = self.query_crate.lock().await;
-            lock.cached_query(name).await?
-        };
+        let query_response = self.query_crate.cached_query(name).await?;
 
         let latest = query_response
             .releases
@@ -249,21 +242,19 @@ impl Engine {
     ) -> Result<String, Error> {
         let manifest_path = path.join(RelativePath::new("Cargo.toml"));
 
-        let mut lock = self.retrieve_file_at_path.lock().await;
-        Ok(lock.call((repo_path.clone(), manifest_path)).await?)
+        let mut service = self.retrieve_file_at_path.clone();
+        Ok(service.call((repo_path.clone(), manifest_path)).await?)
     }
 
     async fn fetch_advisory_db(&self) -> Result<Arc<Database>, Error> {
-        let mut lock = self.fetch_advisory_db.lock().await;
-        Ok(lock.cached_query(()).await?)
+        Ok(self.fetch_advisory_db.cached_query(()).await?)
     }
 }
 
 async fn resolve_crate_with_engine(
     (crate_name, engine): (CrateName, Engine),
 ) -> anyhow::Result<Vec<CrateRelease>> {
-    let mut lock = engine.query_crate.lock().await;
-    let crate_res = lock.cached_query(crate_name).await?;
+    let crate_res = engine.query_crate.cached_query(crate_name).await?;
     Ok(crate_res.releases)
 }
 
