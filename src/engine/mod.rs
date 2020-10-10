@@ -7,6 +7,7 @@ use std::{
 
 use anyhow::{anyhow, Error};
 use cadence::{MetricSink, NopMetricSink, StatsdClient};
+use crates_index::Index;
 use futures::{future::try_join_all, stream, StreamExt};
 use hyper::service::Service;
 use once_cell::sync::Lazy;
@@ -46,8 +47,14 @@ impl Engine {
     pub fn new(client: reqwest::Client, logger: Logger) -> Engine {
         let metrics = StatsdClient::from_sink("engine", NopMetricSink);
 
+        let index = Index::new_cargo_default();
+        // TODO: call update every 30 or so seconds
+        // TODO: decide what we are going to do while we wait for the index to retrieve (when this gets deployed)
+        // TODO: probably add an env variable to allow configuring the index path to the disk on qovery
+        index.retrieve_or_update().unwrap();
+
         let query_crate = Cache::new(
-            QueryCrate::new(client.clone()),
+            QueryCrate::new(index),
             Duration::from_secs(300),
             500,
             logger.clone(),

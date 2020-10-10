@@ -1,17 +1,18 @@
 use std::{fmt, str, task::Context, task::Poll};
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
+use crates_index::{Crate, DependencyKind, Index};
 use futures::FutureExt as _;
 use hyper::service::Service;
 use semver::{Version, VersionReq};
 use serde::Deserialize;
+use tokio::task::spawn_blocking;
 
 use crate::{
     models::crates::{CrateDep, CrateDeps, CrateName, CratePath, CrateRelease},
     BoxFuture,
 };
 
-const CRATES_INDEX_BASE_URI: &str = "https://raw.githubusercontent.com/rust-lang/crates.io-index";
 const CRATES_API_BASE_URI: &str = "https://crates.io/api/v1";
 
 #[derive(Deserialize, Debug)]
@@ -33,27 +34,30 @@ struct RegistryPackage {
     yanked: bool,
 }
 
-fn convert_pkgs(
-    name: &CrateName,
-    packages: Vec<RegistryPackage>,
-) -> Result<QueryCrateResponse, Error> {
-    let releases = packages
-        .into_iter()
+fn convert_pkgs(krate: Crate) -> Result<QueryCrateResponse, Error> {
+    let name: CrateName = krate.name().parse()?;
+
+    let releases = krate
+        .versions()
+        .iter()
         .map(|package| {
             let mut deps = CrateDeps::default();
-            for dep in package.deps {
-                let name = dep.package.as_deref().unwrap_or(&dep.name).parse()?;
-                match dep.kind.as_deref().unwrap_or("normal") {
-                    "normal" => deps.main.insert(name, CrateDep::External(dep.req)),
-                    "dev" => deps.dev.insert(name, CrateDep::External(dep.req)),
+            for dep in package.dependencies() {
+                let name = dep.crate_name().parse()?;
+                let req = VersionReq::parse(dep.requirement())?;
+
+                match dep.kind() {
+                    DependencyKind::Normal => deps.main.insert(name, CrateDep::External(req)),
+                    DependencyKind::Dev => deps.main.insert(name, CrateDep::External(req)),
                     _ => None,
                 };
             }
+            let version = Version::parse(package.version())?;
             Ok(CrateRelease {
                 name: name.clone(),
-                version: package.vers,
+                version,
                 deps,
-                yanked: package.yanked,
+                yanked: package.is_yanked(),
             })
         })
         .collect::<Result<_, Error>>()?;
@@ -68,40 +72,21 @@ pub struct QueryCrateResponse {
 
 #[derive(Clone)]
 pub struct QueryCrate {
-    client: reqwest::Client,
+    index: Index,
 }
 
 impl QueryCrate {
-    pub fn new(client: reqwest::Client) -> Self {
-        Self { client }
+    pub fn new(index: Index) -> Self {
+        Self { index }
     }
 
-    pub async fn query(
-        client: reqwest::Client,
-        crate_name: CrateName,
-    ) -> anyhow::Result<QueryCrateResponse> {
-        let lower_name = crate_name.as_ref().to_lowercase();
+    pub async fn query(index: Index, crate_name: CrateName) -> anyhow::Result<QueryCrateResponse> {
+        let crate_name2 = crate_name.clone();
+        let krate = spawn_blocking(move || index.crate_(crate_name2.as_ref()))
+            .await?
+            .ok_or_else(|| anyhow!("crate '{}' not found", crate_name.as_ref()))?;
 
-        let path = match lower_name.len() {
-            1 => format!("1/{}", lower_name),
-            2 => format!("2/{}", lower_name),
-            3 => format!("3/{}/{}", &lower_name[..1], lower_name),
-            _ => format!("{}/{}/{}", &lower_name[0..2], &lower_name[2..4], lower_name),
-        };
-
-        let url = format!("{}/HEAD/{}", CRATES_INDEX_BASE_URI, path);
-        let res = client.get(&url).send().await?.error_for_status()?;
-
-        let string_body = res.text().await?;
-
-        let pkgs = string_body
-            .lines()
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .map(serde_json::from_str)
-            .collect::<Result<_, _>>()?;
-
-        convert_pkgs(&crate_name, pkgs)
+        convert_pkgs(krate)
     }
 }
 
@@ -121,8 +106,8 @@ impl Service<CrateName> for QueryCrate {
     }
 
     fn call(&mut self, crate_name: CrateName) -> Self::Future {
-        let client = self.client.clone();
-        Self::query(client, crate_name).boxed()
+        let index = self.index.clone();
+        Self::query(index, crate_name).boxed()
     }
 }
 
