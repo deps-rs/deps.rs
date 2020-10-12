@@ -28,8 +28,7 @@ use crate::utils::cache::Cache;
 mod fut;
 mod machines;
 
-use self::fut::analyze_dependencies;
-use self::fut::crawl_manifest;
+use self::fut::{analyze_dependencies, crawl_manifest};
 
 #[derive(Clone, Debug)]
 pub struct Engine {
@@ -44,18 +43,12 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn new(client: reqwest::Client, logger: Logger) -> Engine {
+    pub fn new(client: reqwest::Client, index: Index, logger: Logger) -> Engine {
         let metrics = StatsdClient::from_sink("engine", NopMetricSink);
-
-        let index = Index::new_cargo_default();
-        // TODO: call update every 30 or so seconds
-        // TODO: decide what we are going to do while we wait for the index to retrieve (when this gets deployed)
-        // TODO: probably add an env variable to allow configuring the index path to the disk on qovery
-        index.retrieve_or_update().unwrap();
 
         let query_crate = Cache::new(
             QueryCrate::new(index),
-            Duration::from_secs(300),
+            Duration::from_secs(10),
             500,
             logger.clone(),
         );

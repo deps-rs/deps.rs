@@ -28,6 +28,7 @@ mod utils;
 
 use self::engine::Engine;
 use self::server::App;
+use self::utils::index::ManagedIndex;
 
 /// Future crate's BoxFuture without the explicit lifetime parameter.
 pub type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
@@ -70,7 +71,13 @@ async fn main() {
 
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
 
-    let mut engine = Engine::new(client.clone(), logger.new(o!()));
+    let mut managed_index = ManagedIndex::new(Duration::from_secs(20));
+    let index = managed_index.index();
+    tokio::spawn(async move {
+        managed_index.refresh_at_interval().await;
+    });
+
+    let mut engine = Engine::new(client.clone(), index, logger.new(o!()));
     engine.set_metrics(metrics);
 
     let svc_logger = logger.new(o!());
