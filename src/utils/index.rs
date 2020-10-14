@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use anyhow::Result;
 use crates_index::Index;
 use tokio::task::spawn_blocking;
 use tokio::time::{self, Interval};
@@ -24,16 +25,30 @@ impl ManagedIndex {
         self.index.clone()
     }
 
+    pub async fn clone(&mut self) -> Result<()> {
+        let index = self.index();
+
+        spawn_blocking::<_, Result<()>>(move || {
+            if !index.exists() {
+                index.retrieve()?;
+            }
+            Ok(())
+        })
+        .await??;
+        Ok(())
+    }
+
     pub async fn refresh_at_interval(&mut self) {
         loop {
-            self.refresh().await;
+            let _ = self.refresh().await;
             self.update_interval.tick().await;
         }
     }
 
-    async fn refresh(&self) {
+    async fn refresh(&self) -> Result<()> {
         let index = self.index();
 
-        let _ = spawn_blocking(move || index.retrieve_or_update()).await;
+        spawn_blocking(move || index.retrieve_or_update()).await??;
+        Ok(())
     }
 }
