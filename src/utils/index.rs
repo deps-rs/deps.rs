@@ -1,23 +1,26 @@
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{Error, Result};
 use crates_index::Index;
+use slog::{info, Logger};
 use tokio::task::spawn_blocking;
 use tokio::time::{self, Interval};
 
 pub struct ManagedIndex {
     index: Index,
     update_interval: Interval,
+    logger: Logger,
 }
 
 impl ManagedIndex {
-    pub fn new(update_interval: Duration) -> Self {
+    pub fn new(update_interval: Duration, logger: Logger) -> Self {
         // the index path is configurable through the `CARGO_HOME` env variable
         let index = Index::new_cargo_default();
         let update_interval = time::interval(update_interval);
         Self {
             index,
             update_interval,
+            logger,
         }
     }
 
@@ -27,12 +30,14 @@ impl ManagedIndex {
 
     pub async fn clone(&mut self) -> Result<()> {
         let index = self.index();
+        let logger = self.logger.clone();
 
-        spawn_blocking::<_, Result<()>>(move || {
+        spawn_blocking(move || {
             if !index.exists() {
+                info!(logger, "Cloning crates.io-index");
                 index.retrieve()?;
             }
-            Ok(())
+            Ok::<_, Error>(())
         })
         .await??;
         Ok(())
