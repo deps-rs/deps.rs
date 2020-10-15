@@ -72,7 +72,7 @@ async fn main() {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
 
     let mut managed_index = ManagedIndex::new(Duration::from_secs(20), logger.clone());
-    let _ = managed_index.clone().await;
+    let _ = managed_index.initial_clone().await;
 
     let index = managed_index.index();
     tokio::spawn(async move {

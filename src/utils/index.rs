@@ -28,7 +28,7 @@ impl ManagedIndex {
         self.index.clone()
     }
 
-    pub async fn clone(&mut self) -> Result<()> {
+    pub async fn initial_clone(&mut self) -> Result<()> {
         let index = self.index();
         let logger = self.logger.clone();
 
