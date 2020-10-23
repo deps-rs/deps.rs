@@ -119,6 +119,22 @@ fn render_title(subject_path: &SubjectPath) -> Markup {
     }
 }
 
+fn render_dev_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
+    let insecure = outcome.count_dev_insecure();
+    let outdated = outcome.count_dev_outdated();
+    let text = if insecure > 0 {
+        format!("{} insecure development dependencies", insecure)
+    } else {
+        format!("{} outdated development dependencies", outdated)
+    };
+
+    html! {
+        div class="notification is-warning" {
+            p { "This project contains " b { (text) } "." }
+        }
+    }
+}
+
 fn render_failure(subject_path: SubjectPath) -> Markup {
     html! {
         section class="hero is-light" {
@@ -192,6 +208,9 @@ fn render_success(
         }
         section class="section" {
             div class="container" {
+                @if analysis_outcome.any_dev_issues() {
+                    (render_dev_dependency_box(&analysis_outcome))
+                }
                 @for (crate_name, deps) in analysis_outcome.crates {
                     (dependency_tables(crate_name, deps))
                 }

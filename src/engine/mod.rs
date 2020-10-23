@@ -100,10 +100,31 @@ impl AnalyzeDependenciesOutcome {
         self.crates.iter().any(|&(_, ref deps)| deps.any_outdated())
     }
 
+    // TODO(feliix42): Why is this different from the any_outdated() function above?
     pub fn any_insecure(&self) -> bool {
         self.crates
             .iter()
             .any(|&(_, ref deps)| deps.count_insecure() > 0)
+    }
+
+    pub fn any_dev_issues(&self) -> bool {
+        self.crates
+            .iter()
+            .any(|&(_, ref deps)| deps.any_dev_issues())
+    }
+
+    pub fn count_dev_outdated(&self) -> usize {
+        self.crates
+            .iter()
+            .map(|&(_, ref deps)| deps.count_dev_outdated())
+            .sum()
+    }
+
+    pub fn count_dev_insecure(&self) -> usize {
+        self.crates
+            .iter()
+            .map(|&(_, ref deps)| deps.count_dev_insecure())
+            .sum()
     }
 
     pub fn outdated_ratio(&self) -> (usize, usize) {
