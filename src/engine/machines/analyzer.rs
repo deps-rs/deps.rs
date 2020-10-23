@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use rustsec::database::{Database, Query};
+use rustsec::{
+    cargo_lock,
+    database::{self, Database},
+};
 use semver::Version;
 
 use crate::models::crates::{
@@ -35,9 +38,9 @@ impl DependencyAnalyzer {
                 dep.latest_that_matches = Some(ver.clone());
             }
 
-            let name: rustsec::cargo_lock::Name = name.as_ref().parse().unwrap();
-            let version: rustsec::cargo_lock::Version = ver.to_string().parse().unwrap();
-            let query = Query::new().package_version(name, version);
+            let name: cargo_lock::Name = name.as_ref().parse().unwrap();
+            let version: cargo_lock::Version = ver.to_string().parse().unwrap();
+            let query = database::Query::new().package_version(name, version);
 
             if !advisory_db
                 .map(|db| db.query(&query).is_empty())

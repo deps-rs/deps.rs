@@ -1,4 +1,4 @@
-use std::{env, sync::Arc};
+use std::{env, sync::Arc, time::Instant};
 
 use futures::future;
 use hyper::{
@@ -8,7 +8,7 @@ use hyper::{
 use once_cell::sync::Lazy;
 use route_recognizer::{Params, Router};
 use semver::VersionReq;
-use slog::{error, o, Logger};
+use slog::{error, info, o, Logger};
 
 mod assets;
 mod views;
@@ -52,7 +52,7 @@ impl App {
         router.add("/", Route::Index);
 
         router.add("/static/style.css", Route::Static(StaticFile::StyleCss));
-        router.add("/static/favicon.png", Route::Static(StaticFile::FaviconPng));
+        router.add("/static/logo.svg", Route::Static(StaticFile::FaviconPng));
 
         router.add(
             "/repo/:site/:qual/:name",
@@ -81,45 +81,49 @@ impl App {
     }
 
     pub async fn handle(&self, req: Request<Body>) -> Result<Response<Body>, HyperError> {
-        let logger = self
-            .logger
-            .new(o!("http_path" => req.uri().path().to_owned()));
+        let logger = self.logger.new(o!("path" => req.uri().path().to_owned()));
+        let logger2 = logger.clone();
+        let start = Instant::now();
 
-        if let Ok(route_match) = self.router.recognize(req.uri().path()) {
+        let res = if let Ok(route_match) = self.router.recognize(req.uri().path()) {
             match (req.method(), route_match.handler) {
-                (&Method::GET, Route::Index) => {
-                    return self.index(req, route_match.params, logger).await;
-                }
+                (&Method::GET, Route::Index) => self.index(req, route_match.params, logger).await,
 
                 (&Method::GET, Route::RepoStatus(format)) => {
-                    return self
-                        .repo_status(req, route_match.params, logger, *format)
-                        .await;
+                    self.repo_status(req, route_match.params, logger, *format)
+                        .await
                 }
 
                 (&Method::GET, Route::CrateStatus(format)) => {
-                    return self
-                        .crate_status(req, route_match.params, logger, *format)
-                        .await;
+                    self.crate_status(req, route_match.params, logger, *format)
+                        .await
                 }
 
                 (&Method::GET, Route::CrateRedirect) => {
-                    return self.crate_redirect(req, route_match.params, logger).await;
+                    self.crate_redirect(req, route_match.params, logger).await
                 }
 
-                (&Method::GET, Route::Static(file)) => {
-                    return Ok(App::static_file(*file));
-                }
+                (&Method::GET, Route::Static(file)) => Ok(App::static_file(*file)),
 
-                // fall through to 404
-                _ => {}
+                _ => Ok(not_found()),
             }
-        }
+        } else {
+            Ok(not_found())
+        };
 
-        Ok(Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .body(Body::empty())
-            .unwrap())
+        let end = Instant::now();
+        let diff = end - start;
+
+        match &res {
+            Ok(res) => info!(
+                logger2, "";
+                "status" => res.status().to_string(),
+                "time" => format!("{}ms", diff.as_millis())
+            ),
+            Err(err) => error!(logger2, ""; "error" => err.to_string()),
+        };
+
+        res
     }
 }
 
@@ -341,11 +345,18 @@ impl App {
                 .body(Body::from(assets::STATIC_STYLE_CSS))
                 .unwrap(),
             StaticFile::FaviconPng => Response::builder()
-                .header(CONTENT_TYPE, "image/png")
-                .body(Body::from(assets::STATIC_FAVICON_PNG))
+                .header(CONTENT_TYPE, "image/svg+xml")
+                .body(Body::from(assets::STATIC_FAVICON))
                 .unwrap(),
         }
     }
+}
+
+fn not_found() -> Response<Body> {
+    Response::builder()
+        .status(StatusCode::NOT_FOUND)
+        .body(Body::empty())
+        .unwrap()
 }
 
 static SELF_BASE_URL: Lazy<String> =

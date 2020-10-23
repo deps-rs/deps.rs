@@ -1,110 +1,81 @@
-use std::{
-    fmt::{Debug, Formatter, Result as FmtResult},
-    hash::Hash,
-    sync::Mutex,
-    task::Context,
-    task::Poll,
-    time::{Duration, Instant},
-};
+use std::{fmt, sync::Arc, time::Duration};
 
-use anyhow::Error;
+use derive_more::{Display, Error, From};
 use hyper::service::Service;
-use lru_cache::LruCache;
+use lru_time_cache::LruCache;
+use slog::{debug, Logger};
+use tokio::sync::Mutex;
 
+#[derive(Debug, Clone, Display, From, Error)]
+pub struct CacheError<E> {
+    inner: E,
+}
+
+#[derive(Clone)]
 pub struct Cache<S, Req>
 where
     S: Service<Req>,
-    Req: Hash + Eq,
 {
     inner: S,
-    duration: Duration,
-    #[allow(unused)]
-    cache: Mutex<LruCache<Req, (Instant, S::Response)>>,
+    cache: Arc<Mutex<LruCache<Req, S::Response>>>,
+    logger: Logger,
 }
 
-impl<S, Req> Debug for Cache<S, Req>
+impl<S, Req> fmt::Debug for Cache<S, Req>
 where
-    S: Service<Req> + Debug,
-    Req: Hash + Eq,
+    S: Service<Req> + fmt::Debug,
 {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> FmtResult {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("Cache")
             .field("inner", &self.inner)
-            .field("duration", &self.duration)
             .finish()
     }
 }
 
 impl<S, Req> Cache<S, Req>
 where
-    S: Service<Req>,
-    Req: Hash + Eq,
+    S: Service<Req> + fmt::Debug + Clone,
+    S::Response: Clone,
+    Req: Clone + Eq + Ord + fmt::Debug,
 {
-    pub fn new(service: S, duration: Duration, capacity: usize) -> Cache<S, Req> {
+    pub fn new(service: S, ttl: Duration, capacity: usize, logger: Logger) -> Cache<S, Req> {
+        let cache = LruCache::with_expiry_duration_and_capacity(ttl, capacity);
+
         Cache {
             inner: service,
-            duration,
-            cache: Mutex::new(LruCache::new(capacity)),
+            cache: Arc::new(Mutex::new(cache)),
+            logger,
         }
     }
-}
 
-impl<S, Req> Service<Req> for Cache<S, Req>
-where
-    S: Service<Req, Error = Error>,
-    S::Response: Clone,
-    Req: Clone + Hash + Eq,
-{
-    type Response = S::Response;
-    type Error = Error;
-    // WAS: type Future = Cached<S::Future>;
-    // type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
-    type Future = S::Future;
+    pub async fn cached_query(&self, req: Req) -> Result<S::Response, S::Error> {
+        {
+            let mut cache = self.cache.lock().await;
 
-    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
-    }
+            if let Some(cached_response) = cache.get(&req) {
+                debug!(
+                    self.logger, "cache hit";
+                    "svc" => format!("{:?}", self.inner),
+                    "req" => format!("{:?}", &req)
+                );
+                return Ok(cached_response.clone());
+            }
+        }
 
-    fn call(&mut self, req: Req) -> Self::Future {
-        // TODO: re-add caching
-        // Box::pin({
-        // let now = Instant::now();
-        // let mut cache = self.cache.lock().expect("lock poisoned");
+        debug!(
+            self.logger, "cache miss";
+            "svc" => format!("{:?}", self.inner),
+            "req" => format!("{:?}", &req)
+        );
 
-        // if let Some(&mut (valid_until, ref cached_response)) = cache.get_mut(&req) {
-        //     if valid_until > now {
-        //         return Box::pin(ok(cached_response.clone()));
-        //     }
-        // }
+        let mut service = self.inner.clone();
+        let fresh = service.call(req.clone()).await?;
 
-        self.inner.call(req)
-        // .and_then(|response| {
-        //     // cache.insert(req, (now + self.duration, response.clone()));
-        //     ok(response)
-        // })
-        // })
+        {
+            let mut cache = self.cache.lock().await;
+            cache.insert(req, fresh.clone());
+        }
+
+        Ok(fresh)
     }
 }
-
-// pub struct Cached<F: Future>(Shared<F>);
-
-// impl<F> Debug for Cached<F>
-// where
-//     F: Future + Debug,
-//     F::Output: Debug,
-// {
-//     fn fmt(&self, fmt: &mut Formatter<'_>) -> FmtResult {
-//         self.0.fmt(fmt)
-//     }
-// }
-
-// // WAS: impl<F: Future<Error = Error>> Future for Cached<F> {
-// impl<F: Future> Future for Cached<F> {
-//     type Output = Result<F::Output, Error>;
-
-//     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-//         self.0
-//             .poll()
-//             .map_err(|_err| anyhow!("TODO: shared error not clone-able"))
-//     }
-// }
