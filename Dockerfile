@@ -23,6 +23,8 @@ RUN cargo install --path /src
 
 FROM debian:buster
 
+LABEL org.opencontainers.image.source https://github.com/deps-rs/deps.rs
+
 RUN set -ex; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive \
