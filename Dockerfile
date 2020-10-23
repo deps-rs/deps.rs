@@ -1,4 +1,4 @@
-FROM buildpack-deps:stretch
+FROM buildpack-deps:buster as build
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
@@ -21,5 +21,15 @@ RUN set -eux; \
 COPY . /src
 RUN cargo install --path /src
 
+FROM debian:buster
+
+RUN set -ex; \
+    apt-get update; \
+    DEBIAN_FRONTEND=noninteractive \
+    apt-get install -y --no-install-recommends libssl-dev; \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /usr/local/cargo/bin/shiny-robots /usr/local/bin
+
 EXPOSE 8080
-CMD "/usr/local/cargo/bin/shiny-robots"
+CMD /usr/local/bin/shiny-robots
