@@ -15,6 +15,8 @@ To analyze the state of your dependencies you can use the following URLs:
 - for projects on crates.io: `https://deps.rs/crates/<NAME>`
 - for projects on Github, Gitlab or Bitbucket: `https://deps.rs/repo/<HOSTER>/<USER>/<REPO>` (where `<HOSTER>` is either `github`, `gitlab` or `bitbucket`)
 
+On the analysis page, you will also find the markdown code to include a fancy badge in your project README so visitors (and you) can see at a glance if your dependencies are still up to date!
+
 ## Contributing
 
 We are always looking for help from the community! Feel like a feature is missing? Found a bug? [Open an issue](https://github.com/deps-rs/deps.rs/issues/new)!
