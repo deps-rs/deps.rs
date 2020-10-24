@@ -152,10 +152,12 @@ impl AnalyzedDependencies {
         AnalyzedDependencies { main, dev, build }
     }
 
+    /// Counts the total number of main and build dependencies
     pub fn count_total(&self) -> usize {
         self.main.len() + self.build.len()
     }
 
+    /// Returns the number of outdated main and build dependencies
     pub fn count_outdated(&self) -> usize {
         let main_outdated = self
             .main
@@ -170,13 +172,14 @@ impl AnalyzedDependencies {
         main_outdated + build_outdated
     }
 
+    /// Returns the number of insecure main and build dependencies
     pub fn count_insecure(&self) -> usize {
         let main_insecure = self.main.iter().filter(|&(_, dep)| dep.insecure).count();
         let build_insecure = self.build.iter().filter(|&(_, dep)| dep.insecure).count();
         main_insecure + build_insecure
     }
 
-    /// Checks if any outdated dependencies exist
+    /// Checks if any outdated main or build dependencies exist
     pub fn any_outdated(&self) -> bool {
         let main_any_outdated = self.main.iter().any(|(_, dep)| dep.is_outdated());
         let build_any_outdated = self.build.iter().any(|(_, dep)| dep.is_outdated());
