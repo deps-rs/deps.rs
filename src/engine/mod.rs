@@ -131,7 +131,7 @@ impl AnalyzeDependenciesOutcome {
             .sum()
     }
 
-    /// Returns the number of outdated and the number of total main and build dependencies 
+    /// Returns the number of outdated and the number of total main and build dependencies
     pub fn outdated_ratio(&self) -> (usize, usize) {
         self.crates
             .iter()
