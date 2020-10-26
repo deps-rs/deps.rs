@@ -41,13 +41,12 @@ fn dependency_table(title: &str, deps: IndexMap<CrateName, AnalyzedDependency>) 
     html! {
         h3 class="title is-4" { (title) }
         p class="subtitle is-5" {
-            @if count_insecure > 0 {
-                (format!(" ({} total, {} insecure)", count_total, count_insecure))
-            } @else if count_outdated > 0 {
-                (format!(" ({} total, {} up-to-date, {} outdated)", count_total, count_total - count_outdated, count_outdated))
-            } @else {
-                (format!(" ({} total, all up-to-date)", count_total))
-            }
+            (match (count_outdated, count_insecure) {
+                (0, 0) => format!("({} total, all up-to-date)", count_total),
+                (0, _) => format!("({} total, {} insecure)", count_total, count_insecure),
+                (_, 0) => format!("({} total, {} outdated)", count_total, count_outdated),
+                (_, _) => format!("({} total, {} outdated, {} insecure)", count_total, count_outdated, count_insecure),
+            })
         }
 
         table class="table is-fullwidth is-striped is-hoverable" {
