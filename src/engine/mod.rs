@@ -100,12 +100,38 @@ impl AnalyzeDependenciesOutcome {
         self.crates.iter().any(|&(_, ref deps)| deps.any_outdated())
     }
 
+    // TODO(feliix42): Why is this different from the any_outdated() function above?
+    /// Checks if any insecure main or build dependencies exist in the scanned crates
     pub fn any_insecure(&self) -> bool {
         self.crates
             .iter()
             .any(|&(_, ref deps)| deps.count_insecure() > 0)
     }
 
+    /// Checks if any dev-dependencies in the scanned crates are either outdated or insecure
+    pub fn any_dev_issues(&self) -> bool {
+        self.crates
+            .iter()
+            .any(|&(_, ref deps)| deps.any_dev_issues())
+    }
+
+    /// Returns the number of outdated dev-dependencies
+    pub fn count_dev_outdated(&self) -> usize {
+        self.crates
+            .iter()
+            .map(|&(_, ref deps)| deps.count_dev_outdated())
+            .sum()
+    }
+
+    /// Returns the number of insecure dev-dependencies
+    pub fn count_dev_insecure(&self) -> usize {
+        self.crates
+            .iter()
+            .map(|&(_, ref deps)| deps.count_dev_insecure())
+            .sum()
+    }
+
+    /// Returns the number of outdated and the number of total main and build dependencies
     pub fn outdated_ratio(&self) -> (usize, usize) {
         self.crates
             .iter()

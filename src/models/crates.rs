@@ -152,18 +152,15 @@ impl AnalyzedDependencies {
         AnalyzedDependencies { main, dev, build }
     }
 
+    /// Counts the total number of main and build dependencies
     pub fn count_total(&self) -> usize {
-        self.main.len() + self.dev.len() + self.build.len()
+        self.main.len() + self.build.len()
     }
 
+    /// Returns the number of outdated main and build dependencies
     pub fn count_outdated(&self) -> usize {
         let main_outdated = self
             .main
-            .iter()
-            .filter(|&(_, dep)| dep.is_outdated())
-            .count();
-        let dev_outdated = self
-            .dev
             .iter()
             .filter(|&(_, dep)| dep.is_outdated())
             .count();
@@ -172,21 +169,41 @@ impl AnalyzedDependencies {
             .iter()
             .filter(|&(_, dep)| dep.is_outdated())
             .count();
-        main_outdated + dev_outdated + build_outdated
+        main_outdated + build_outdated
     }
 
+    /// Returns the number of insecure main and build dependencies
     pub fn count_insecure(&self) -> usize {
         let main_insecure = self.main.iter().filter(|&(_, dep)| dep.insecure).count();
-        let dev_insecure = self.dev.iter().filter(|&(_, dep)| dep.insecure).count();
         let build_insecure = self.build.iter().filter(|&(_, dep)| dep.insecure).count();
-        main_insecure + dev_insecure + build_insecure
+        main_insecure + build_insecure
     }
 
+    /// Checks if any outdated main or build dependencies exist
     pub fn any_outdated(&self) -> bool {
         let main_any_outdated = self.main.iter().any(|(_, dep)| dep.is_outdated());
-        let dev_any_outdated = self.dev.iter().any(|(_, dep)| dep.is_outdated());
         let build_any_outdated = self.build.iter().any(|(_, dep)| dep.is_outdated());
-        main_any_outdated || dev_any_outdated || build_any_outdated
+        main_any_outdated || build_any_outdated
+    }
+
+    /// Counts the number of outdated `dev-dependencies`
+    pub fn count_dev_outdated(&self) -> usize {
+        self.dev
+            .iter()
+            .filter(|&(_, dep)| dep.is_outdated())
+            .count()
+    }
+
+    /// Counts the number of insecure `dev-dependencies`
+    pub fn count_dev_insecure(&self) -> usize {
+        self.dev.iter().filter(|&(_, dep)| dep.insecure).count()
+    }
+
+    /// Returns `true` if any dev-dependencies are either insecure or outdated.
+    pub fn any_dev_issues(&self) -> bool {
+        self.dev
+            .iter()
+            .any(|(_, dep)| dep.is_outdated() || dep.insecure)
     }
 }
 
