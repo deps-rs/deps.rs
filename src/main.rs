@@ -72,7 +72,12 @@ async fn main() {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
 
     let mut managed_index = ManagedIndex::new(Duration::from_secs(20), logger.clone());
-    let _ = managed_index.initial_clone().await;
+    if let Err(e) = managed_index.initial_clone().await {
+        error!(
+            logger,
+            "failed running initial clone of the crates.io-index: {}", e
+        );
+    }
 
     let index = managed_index.index();
     tokio::spawn(async move {

@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use anyhow::{Error, Result};
 use crates_index::Index;
-use slog::{info, Logger};
+use slog::{error, info, Logger};
 use tokio::task::spawn_blocking;
 use tokio::time::{self, Interval};
 
@@ -45,7 +45,12 @@ impl ManagedIndex {
 
     pub async fn refresh_at_interval(&mut self) {
         loop {
-            let _ = self.refresh().await;
+            if let Err(e) = self.refresh().await {
+                error!(
+                    self.logger,
+                    "failed refreshing the crates.io-index, the operation will be retried: {}", e
+                );
+            }
             self.update_interval.tick().await;
         }
     }
