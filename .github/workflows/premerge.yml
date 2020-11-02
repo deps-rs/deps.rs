@@ -18,7 +18,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2020-09-27
+          toolchain: stable
           override: true
 
       - name: Build check
@@ -41,7 +41,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2020-09-27
+          toolchain: stable
           default: true
           components: rustfmt, clippy
 

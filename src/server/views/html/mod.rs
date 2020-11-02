@@ -38,7 +38,7 @@ fn render_navbar() -> Markup {
         header class="navbar" {
             div class="container" {
                 div class="navbar-brand" {
-                    a class="navbar-item is-dark" href=(SELF_BASE_URL) {
+                    a class="navbar-item is-dark" href=(SELF_BASE_URL.as_str()) {
                         h1 class="title is-3" { "Deps.rs" }
                     }
                 }
