@@ -20,7 +20,7 @@ futures = "0.3"
 hyper = "0.13"
 indexmap = { version = "1", features = ["serde-1"] }
 lru_time_cache = "0.11.1"
-maud = "0.22"
+maud = "0.22.1"
 once_cell = "1.4"
 pin-project = "0.4"
 relative-path = { version = "1.3", features = ["serde"] }
