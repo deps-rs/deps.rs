@@ -15,5 +15,9 @@ RUN set -ex; \
 
 COPY --from=build /usr/local/cargo/bin/shiny-robots /usr/local/bin
 
+RUN useradd -ms /bin/bash -u 1001 deps
+WORKDIR /home/deps
+USER deps
+
 EXPOSE 8080
 CMD /usr/local/bin/shiny-robots
