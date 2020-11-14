@@ -10,7 +10,7 @@ LABEL org.opencontainers.image.source https://github.com/deps-rs/deps.rs
 RUN set -ex; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive \
-    apt-get install -y --no-install-recommends libssl-dev; \
+    apt-get install -y --no-install-recommends ca-certificates libssl-dev; \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /usr/local/cargo/bin/shiny-robots /usr/local/bin
