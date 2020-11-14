@@ -1329,6 +1329,7 @@ dependencies = [
  "anyhow",
  "badge",
  "cadence",
+ "crates-index",
  "derive_more",
  "futures",
  "hyper",

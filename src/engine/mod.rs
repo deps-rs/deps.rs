@@ -7,6 +7,7 @@ use std::{
 
 use anyhow::{anyhow, Error};
 use cadence::{MetricSink, NopMetricSink, StatsdClient};
+use crates_index::Index;
 use futures::{future::try_join_all, stream, StreamExt};
 use hyper::service::Service;
 use once_cell::sync::Lazy;
@@ -27,8 +28,7 @@ use crate::utils::cache::Cache;
 mod fut;
 mod machines;
 
-use self::fut::analyze_dependencies;
-use self::fut::crawl_manifest;
+use self::fut::{analyze_dependencies, crawl_manifest};
 
 #[derive(Clone, Debug)]
 pub struct Engine {
@@ -43,12 +43,12 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn new(client: reqwest::Client, logger: Logger) -> Engine {
+    pub fn new(client: reqwest::Client, index: Index, logger: Logger) -> Engine {
         let metrics = StatsdClient::from_sink("engine", NopMetricSink);
 
         let query_crate = Cache::new(
-            QueryCrate::new(client.clone()),
-            Duration::from_secs(300),
+            QueryCrate::new(index),
+            Duration::from_secs(10),
             500,
             logger.clone(),
         );

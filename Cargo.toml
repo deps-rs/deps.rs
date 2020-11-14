@@ -26,6 +26,7 @@ pin-project = "0.4"
 relative-path = { version = "1.3", features = ["serde"] }
 route-recognizer = "0.2"
 rustsec = "0.21"
+crates-index = "0.15.0"
 semver = { version = "0.10", features = ["serde"] }
 reqwest = { version = "0.10", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
