@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+nameSuffix: -stg
+
+commonLabels:
+  env: stg
+
+resources:
+  - ../../base
+
+patches:
+  - path: patch-ingress.json
+    target:
+      group: extensions
+      version: v1beta1
+      kind: Ingress
+      name: deps-rs

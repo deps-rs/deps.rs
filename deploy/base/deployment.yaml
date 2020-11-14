@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deps-rs
+spec:
+  selector:
+    matchLabels:
+      app: deps-rs
+  template:
+    metadata:
+      labels:
+        app: deps-rs
+    spec:
+      containers:
+        - name: deps-rs
+          image: ghcr.io/deps-rs/deps.rs:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: BASE_URL
+              value: https://$(DOMAIN)
+          volumeMounts:
+            - mountPath: /home/deps/.cargo
+              name: cargo
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
