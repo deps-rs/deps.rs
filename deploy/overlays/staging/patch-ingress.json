@@ -1,0 +1,12 @@
+[
+  {
+    "op": "replace",
+    "path": "/spec/rules/0/host",
+    "value": "staging.deps.rs"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/tls/0/secretName",
+    "value": "staging-deps-rs-tls"
+  }
+]

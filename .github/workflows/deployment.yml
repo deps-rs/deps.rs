@@ -21,6 +21,7 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
       - name: Build and push
+        id: docker_push
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -28,3 +29,21 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository }}:latest
+    outputs:
+      digest: ${{ steps.docker_push.outputs.digest }}
+
+  deploy:
+    needs: build-docker-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Patch and Sync
+        env:
+          DIGEST: ${{ needs.build-docker-image.outputs.digest }}
+          ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+        run: |
+          curl -sSL -o argocd https://${ARGOCD_SERVER}/download/argocd-linux-amd64
+          chmod +x argocd
+          ./argocd app patch deps-rs-staging --patch "{ \"spec\": { \"source\": { \"kustomize\": { \"images\": [\"ghcr.io/deps-rs/deps.rs@${DIGEST}\"] } } } }" --type merge --grpc-web
+          ./argocd app sync deps-rs-staging --grpc-web
+          ./argocd app wait deps-rs-staging --grpc-web

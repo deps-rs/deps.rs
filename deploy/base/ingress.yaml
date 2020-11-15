@@ -1,0 +1,20 @@
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: deps-rs
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  rules:
+    - host: staging.deps.rs
+      http:
+        paths:
+          - backend:
+              serviceName: deps-rs
+              servicePort: http
+            path: /
+  tls:
+    - secretName: deps-rs-tls
+      hosts:
+        - $(DOMAIN)
