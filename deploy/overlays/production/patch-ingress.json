@@ -1,0 +1,12 @@
+[
+  {
+    "op": "replace",
+    "path": "/spec/rules/0/host",
+    "value": "deps.rs"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/tls/0/secretName",
+    "value": "deps-rs-tls"
+  }
+]
