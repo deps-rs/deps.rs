@@ -11,6 +11,9 @@ spec:
       labels:
         app: deps-rs
     spec:
+      volumes:
+        - name: cargo
+          emptyDir: {}
       containers:
         - name: deps-rs
           image: ghcr.io/deps-rs/deps.rs:latest
