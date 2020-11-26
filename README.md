@@ -12,7 +12,7 @@ For security-related information, we query the RustSec Security Advisory Databas
 We currently support projects and crates hosted on crates.io, Github, Gitlab and Bitbucket.
 To analyze the state of your dependencies you can use the following URLs:
 
-- for projects on crates.io: `https://deps.rs/crates/<NAME>`
+- for projects on crates.io: `https://deps.rs/crate/<NAME>`
 - for projects on Github, Gitlab or Bitbucket: `https://deps.rs/repo/<HOSTER>/<USER>/<REPO>` (where `<HOSTER>` is either `github`, `gitlab` or `bitbucket`)
 
 On the analysis page, you will also find the markdown code to include a fancy badge in your project README so visitors (and you) can see at a glance if your dependencies are still up to date!
