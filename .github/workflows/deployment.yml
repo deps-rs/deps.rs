@@ -44,6 +44,6 @@ jobs:
         run: |
           curl -sSL -o argocd https://${ARGOCD_SERVER}/download/argocd-linux-amd64
           chmod +x argocd
-          ./argocd app patch deps-rs-staging --patch "{ \"spec\": { \"source\": { \"kustomize\": { \"images\": [\"ghcr.io/deps-rs/deps.rs@${DIGEST}\"] } } } }" --type merge --grpc-web
-          ./argocd app sync deps-rs-staging --grpc-web
-          ./argocd app wait deps-rs-staging --grpc-web
+          ./argocd app patch deps-rs --patch "{ \"spec\": { \"source\": { \"kustomize\": { \"images\": [\"ghcr.io/deps-rs/deps.rs@${DIGEST}\"] } } } }" --type merge --grpc-web
+          ./argocd app sync deps-rs --grpc-web
+          ./argocd app wait deps-rs --grpc-web
