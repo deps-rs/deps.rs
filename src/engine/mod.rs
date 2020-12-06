@@ -287,11 +287,12 @@ async fn resolve_crate_with_engine(
 static POPULAR_REPO_BLOCK_LIST: Lazy<HashSet<RepoPath>> = Lazy::new(|| {
     vec![
         RepoPath::from_parts("github", "rust-lang", "rust"),
-        RepoPath::from_parts("github", "google", "xi-editor"),
+        RepoPath::from_parts("github", "xi-editor", "xi-editor"),
         RepoPath::from_parts("github", "lk-geimfari", "awesomo"),
         RepoPath::from_parts("github", "redox-os", "tfs"),
-        RepoPath::from_parts("github", "carols10cents", "rustlings"),
+        RepoPath::from_parts("github", "rust-lang", "rustlings"),
         RepoPath::from_parts("github", "rust-unofficial", "awesome-rust"),
+        RepoPath::from_parts("github", "996icu", "996.ICU"),
     ]
     .into_iter()
     .collect::<Result<HashSet<_>, _>>()
