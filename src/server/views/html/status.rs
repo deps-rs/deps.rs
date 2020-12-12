@@ -1,12 +1,21 @@
 use hyper::{Body, Response};
 use indexmap::IndexMap;
 use maud::{html, Markup};
+use semver::Version;
 
 use crate::engine::AnalyzeDependenciesOutcome;
 use crate::models::crates::{AnalyzedDependencies, AnalyzedDependency, CrateName};
 use crate::models::repo::RepoSite;
 use crate::models::SubjectPath;
 use crate::server::views::badge;
+
+fn get_crates_url(name: impl AsRef<str>) -> String {
+    format!("https://crates.io/crates/{}", name.as_ref())
+}
+
+fn get_crates_version_url(name: impl AsRef<str>, version: &Version) -> String {
+    format!("https://crates.io/crates/{}/{}", name.as_ref(), version)
+}
 
 fn dependency_tables(crate_name: CrateName, deps: AnalyzedDependencies) -> Markup {
     html! {
@@ -62,7 +71,11 @@ fn dependency_table(title: &str, deps: IndexMap<CrateName, AnalyzedDependency>) 
                 @for (name, dep) in deps {
                     tr {
                         td {
-                            a href=(format!("https://crates.io/crates/{}", name.as_ref())) { (name.as_ref()) }
+                            a class="has-text-grey" href=(get_crates_url(&name)) {
+                                i class=("fa fa-cube") { "" }
+                            }
+                            { "\u{00A0}" } // non-breaking space
+                            a href=(dep.deps_rs_path(name.as_ref())) { (name.as_ref()) }
                         }
                         td class="has-text-right" { code { (dep.required.to_string()) } }
                         td class="has-text-right" {
@@ -109,7 +122,7 @@ fn render_title(subject_path: &SubjectPath) -> Markup {
         }
         SubjectPath::Crate(ref crate_path) => {
             html! {
-                a href=(format!("https://crates.io/crates/{}/{}", crate_path.name.as_ref(), crate_path.version)) {
+                a href=(get_crates_version_url(&crate_path.name, &crate_path.version)) {
                     i class="fa fa-cube" { "" }
                     (format!(" {} {}", crate_path.name.as_ref(), crate_path.version))
                 }
