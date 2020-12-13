@@ -105,6 +105,13 @@ impl AnalyzedDependency {
     pub fn is_outdated(&self) -> bool {
         self.latest > self.latest_that_matches
     }
+
+    pub fn deps_rs_path(&self, name: &str) -> String {
+        match &self.latest_that_matches {
+            Some(version) => ["/crate/", name, "/", version.to_string().as_str()].concat(),
+            None => ["/crate/", name].concat(),
+        }
+    }
 }
 
 #[derive(Debug)]
