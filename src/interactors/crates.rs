@@ -48,7 +48,7 @@ fn convert_pkgs(krate: Crate) -> Result<QueryCrateResponse, Error> {
 
                 match dep.kind() {
                     DependencyKind::Normal => deps.main.insert(name, CrateDep::External(req)),
-                    DependencyKind::Dev => deps.main.insert(name, CrateDep::External(req)),
+                    DependencyKind::Dev => deps.dev.insert(name, CrateDep::External(req)),
                     _ => None,
                 };
             }
