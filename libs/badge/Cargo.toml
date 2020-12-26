@@ -12,6 +12,6 @@ edition = "2018"
 path = "badge.rs"
 
 [dependencies]
-base64 = "0.12"
+base64 = "0.13"
 once_cell = "1"
 rusttype = "0.9"

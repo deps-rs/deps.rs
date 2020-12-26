@@ -86,21 +86,24 @@ impl App {
         let start = Instant::now();
 
         let res = if let Ok(route_match) = self.router.recognize(req.uri().path()) {
-            match (req.method(), route_match.handler) {
-                (&Method::GET, Route::Index) => self.index(req, route_match.params, logger).await,
+            match (req.method(), route_match.handler()) {
+                (&Method::GET, Route::Index) => {
+                    self.index(req, route_match.params().clone(), logger).await
+                }
 
                 (&Method::GET, Route::RepoStatus(format)) => {
-                    self.repo_status(req, route_match.params, logger, *format)
+                    self.repo_status(req, route_match.params().clone(), logger, *format)
                         .await
                 }
 
                 (&Method::GET, Route::CrateStatus(format)) => {
-                    self.crate_status(req, route_match.params, logger, *format)
+                    self.crate_status(req, route_match.params().clone(), logger, *format)
                         .await
                 }
 
                 (&Method::GET, Route::CrateRedirect) => {
-                    self.crate_redirect(req, route_match.params, logger).await
+                    self.crate_redirect(req, route_match.params().clone(), logger)
+                        .await
                 }
 
                 (&Method::GET, Route::Static(file)) => Ok(App::static_file(*file)),
