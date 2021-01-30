@@ -25,7 +25,7 @@ once_cell = "1"
 pin-project = "1"
 relative-path = { version = "1.3", features = ["serde"] }
 route-recognizer = "0.3"
-rustsec = "0.22"
+rustsec = "0.23"
 crates-index = "0.15" # held back by semver 0.11
 semver = { version = "0.10", features = ["serde"] } # held at 0.10 due to #63
 reqwest = { version = "0.11", features = ["json"] }
