@@ -1,6 +1,8 @@
 use hyper::{Body, Response};
 use indexmap::IndexMap;
-use maud::{html, Markup};
+use maud::{html, Markup, PreEscaped};
+use pulldown_cmark::{html, Parser};
+use rustsec::advisory::Advisory;
 use semver::Version;
 
 use crate::engine::AnalyzeDependenciesOutcome;
@@ -17,7 +19,7 @@ fn get_crates_version_url(name: impl AsRef<str>, version: &Version) -> String {
     format!("https://crates.io/crates/{}/{}", name.as_ref(), version)
 }
 
-fn dependency_tables(crate_name: CrateName, deps: AnalyzedDependencies) -> Markup {
+fn dependency_tables(crate_name: &CrateName, deps: &AnalyzedDependencies) -> Markup {
     html! {
         h2 class="title is-3" {
             "Crate "
@@ -29,22 +31,22 @@ fn dependency_tables(crate_name: CrateName, deps: AnalyzedDependencies) -> Marku
         }
 
         @if !deps.main.is_empty() {
-            (dependency_table("Dependencies", deps.main))
+            (dependency_table("Dependencies", &deps.main))
         }
 
         @if !deps.dev.is_empty() {
-            (dependency_table("Dev dependencies", deps.dev))
+            (dependency_table("Dev dependencies", &deps.dev))
         }
 
         @if !deps.build.is_empty() {
-            (dependency_table("Build dependencies", deps.build))
+            (dependency_table("Build dependencies", &deps.build))
         }
     }
 }
 
-fn dependency_table(title: &str, deps: IndexMap<CrateName, AnalyzedDependency>) -> Markup {
+fn dependency_table(title: &str, deps: &IndexMap<CrateName, AnalyzedDependency>) -> Markup {
     let count_total = deps.len();
-    let count_insecure = deps.iter().filter(|&(_, dep)| dep.insecure).count();
+    let count_insecure = deps.iter().filter(|&(_, dep)| dep.is_insecure()).count();
     let count_outdated = deps.iter().filter(|&(_, dep)| dep.is_outdated()).count();
 
     html! {
@@ -86,7 +88,7 @@ fn dependency_table(title: &str, deps: IndexMap<CrateName, AnalyzedDependency>) 
                             }
                         }
                         td class="has-text-right" {
-                            @if dep.insecure {
+                            @if dep.is_insecure() {
                                 span class="tag is-danger" { "insecure" }
                             } @else if dep.is_outdated() {
                                 span class="tag is-warning" { "out of date" }
@@ -143,6 +145,93 @@ fn render_dev_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
     html! {
         div class="notification is-warning" {
             p { "This project contains " b { (text) } "." }
+        }
+    }
+}
+
+fn build_rustsec_link(advisory: &Advisory) -> String {
+    format!(
+        "https://rustsec.org/advisories/{}.html",
+        advisory.id().as_str()
+    )
+}
+
+fn render_markdown(description: &str) -> Markup {
+    let mut rendered = String::new();
+    html::push_html(&mut rendered, Parser::new(description));
+    PreEscaped(rendered)
+}
+
+/// Renders a list of all security vulnerabilities affecting the repository
+fn vulnerability_list(analysis_outcome: &AnalyzeDependenciesOutcome) -> Markup {
+    let mut vulnerabilities = Vec::new();
+    for (_, analyzed_crate) in &analysis_outcome.crates {
+        vulnerabilities.append(
+            &mut analyzed_crate
+                .main
+                .iter()
+                .filter(|&(_, dep)| dep.is_insecure())
+                .map(|(_, dep)| dep.vulnerabilities.as_deref().unwrap())
+                .collect(),
+        );
+        vulnerabilities.append(
+            &mut analyzed_crate
+                .dev
+                .iter()
+                .filter(|&(_, dep)| dep.is_insecure())
+                .map(|(_, dep)| dep.vulnerabilities.as_deref().unwrap())
+                .collect(),
+        );
+        vulnerabilities.append(
+            &mut analyzed_crate
+                .build
+                .iter()
+                .filter(|&(_, dep)| dep.is_insecure())
+                .map(|(_, dep)| dep.vulnerabilities.as_deref().unwrap())
+                .collect(),
+        );
+    }
+
+    // construct a single vector out of all vulnerabilities for all crates to iterate over in the template engine
+    let vulnerabilities: Vec<&Advisory> = vulnerabilities.drain(..).flatten().collect();
+
+    html! {
+        h3 class="title is-3" id="vulnerabilities" { "Security Vulnerabilities" }
+
+        @for vuln in vulnerabilities {
+            div class="box" {
+                h3 class="title is-4" { code { (vuln.metadata.package.as_str()) } ": " (vuln.title()) }
+                p class="subtitle is-5" style="margin-top: -0.5rem;" { a href=(build_rustsec_link(vuln)) { (vuln.id()) } }
+
+                article { (render_markdown(vuln.description())) }
+
+                nav class="level" style="margin-top: 1rem;" {
+                    div class="level-item has-text-centered" {
+                        div {
+                            p class="heading" { "Unaffected" }
+                            @if vuln.versions.unaffected.is_empty() {
+                                p class="is-grey" { "None"}
+                            } @else {
+                                @for item in &vuln.versions.unaffected {
+                                    p { code { (item) } }
+                                }
+                            }
+                        }
+                    }
+                    div class="level-item has-text-centered" {
+                        div {
+                            p class="heading" { "Patched" }
+                            @if vuln.versions.unaffected.is_empty() {
+                                p class="has-text-grey" { "None"}
+                            } @else {
+                                @for item in &vuln.versions.patched {
+                                    p { code { (item) } }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -220,11 +309,23 @@ fn render_success(
         }
         section class="section" {
             div class="container" {
-                @if analysis_outcome.any_dev_issues() {
+                @if analysis_outcome.any_insecure() {
+                    div class="notification is-warning" {
+                        p { "This project contains "
+                            b { "known security vulnerabilities" }
+                            ". Find detailed information at the "
+                            a href="#vulnerabilities" { "bottom"} "."
+                        }
+                    }
+                } @else if analysis_outcome.any_dev_issues() {
                     (render_dev_dependency_box(&analysis_outcome))
                 }
-                @for (crate_name, deps) in analysis_outcome.crates {
+                @for (crate_name, deps) in &analysis_outcome.crates {
                     (dependency_tables(crate_name, deps))
+                }
+
+                @if analysis_outcome.any_insecure() {
+                    (vulnerability_list(&analysis_outcome))
                 }
             }
         }

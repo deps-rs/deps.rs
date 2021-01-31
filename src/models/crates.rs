@@ -3,6 +3,7 @@ use std::{borrow::Borrow, str::FromStr};
 use anyhow::{anyhow, Error};
 use indexmap::IndexMap;
 use relative_path::RelativePathBuf;
+use rustsec::Advisory;
 use semver::{Version, VersionReq};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -89,7 +90,7 @@ pub struct AnalyzedDependency {
     pub required: VersionReq,
     pub latest_that_matches: Option<Version>,
     pub latest: Option<Version>,
-    pub insecure: bool,
+    pub vulnerabilities: Option<Vec<Advisory>>,
 }
 
 impl AnalyzedDependency {
@@ -98,8 +99,12 @@ impl AnalyzedDependency {
             required,
             latest_that_matches: None,
             latest: None,
-            insecure: false,
+            vulnerabilities: None,
         }
+    }
+
+    pub fn is_insecure(&self) -> bool {
+        self.vulnerabilities.is_some()
     }
 
     pub fn is_outdated(&self) -> bool {
@@ -181,8 +186,16 @@ impl AnalyzedDependencies {
 
     /// Returns the number of insecure main and build dependencies
     pub fn count_insecure(&self) -> usize {
-        let main_insecure = self.main.iter().filter(|&(_, dep)| dep.insecure).count();
-        let build_insecure = self.build.iter().filter(|&(_, dep)| dep.insecure).count();
+        let main_insecure = self
+            .main
+            .iter()
+            .filter(|&(_, dep)| dep.is_insecure())
+            .count();
+        let build_insecure = self
+            .build
+            .iter()
+            .filter(|&(_, dep)| dep.is_insecure())
+            .count();
         main_insecure + build_insecure
     }
 
@@ -203,14 +216,17 @@ impl AnalyzedDependencies {
 
     /// Counts the number of insecure `dev-dependencies`
     pub fn count_dev_insecure(&self) -> usize {
-        self.dev.iter().filter(|&(_, dep)| dep.insecure).count()
+        self.dev
+            .iter()
+            .filter(|&(_, dep)| dep.is_insecure())
+            .count()
     }
 
     /// Returns `true` if any dev-dependencies are either insecure or outdated.
     pub fn any_dev_issues(&self) -> bool {
         self.dev
             .iter()
-            .any(|(_, dep)| dep.is_outdated() || dep.insecure)
+            .any(|(_, dep)| dep.is_outdated() || dep.is_insecure())
     }
 }
 

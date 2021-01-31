@@ -42,11 +42,12 @@ impl DependencyAnalyzer {
             let version: cargo_lock::Version = ver.to_string().parse().unwrap();
             let query = database::Query::new().package_version(name, version);
 
-            if !advisory_db
-                .map(|db| db.query(&query).is_empty())
-                .unwrap_or(true)
-            {
-                dep.insecure = true;
+            if let Some(db) = advisory_db {
+                let mut vulnerabilities = db.query(&query);
+                if !vulnerabilities.is_empty() {
+                    dep.vulnerabilities =
+                        Some(vulnerabilities.drain(..).map(|v| v.to_owned()).collect());
+                }
             }
         }
         if !ver.is_prerelease() {
