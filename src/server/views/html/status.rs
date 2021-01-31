@@ -166,34 +166,33 @@ fn render_markdown(description: &str) -> Markup {
 fn vulnerability_list(analysis_outcome: &AnalyzeDependenciesOutcome) -> Markup {
     let mut vulnerabilities = Vec::new();
     for (_, analyzed_crate) in &analysis_outcome.crates {
-        vulnerabilities.append(
+        vulnerabilities.extend(
             &mut analyzed_crate
                 .main
                 .iter()
                 .filter(|&(_, dep)| dep.is_insecure())
-                .map(|(_, dep)| dep.vulnerabilities.as_deref().unwrap())
-                .collect(),
+                .map(|(_, dep)| &dep.vulnerabilities),
         );
-        vulnerabilities.append(
+        vulnerabilities.extend(
             &mut analyzed_crate
                 .dev
                 .iter()
                 .filter(|&(_, dep)| dep.is_insecure())
-                .map(|(_, dep)| dep.vulnerabilities.as_deref().unwrap())
-                .collect(),
+                .map(|(_, dep)| &dep.vulnerabilities),
         );
-        vulnerabilities.append(
+        vulnerabilities.extend(
             &mut analyzed_crate
                 .build
                 .iter()
                 .filter(|&(_, dep)| dep.is_insecure())
-                .map(|(_, dep)| dep.vulnerabilities.as_deref().unwrap())
-                .collect(),
+                .map(|(_, dep)| &dep.vulnerabilities),
         );
     }
 
-    // construct a single vector out of all vulnerabilities for all crates to iterate over in the template engine
-    let vulnerabilities: Vec<&Advisory> = vulnerabilities.drain(..).flatten().collect();
+    // flatten Vec<Vec<&Advisory>> -> Vec<&Advisory>
+    let mut vulnerabilities: Vec<&Advisory> = vulnerabilities.into_iter().flatten().collect();
+    vulnerabilities.sort_unstable_by_key(|&v| v.id());
+    vulnerabilities.dedup();
 
     html! {
         h3 class="title is-3" id="vulnerabilities" { "Security Vulnerabilities" }

@@ -43,10 +43,10 @@ impl DependencyAnalyzer {
             let query = database::Query::new().package_version(name, version);
 
             if let Some(db) = advisory_db {
-                let mut vulnerabilities = db.query(&query);
+                let vulnerabilities = db.query(&query);
                 if !vulnerabilities.is_empty() {
                     dep.vulnerabilities =
-                        Some(vulnerabilities.drain(..).map(|v| v.to_owned()).collect());
+                        vulnerabilities.into_iter().map(|v| v.to_owned()).collect();
                 }
             }
         }

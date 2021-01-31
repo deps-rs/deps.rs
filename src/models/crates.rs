@@ -90,7 +90,7 @@ pub struct AnalyzedDependency {
     pub required: VersionReq,
     pub latest_that_matches: Option<Version>,
     pub latest: Option<Version>,
-    pub vulnerabilities: Option<Vec<Advisory>>,
+    pub vulnerabilities: Vec<Advisory>,
 }
 
 impl AnalyzedDependency {
@@ -99,12 +99,12 @@ impl AnalyzedDependency {
             required,
             latest_that_matches: None,
             latest: None,
-            vulnerabilities: None,
+            vulnerabilities: Vec::new(),
         }
     }
 
     pub fn is_insecure(&self) -> bool {
-        self.vulnerabilities.is_some()
+        !self.vulnerabilities.is_empty()
     }
 
     pub fn is_outdated(&self) -> bool {
