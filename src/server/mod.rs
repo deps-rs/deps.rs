@@ -85,7 +85,10 @@ impl App {
         let logger2 = logger.clone();
         let start = Instant::now();
 
-        let res = if let Ok(route_match) = self.router.recognize(req.uri().path()) {
+        // allows `/path/` to also match `/path`
+        let normalized_path = req.uri().path().trim_end_matches('/');
+
+        let res = if let Ok(route_match) = self.router.recognize(normalized_path) {
             match (req.method(), route_match.handler()) {
                 (&Method::GET, Route::Index) => {
                     self.index(req, route_match.params().clone(), logger).await
