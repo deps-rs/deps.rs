@@ -86,7 +86,7 @@ impl App {
         let start = Instant::now();
 
         // allows `/path/` to also match `/path`
-        let normalized_path = req.uri().path().trim_end_matches("/");
+        let normalized_path = req.uri().path().trim_end_matches('/');
 
         let res = if let Ok(route_match) = self.router.recognize(normalized_path) {
             match (req.method(), route_match.handler()) {
