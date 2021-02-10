@@ -2,7 +2,7 @@ use std::{env, sync::Arc, time::Instant};
 
 use futures::future;
 use hyper::{
-    header::{CONTENT_TYPE, LOCATION},
+    header::{CACHE_CONTROL, CONTENT_TYPE, LOCATION},
     Body, Error as HyperError, Method, Request, Response, StatusCode,
 };
 use once_cell::sync::Lazy;
@@ -347,7 +347,8 @@ impl App {
     fn static_file(file: StaticFile) -> Response<Body> {
         match file {
             StaticFile::StyleCss => Response::builder()
-                .header(CONTENT_TYPE, "text/css")
+                .header(CONTENT_TYPE, "text/css; charset=utf-8")
+                .header(CACHE_CONTROL, "public, max-age=365000000, immutable")
                 .body(Body::from(assets::STATIC_STYLE_CSS))
                 .unwrap(),
             StaticFile::FaviconPng => Response::builder()

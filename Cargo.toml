@@ -40,3 +40,4 @@ toml = "0.5"
 
 [build-dependencies]
 sass-rs = "0.2"
+sha-1 = "0.9"

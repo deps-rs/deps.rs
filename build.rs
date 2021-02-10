@@ -1,9 +1,10 @@
 extern crate sass_rs as sass;
 
 use std::env;
-use std::fs::File;
-use std::io::Write;
+use std::fs;
 use std::path::Path;
+
+use sha1::{Digest, Sha1};
 
 fn build_style() -> String {
     let options = sass::Options {
@@ -16,8 +17,13 @@ fn build_style() -> String {
 
 fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
-    let dest_path = Path::new(&out_dir).join("style.css");
-    let mut f = File::create(&dest_path).unwrap();
 
-    f.write_all(build_style().as_bytes()).unwrap();
+    let style = build_style();
+
+    let css_path = Path::new(&out_dir).join("style.css");
+    fs::write(css_path, style.as_bytes()).unwrap();
+
+    let hash_path = Path::new(&out_dir).join("style.css.sha1");
+    let digest = Sha1::digest(style.as_bytes());
+    fs::write(hash_path, format!("{:x}", digest)).unwrap();
 }
