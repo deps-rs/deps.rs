@@ -1,3 +1,4 @@
+use font_awesome_as_a_crate::{svg as fa, Type as FaType};
 use hyper::{Body, Response};
 use indexmap::IndexMap;
 use maud::{html, Markup, PreEscaped};
@@ -49,6 +50,8 @@ fn dependency_table(title: &str, deps: &IndexMap<CrateName, AnalyzedDependency>)
     let count_insecure = deps.iter().filter(|&(_, dep)| dep.is_insecure()).count();
     let count_outdated = deps.iter().filter(|&(_, dep)| dep.is_outdated()).count();
 
+    let fa_cube = PreEscaped(fa(FaType::Solid, "cube").unwrap());
+
     html! {
         h3 class="title is-4" { (title) }
         p class="subtitle is-5" {
@@ -74,7 +77,7 @@ fn dependency_table(title: &str, deps: &IndexMap<CrateName, AnalyzedDependency>)
                     tr {
                         td {
                             a class="has-text-grey" href=(get_crates_url(&name)) {
-                                i class=("fa fa-cube") { "" }
+                                { (fa_cube) }
                             }
                             { "\u{00A0}" } // non-breaking space
                             a href=(dep.deps_rs_path(name.as_ref())) { (name.as_ref()) }
@@ -105,9 +108,9 @@ fn dependency_table(title: &str, deps: &IndexMap<CrateName, AnalyzedDependency>)
 
 fn get_site_icon(site: &RepoSite) -> &'static str {
     match *site {
-        RepoSite::Github => "fa-github",
-        RepoSite::Gitlab => "fa-gitlab",
-        RepoSite::Bitbucket => "fa-bitbucket",
+        RepoSite::Github => "github",
+        RepoSite::Gitlab => "gitlab",
+        RepoSite::Bitbucket => "bitbucket",
     }
 }
 
@@ -115,17 +118,21 @@ fn render_title(subject_path: &SubjectPath) -> Markup {
     match *subject_path {
         SubjectPath::Repo(ref repo_path) => {
             let site_icon = get_site_icon(&repo_path.site);
+            let fa_site_icon = PreEscaped(fa(FaType::Brands, site_icon).unwrap());
+
             html! {
                 a href=(format!("{}/{}/{}", repo_path.site.to_base_uri(), repo_path.qual.as_ref(), repo_path.name.as_ref())) {
-                    i class=(format!("fa {}", site_icon)) { "" }
+                    { (fa_site_icon) }
                     (format!(" {} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref()))
                 }
             }
         }
         SubjectPath::Crate(ref crate_path) => {
+            let fa_cube = PreEscaped(fa(FaType::Solid, "cube").unwrap());
+
             html! {
                 a href=(get_crates_version_url(&crate_path.name, &crate_path.version)) {
-                    i class="fa fa-cube" { "" }
+                    { (fa_cube) }
                     (format!(" {} {}", crate_path.name.as_ref(), crate_path.version))
                 }
             }
