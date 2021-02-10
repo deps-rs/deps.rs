@@ -12,9 +12,25 @@ $family-sans-serif: "Fira Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 $family-monospace: "Source Serif Pro", monospace;
 
 @import "bulma/utilities/_all";
-@import "bulma/helpers/_all";
-@import "bulma/base/_all";
-@import "bulma/elements/_all";
-@import "bulma/components/_all";
-@import "bulma/grid/_all";
+
+@import "bulma/helpers/color"
+@import "bulma/helpers/typography"
+@import "bulma/helpers/visibility"
+
+@import "bulma/base/minireset"
+@import "bulma/base/generic"
+
+@import "bulma/elements/box"
+@import "bulma/elements/container"
+@import "bulma/elements/content"
+@import "bulma/elements/notification"
+@import "bulma/elements/table"
+@import "bulma/elements/tag"
+@import "bulma/elements/title"
+
+@import "bulma/components/level"
+@import "bulma/components/message"
+@import "bulma/components/navbar"
+
+@import "bulma/grid/columns";
 @import "bulma/layout/_all";
