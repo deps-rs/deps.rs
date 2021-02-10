@@ -291,6 +291,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
+name = "font-awesome-as-a-crate"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a12cc52b2062ad4cb425d969c77325dd3da70312ed7ed892c7e8143384da58aa"
+
+[[package]]
 name = "foreign-types"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1408,6 +1414,7 @@ dependencies = [
  "cadence",
  "crates-index 0.15.0",
  "derive_more",
+ "font-awesome-as-a-crate",
  "futures",
  "hyper",
  "indexmap",

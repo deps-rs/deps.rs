@@ -37,6 +37,7 @@ slog-async = "2"
 slog-term = "2"
 tokio = { version = "1.0.1", features = ["full"] }
 toml = "0.5"
+font-awesome-as-a-crate = "0.1.2"
 
 [build-dependencies]
 sass-rs = "0.2"
