@@ -13,6 +13,7 @@ use slog::{error, info, o, Logger};
 mod assets;
 mod views;
 
+use self::assets::STATIC_STYLE_CSS_PATH;
 use crate::engine::{AnalyzeDependenciesOutcome, Engine};
 use crate::models::crates::{CrateName, CratePath};
 use crate::models::repo::RepoPath;
@@ -51,7 +52,7 @@ impl App {
 
         router.add("/", Route::Index);
 
-        router.add("/static/style.css", Route::Static(StaticFile::StyleCss));
+        router.add(STATIC_STYLE_CSS_PATH, Route::Static(StaticFile::StyleCss));
         router.add("/static/logo.svg", Route::Static(StaticFile::FaviconPng));
 
         router.add(

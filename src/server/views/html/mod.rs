@@ -4,12 +4,11 @@ use hyper::header::CONTENT_TYPE;
 use hyper::{Body, Response};
 use maud::{html, Markup, Render};
 
-use crate::server::assets::STATIC_STYLE_CSS_IMPORT;
-
 pub mod error;
 pub mod index;
 pub mod status;
 
+use crate::server::assets::STATIC_STYLE_CSS_PATH;
 use crate::server::SELF_BASE_URL;
 
 fn render_html<B: Render>(title: &str, body: B) -> Response<Body> {
@@ -20,7 +19,7 @@ fn render_html<B: Render>(title: &str, body: B) -> Response<Body> {
                 meta name="viewport" content="width=device-width, initial-scale=1";
                 title { (format!("{} - Deps.rs", title)) }
                 link rel="icon" type="image/svg+xml" href="/static/logo.svg";
-                link rel="stylesheet" type="text/css" href=(STATIC_STYLE_CSS_IMPORT);
+                link rel="stylesheet" type="text/css" href=(STATIC_STYLE_CSS_PATH);
                 link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600";
                 link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Source+Code+Pro";
                 link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css";
