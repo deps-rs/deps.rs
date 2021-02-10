@@ -2,7 +2,7 @@ use std::{env, sync::Arc, time::Instant};
 
 use futures::future;
 use hyper::{
-    header::{CACHE_CONTROL, CONTENT_TYPE, LOCATION},
+    header::{CACHE_CONTROL, CONTENT_TYPE, ETAG, LOCATION},
     Body, Error as HyperError, Method, Request, Response, StatusCode,
 };
 use once_cell::sync::Lazy;
@@ -13,7 +13,7 @@ use slog::{error, info, o, Logger};
 mod assets;
 mod views;
 
-use self::assets::STATIC_STYLE_CSS_PATH;
+use self::assets::{STATIC_STYLE_CSS_ETAG, STATIC_STYLE_CSS_PATH};
 use crate::engine::{AnalyzeDependenciesOutcome, Engine};
 use crate::models::crates::{CrateName, CratePath};
 use crate::models::repo::RepoPath;
@@ -349,6 +349,7 @@ impl App {
         match file {
             StaticFile::StyleCss => Response::builder()
                 .header(CONTENT_TYPE, "text/css; charset=utf-8")
+                .header(ETAG, STATIC_STYLE_CSS_ETAG)
                 .header(CACHE_CONTROL, "public, max-age=365000000, immutable")
                 .body(Body::from(assets::STATIC_STYLE_CSS))
                 .unwrap(),
