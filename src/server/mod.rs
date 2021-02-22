@@ -362,10 +362,7 @@ impl App {
 }
 
 fn not_found() -> Response<Body> {
-    Response::builder()
-        .status(StatusCode::NOT_FOUND)
-        .body(Body::empty())
-        .unwrap()
+    views::html::error::render_404()
 }
 
 static SELF_BASE_URL: Lazy<String> =
