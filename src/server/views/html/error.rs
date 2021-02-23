@@ -1,4 +1,7 @@
-use hyper::{header::CONTENT_TYPE, Body, Response, StatusCode};
+use hyper::{
+    header::{CACHE_CONTROL, CONTENT_TYPE},
+    Body, Response, StatusCode,
+};
 use maud::html;
 
 use crate::server::assets::STATIC_STYLE_CSS_PATH;
@@ -55,6 +58,7 @@ pub fn render_404() -> Response<Body> {
     Response::builder()
         .status(StatusCode::NOT_FOUND)
         .header(CONTENT_TYPE, "text/html; charset=utf-8")
+        .header(CACHE_CONTROL, "public, max-age=300, immutable")
         .body(Body::from(rendered.0))
         .unwrap()
 }
