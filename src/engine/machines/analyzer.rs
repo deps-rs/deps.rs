@@ -43,10 +43,14 @@ impl DependencyAnalyzer {
             let query = database::Query::new().package_version(name, version);
 
             if let Some(db) = advisory_db {
-                let vulnerabilities = db.query(&query);
+                let vulnerabilities: Vec<_> = db
+                    .query(&query)
+                    .into_iter()
+                    .filter(|vuln| !vuln.metadata.yanked)
+                    .map(|v| v.to_owned())
+                    .collect();
                 if !vulnerabilities.is_empty() {
-                    dep.vulnerabilities =
-                        vulnerabilities.into_iter().map(|v| v.to_owned()).collect();
+                    dep.vulnerabilities = vulnerabilities;
                 }
             }
         }
