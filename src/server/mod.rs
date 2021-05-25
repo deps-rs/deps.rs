@@ -236,7 +236,7 @@ impl App {
 
             Ok(crate_name) => {
                 let release_result = engine
-                    .find_latest_crate_release(crate_name, VersionReq::any())
+                    .find_latest_crate_release(crate_name, VersionReq::STAR)
                     .await;
 
                 match release_result {

@@ -50,7 +50,7 @@ impl DependencyAnalyzer {
                 }
             }
         }
-        if !ver.is_prerelease() {
+        if ver.pre.is_empty() {
             if let Some(ref mut current_latest) = dep.latest {
                 if *current_latest < *ver {
                     *current_latest = ver.clone();
