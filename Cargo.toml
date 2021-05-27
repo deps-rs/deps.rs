@@ -14,7 +14,7 @@ members = [
 badge = { path = "./libs/badge" }
 
 anyhow = "1"
-cadence = "0.24"
+cadence = "0.25"
 derive_more = "0.99"
 futures = "0.3"
 hyper = { version = "0.14.3", features = ["full"] }
@@ -27,8 +27,8 @@ pin-project = "1"
 relative-path = { version = "1.3", features = ["serde"] }
 route-recognizer = "0.3"
 rustsec = "0.23"
-crates-index = "0.15" # held back by semver 0.11
-semver = { version = "0.10", features = ["serde"] } # held at 0.10 due to #63
+crates-index = "0.16"
+semver = { version = "1.0", features = ["serde"] }
 reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
