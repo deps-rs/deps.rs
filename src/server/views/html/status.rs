@@ -215,10 +215,10 @@ fn vulnerability_list(analysis_outcome: &AnalyzeDependenciesOutcome) -> Markup {
                     div class="level-item has-text-centered" {
                         div {
                             p class="heading" { "Unaffected" }
-                            @if vuln.versions.unaffected.is_empty() {
+                            @if vuln.versions.unaffected().is_empty() {
                                 p class="is-grey" { "None"}
                             } @else {
-                                @for item in &vuln.versions.unaffected {
+                                @for item in vuln.versions.unaffected() {
                                     p { code { (item) } }
                                 }
                             }
@@ -227,10 +227,10 @@ fn vulnerability_list(analysis_outcome: &AnalyzeDependenciesOutcome) -> Markup {
                     div class="level-item has-text-centered" {
                         div {
                             p class="heading" { "Patched" }
-                            @if vuln.versions.unaffected.is_empty() {
+                            @if vuln.versions.unaffected().is_empty() {
                                 p class="has-text-grey" { "None"}
                             } @else {
-                                @for item in &vuln.versions.patched {
+                                @for item in vuln.versions.patched() {
                                     p { code { (item) } }
                                 }
                             }
