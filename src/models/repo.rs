@@ -54,6 +54,7 @@ pub enum RepoSite {
     Github,
     Gitlab,
     Bitbucket,
+    Sourcehut,
 }
 
 impl RepoSite {
@@ -62,6 +63,7 @@ impl RepoSite {
             RepoSite::Github => "https://github.com",
             RepoSite::Gitlab => "https://gitlab.com",
             RepoSite::Bitbucket => "https://bitbucket.org",
+            RepoSite::Sourcehut => "https://git.sr.ht",
         }
     }
 
@@ -70,6 +72,7 @@ impl RepoSite {
             RepoSite::Github => "https://raw.githubusercontent.com",
             RepoSite::Gitlab => "https://gitlab.com",
             RepoSite::Bitbucket => "https://bitbucket.org",
+            RepoSite::Sourcehut => "https://git.sr.ht",
         }
     }
 
@@ -77,6 +80,7 @@ impl RepoSite {
         match self {
             RepoSite::Github => "HEAD",
             RepoSite::Gitlab | RepoSite::Bitbucket => "raw/HEAD",
+            RepoSite::Sourcehut => "blob/HEAD",
         }
     }
 }
@@ -89,6 +93,7 @@ impl FromStr for RepoSite {
             "github" => Ok(RepoSite::Github),
             "gitlab" => Ok(RepoSite::Gitlab),
             "bitbucket" => Ok(RepoSite::Bitbucket),
+            "sourcehut" => Ok(RepoSite::Sourcehut),
             _ => Err(anyhow!("unknown repo site identifier")),
         }
     }
@@ -100,6 +105,7 @@ impl AsRef<str> for RepoSite {
             RepoSite::Github => "github",
             RepoSite::Gitlab => "gitlab",
             RepoSite::Bitbucket => "bitbucket",
+            RepoSite::Sourcehut => "sourcehut",
         }
     }
 }
@@ -111,9 +117,12 @@ impl FromStr for RepoQualifier {
     type Err = Error;
 
     fn from_str(input: &str) -> Result<RepoQualifier, Error> {
-        let is_valid = input
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_');
+        let is_valid = input.chars().all(|c| {
+            c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_'
+                 // Sourcehut projects have the form
+                 // https://git.sr.ht/~user/project.
+                 || c == '~'
+        });
 
         ensure!(is_valid, "invalid repo qualifier");
         Ok(RepoQualifier(input.to_string()))
