@@ -56,13 +56,15 @@ fn dependency_table(title: &str, deps: &IndexMap<CrateName, AnalyzedDependency>)
     html! {
         h3 class="title is-4" { (title) }
         p class="subtitle is-5" {
-            (match (count_outdated, count_always_insecure, count_insecure) {
+            (match (count_outdated, count_always_insecure, count_insecure - count_always_insecure) {
                 (0, 0, 0) => format!("({} total, all up-to-date)", count_total),
-                (0, _, 0) => format!("({} total, {} insecure)", count_total, count_always_insecure),
-                (0, 0, _) => format!("({} total, {} possibly insecure)", count_total, count_insecure - count_always_insecure),
-                (0, _, _) => format!("({} total, {} insecure, {} possibly insecure)", count_total, count_always_insecure, count_insecure - count_always_insecure),
+                (0, 0, c) => format!("({} total, {} possibly insecure)", count_total, c),
                 (_, 0, 0) => format!("({} total, {} outdated)", count_total, count_outdated),
-                (_, _, _) => format!("({} total, {} outdated, {} insecure, {} possibly insecure)", count_total, count_outdated, count_always_insecure, count_insecure - count_always_insecure),
+                (0, _, 0) => format!("({} total, {} insecure)", count_total, count_always_insecure),
+                (0, _, c) => format!("({} total, {} insecure, {} possibly insecure)", count_total, count_always_insecure, c),
+                (_, 0, c) => format!("({} total, {} outdated, {} possibly insecure)", count_total, count_outdated, c),
+                (_, _, 0) => format!("({} total, {} outdated, {} insecure)", count_total, count_outdated, count_always_insecure),
+                (_, _, c) => format!("({} total, {} outdated, {} insecure, {} possibly insecure)", count_total, count_outdated, count_always_insecure, c),
             })
         }
 
