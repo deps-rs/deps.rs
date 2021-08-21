@@ -7,7 +7,7 @@ use crate::engine::AnalyzeDependenciesOutcome;
 pub fn badge(analysis_outcome: Option<&AnalyzeDependenciesOutcome>) -> Badge {
     let opts = match analysis_outcome {
         Some(outcome) => {
-            if outcome.any_insecure() {
+            if outcome.any_always_insecure() {
                 BadgeOptions {
                     subject: "dependencies".into(),
                     status: "insecure".into(),
@@ -23,10 +23,18 @@ pub fn badge(analysis_outcome: Option<&AnalyzeDependenciesOutcome>) -> Badge {
                         color: "#dfb317".into(),
                     }
                 } else if total > 0 {
-                    BadgeOptions {
-                        subject: "dependencies".into(),
-                        status: "up to date".into(),
-                        color: "#4c1".into(),
+                    if outcome.any_insecure() {
+                        BadgeOptions {
+                            subject: "dependencies".into(),
+                            status: "maybe insecure".into(),
+                            color: "#8b1".into(),
+                        }
+                    } else {
+                        BadgeOptions {
+                            subject: "dependencies".into(),
+                            status: "up to date".into(),
+                            color: "#4c1".into(),
+                        }
                     }
                 } else {
                     BadgeOptions {
