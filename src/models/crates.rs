@@ -116,7 +116,8 @@ impl AnalyzedDependency {
     /// even when the latest version in the required range is used.
     pub fn is_always_insecure(&self) -> bool {
         if let Some(latest) = &self.latest {
-            self.vulnerabilities.iter()
+            self.vulnerabilities
+                .iter()
                 .any(|a| a.versions.is_vulnerable(latest))
         } else {
             self.is_insecure()
@@ -231,7 +232,7 @@ impl AnalyzedDependencies {
             .count();
         main_insecure + build_insecure
     }
-    
+
     /// Checks if any outdated main or build dependencies exist
     pub fn any_outdated(&self) -> bool {
         let main_any_outdated = self.main.iter().any(|(_, dep)| dep.is_outdated());

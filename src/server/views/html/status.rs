@@ -47,7 +47,10 @@ fn dependency_tables(crate_name: &CrateName, deps: &AnalyzedDependencies) -> Mar
 
 fn dependency_table(title: &str, deps: &IndexMap<CrateName, AnalyzedDependency>) -> Markup {
     let count_total = deps.len();
-    let count_always_insecure = deps.iter().filter(|&(_, dep)| dep.is_always_insecure()).count();
+    let count_always_insecure = deps
+        .iter()
+        .filter(|&(_, dep)| dep.is_always_insecure())
+        .count();
     let count_insecure = deps.iter().filter(|&(_, dep)| dep.is_insecure()).count();
     let count_outdated = deps.iter().filter(|&(_, dep)| dep.is_outdated()).count();
 
@@ -86,7 +89,7 @@ fn dependency_table(title: &str, deps: &IndexMap<CrateName, AnalyzedDependency>)
                             }
                             { "\u{00A0}" } // non-breaking space
                             a href=(dep.deps_rs_path(name.as_ref())) { (name.as_ref()) }
-                            
+
                             @if dep.is_insecure() {
                                 { "\u{00A0}" } // non-breaking space
                                 a href="#vulnerabilities" title="has known vulnerabilities" { "⚠️" }
