@@ -46,7 +46,7 @@ impl DependencyAnalyzer {
                 let vulnerabilities: Vec<_> = db
                     .query(&query)
                     .into_iter()
-                    .filter(|vuln| !vuln.metadata.yanked)
+                    .filter(|vuln| !vuln.withdrawn())
                     .map(|v| v.to_owned())
                     .collect();
                 if !vulnerabilities.is_empty() {
