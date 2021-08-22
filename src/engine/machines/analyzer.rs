@@ -29,7 +29,7 @@ impl DependencyAnalyzer {
         ver: &Version,
         advisory_db: Option<&Database>,
     ) {
-        if dep.required.matches(&ver) {
+        if dep.required.matches(ver) {
             if let Some(ref mut current_latest_that_matches) = dep.latest_that_matches {
                 if *current_latest_that_matches < *ver {
                     *current_latest_that_matches = ver.clone();

@@ -57,7 +57,7 @@ pub enum RepoSite {
 }
 
 impl RepoSite {
-    pub fn to_base_uri(&self) -> &'static str {
+    pub fn to_base_uri(self) -> &'static str {
         match self {
             RepoSite::Github => "https://github.com",
             RepoSite::Gitlab => "https://gitlab.com",
@@ -65,7 +65,7 @@ impl RepoSite {
         }
     }
 
-    pub fn to_usercontent_base_uri(&self) -> &'static str {
+    pub fn to_usercontent_base_uri(self) -> &'static str {
         match self {
             RepoSite::Github => "https://raw.githubusercontent.com",
             RepoSite::Gitlab => "https://gitlab.com",
@@ -73,7 +73,7 @@ impl RepoSite {
         }
     }
 
-    pub fn to_usercontent_repo_suffix(&self) -> &'static str {
+    pub fn to_usercontent_repo_suffix(self) -> &'static str {
         match self {
             RepoSite::Github => "HEAD",
             RepoSite::Gitlab | RepoSite::Bitbucket => "raw/HEAD",
