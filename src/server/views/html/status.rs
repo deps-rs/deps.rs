@@ -106,11 +106,14 @@ fn dependency_table(title: &str, deps: &IndexMap<CrateName, AnalyzedDependency>)
     }
 }
 
-fn get_site_icon(site: &RepoSite) -> &'static str {
+fn get_site_icon(site: &RepoSite) -> (FaType, &'static str) {
     match *site {
-        RepoSite::Github => "github",
-        RepoSite::Gitlab => "gitlab",
-        RepoSite::Bitbucket => "bitbucket",
+        RepoSite::Github => (FaType::Brands, "github"),
+        RepoSite::Gitlab => (FaType::Brands, "gitlab"),
+        RepoSite::Bitbucket => (FaType::Brands, "bitbucket"),
+        // FIXME: There is no brands/sourcehut icon, so just use a regular
+        // circle which looks pretty much like sr.ht's circle.
+        RepoSite::Sourcehut => (FaType::Regular, "circle"),
     }
 }
 
@@ -118,7 +121,7 @@ fn render_title(subject_path: &SubjectPath) -> Markup {
     match *subject_path {
         SubjectPath::Repo(ref repo_path) => {
             let site_icon = get_site_icon(&repo_path.site);
-            let fa_site_icon = PreEscaped(fa(FaType::Brands, site_icon).unwrap());
+            let fa_site_icon = PreEscaped(fa(site_icon.0, site_icon.1).unwrap());
 
             html! {
                 a href=(format!("{}/{}/{}", repo_path.site.to_base_uri(), repo_path.qual.as_ref(), repo_path.name.as_ref())) {
