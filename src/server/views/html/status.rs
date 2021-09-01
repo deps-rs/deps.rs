@@ -342,7 +342,9 @@ fn render_success(
                     div class="notification is-warning" {
                         p { "This project might be open to "
                             b { "known security vulnerabilities" }
-                            ". Find detailed information at the "
+                            ", which can be prevented by tightening "
+                            "the version range of affected dependencies. "
+                            "Find detailed information at the "
                             a href="#vulnerabilities" { "bottom"} "."
                         }
                     }
