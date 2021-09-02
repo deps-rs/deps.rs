@@ -9,11 +9,11 @@ Deps.rs is a service that shows you at a glance if any of your dependencies are 
 This works by comparing the dependencies in a project's `Cargo.toml` to the latest versions in the crates.io database.
 For security-related information, we query the RustSec Security Advisory Database.
 
-We currently support projects and crates hosted on crates.io, Github, Gitlab and Bitbucket.
+We currently support projects and crates hosted on crates.io, Github, Gitlab, Bitbucket, and SourceHut.
 To analyze the state of your dependencies you can use the following URLs:
 
 - for projects on crates.io: `https://deps.rs/crate/<NAME>`
-- for projects on Github, Gitlab or Bitbucket: `https://deps.rs/repo/<HOSTER>/<USER>/<REPO>` (where `<HOSTER>` is either `github`, `gitlab` or `bitbucket`)
+- for projects on Github, Gitlab, Bitbucket, or SourceHut: `https://deps.rs/repo/<HOSTER>/<USER>/<REPO>` (where `<HOSTER>` is either `github`, `gitlab`, `bitbucket`, or `sourcehut`)
 
 On the analysis page, you will also find the markdown code to include a fancy badge in your project README so visitors (and you) can see at a glance if your dependencies are still up to date!
 
