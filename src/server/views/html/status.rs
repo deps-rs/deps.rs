@@ -47,6 +47,10 @@ fn dependency_tables(crate_name: &CrateName, deps: &AnalyzedDependencies) -> Mar
 
 fn dependency_table(title: &str, deps: &IndexMap<CrateName, AnalyzedDependency>) -> Markup {
     let count_total = deps.len();
+    let count_always_insecure = deps
+        .iter()
+        .filter(|&(_, dep)| dep.is_always_insecure())
+        .count();
     let count_insecure = deps.iter().filter(|&(_, dep)| dep.is_insecure()).count();
     let count_outdated = deps.iter().filter(|&(_, dep)| dep.is_outdated()).count();
 
@@ -55,11 +59,15 @@ fn dependency_table(title: &str, deps: &IndexMap<CrateName, AnalyzedDependency>)
     html! {
         h3 class="title is-4" { (title) }
         p class="subtitle is-5" {
-            (match (count_outdated, count_insecure) {
-                (0, 0) => format!("({} total, all up-to-date)", count_total),
-                (0, _) => format!("({} total, {} insecure)", count_total, count_insecure),
-                (_, 0) => format!("({} total, {} outdated)", count_total, count_outdated),
-                (_, _) => format!("({} total, {} outdated, {} insecure)", count_total, count_outdated, count_insecure),
+            (match (count_outdated, count_always_insecure, count_insecure - count_always_insecure) {
+                (0, 0, 0) => format!("({} total, all up-to-date)", count_total),
+                (0, 0, c) => format!("({} total, {} possibly insecure)", count_total, c),
+                (_, 0, 0) => format!("({} total, {} outdated)", count_total, count_outdated),
+                (0, _, 0) => format!("({} total, {} insecure)", count_total, count_always_insecure),
+                (0, _, c) => format!("({} total, {} insecure, {} possibly insecure)", count_total, count_always_insecure, c),
+                (_, 0, c) => format!("({} total, {} outdated, {} possibly insecure)", count_total, count_outdated, c),
+                (_, _, 0) => format!("({} total, {} outdated, {} insecure)", count_total, count_outdated, count_always_insecure),
+                (_, _, c) => format!("({} total, {} outdated, {} insecure, {} possibly insecure)", count_total, count_outdated, count_always_insecure, c),
             })
         }
 
@@ -81,6 +89,11 @@ fn dependency_table(title: &str, deps: &IndexMap<CrateName, AnalyzedDependency>)
                             }
                             { "\u{00A0}" } // non-breaking space
                             a href=(dep.deps_rs_path(name.as_ref())) { (name.as_ref()) }
+
+                            @if dep.is_insecure() {
+                                { "\u{00A0}" } // non-breaking space
+                                a href="#vulnerabilities" title="has known vulnerabilities" { "⚠️" }
+                            }
                         }
                         td class="has-text-right" { code { (dep.required.to_string()) } }
                         td class="has-text-right" {
@@ -91,10 +104,12 @@ fn dependency_table(title: &str, deps: &IndexMap<CrateName, AnalyzedDependency>)
                             }
                         }
                         td class="has-text-right" {
-                            @if dep.is_insecure() {
+                            @if dep.is_always_insecure() {
                                 span class="tag is-danger" { "insecure" }
                             } @else if dep.is_outdated() {
                                 span class="tag is-warning" { "out of date" }
+                            } @else if dep.is_insecure() {
+                                span class="tag is-warning" { "maybe insecure" }
                             } @else {
                                 span class="tag is-success" { "up to date" }
                             }
@@ -288,9 +303,9 @@ fn render_success(
 
     let status_data_uri = badge::badge(Some(&analysis_outcome)).to_svg_data_uri();
 
-    let hero_class = if analysis_outcome.any_insecure() {
+    let hero_class = if analysis_outcome.any_always_insecure() {
         "is-danger"
-    } else if analysis_outcome.any_outdated() {
+    } else if analysis_outcome.any_insecure() || analysis_outcome.any_outdated() {
         "is-warning"
     } else {
         "is-success"
@@ -318,11 +333,21 @@ fn render_success(
         }
         section class="section" {
             div class="container" {
-                @if analysis_outcome.any_insecure() {
+                @if analysis_outcome.any_always_insecure() {
                     div class="notification is-warning" {
                         p { "This project contains "
                             b { "known security vulnerabilities" }
                             ". Find detailed information at the "
+                            a href="#vulnerabilities" { "bottom"} "."
+                        }
+                    }
+                } @else if analysis_outcome.any_insecure() {
+                    div class="notification is-warning" {
+                        p { "This project might be open to "
+                            b { "known security vulnerabilities" }
+                            ", which can be prevented by tightening "
+                            "the version range of affected dependencies. "
+                            "Find detailed information at the "
                             a href="#vulnerabilities" { "bottom"} "."
                         }
                     }

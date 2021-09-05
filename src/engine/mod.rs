@@ -108,6 +108,13 @@ impl AnalyzeDependenciesOutcome {
             .any(|&(_, ref deps)| deps.count_insecure() > 0)
     }
 
+    /// Checks if any always insecure main or build dependencies exist in the scanned crates
+    pub fn any_always_insecure(&self) -> bool {
+        self.crates
+            .iter()
+            .any(|&(_, ref deps)| deps.count_always_insecure() > 0)
+    }
+
     /// Checks if any dev-dependencies in the scanned crates are either outdated or insecure
     pub fn any_dev_issues(&self) -> bool {
         self.crates
