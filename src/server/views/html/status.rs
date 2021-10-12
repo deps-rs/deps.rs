@@ -168,15 +168,27 @@ fn dependencies_pluralized(count: usize) -> &'static str {
 
 fn render_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
     // assuming at least one issue in dependencies
-    // zero insecure main dependencies 
+    // zero insecure main dependencies
     let insecure_dev = outcome.count_dev_insecure();
     let outdated_dev = outcome.count_dev_outdated();
     let outdated = outcome.count_outdated() - outdated_dev;
 
     let text = match (insecure_dev > 0, outdated > 0, outdated_dev > 0) {
-        (true, false, false) => format!("{} insecure development {}", insecure_dev, dependencies_pluralized(insecure_dev)),
-        (false, true, false) => format!("{} outdated main {}", outdated, dependencies_pluralized(outdated)),
-        (false, false, true) => format!("{} outdated development {}", outdated_dev, dependencies_pluralized(outdated_dev)),
+        (true, false, false) => format!(
+            "{} insecure development {}",
+            insecure_dev,
+            dependencies_pluralized(insecure_dev)
+        ),
+        (false, true, false) => format!(
+            "{} outdated main {}",
+            outdated,
+            dependencies_pluralized(outdated)
+        ),
+        (false, false, true) => format!(
+            "{} outdated development {}",
+            outdated_dev,
+            dependencies_pluralized(outdated_dev)
+        ),
 
         (true, true, false) => format!(
             "{} insecure development {} and {} outdated main {}",
@@ -185,7 +197,7 @@ fn render_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
             outdated,
             dependencies_pluralized(outdated),
         ),
-        
+
         (true, false, true) => format!(
             "{} insecure development {} and {} outdated development {}",
             insecure_dev,
