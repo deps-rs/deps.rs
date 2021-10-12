@@ -255,13 +255,6 @@ impl AnalyzedDependencies {
             .filter(|&(_, dep)| dep.is_insecure())
             .count()
     }
-
-    /// Returns `true` if any dev-dependencies are either insecure or outdated.
-    pub fn any_dev_issues(&self) -> bool {
-        self.dev
-            .iter()
-            .any(|(_, dep)| dep.is_outdated() || dep.is_insecure())
-    }
 }
 
 #[derive(Clone, Debug)]

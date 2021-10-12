@@ -115,11 +115,12 @@ impl AnalyzeDependenciesOutcome {
             .any(|&(_, ref deps)| deps.count_always_insecure() > 0)
     }
 
-    /// Checks if any dev-dependencies in the scanned crates are either outdated or insecure
-    pub fn any_dev_issues(&self) -> bool {
+    /// Returns the number of outdated main and dev dependencies
+    pub fn count_outdated(&self) -> usize {
         self.crates
             .iter()
-            .any(|&(_, ref deps)| deps.any_dev_issues())
+            .map(|&(_, ref deps)| deps.count_outdated())
+            .sum()
     }
 
     /// Returns the number of outdated dev-dependencies

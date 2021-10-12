@@ -158,13 +158,59 @@ fn render_title(subject_path: &SubjectPath) -> Markup {
     }
 }
 
-fn render_dev_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
-    let insecure = outcome.count_dev_insecure();
-    let outdated = outcome.count_dev_outdated();
-    let text = if insecure > 0 {
-        format!("{} insecure development dependencies", insecure)
+fn dependencies_pluralized(count: usize) -> &'static str {
+    if count == 1 {
+        "dependency"
     } else {
-        format!("{} outdated development dependencies", outdated)
+        "dependencies"
+    }
+}
+
+fn render_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
+    // assuming at least one issue in dependencies
+    // zero insecure main dependencies 
+    let insecure_dev = outcome.count_dev_insecure();
+    let outdated_dev = outcome.count_dev_outdated();
+    let outdated = outcome.count_outdated() - outdated_dev;
+
+    let text = match (insecure_dev > 0, outdated > 0, outdated_dev > 0) {
+        (true, false, false) => format!("{} insecure development {}", insecure_dev, dependencies_pluralized(insecure_dev)),
+        (false, true, false) => format!("{} outdated main {}", outdated, dependencies_pluralized(outdated)),
+        (false, false, true) => format!("{} outdated development {}", outdated_dev, dependencies_pluralized(outdated_dev)),
+
+        (true, true, false) => format!(
+            "{} insecure development {} and {} outdated main {}",
+            insecure_dev,
+            dependencies_pluralized(insecure_dev),
+            outdated,
+            dependencies_pluralized(outdated),
+        ),
+        
+        (true, false, true) => format!(
+            "{} insecure development {} and {} outdated development {}",
+            insecure_dev,
+            dependencies_pluralized(insecure_dev),
+            outdated_dev,
+            dependencies_pluralized(outdated_dev),
+        ),
+
+        (false, true, true) => format!(
+            "{} outdated main {} and {} outdated development {}",
+            outdated,
+            dependencies_pluralized(outdated),
+            outdated_dev,
+            dependencies_pluralized(outdated_dev),
+        ),
+
+        _ => format!(
+            "{} insecure development {}, {} outdated main {}, and {} outdated development {}",
+            insecure_dev,
+            dependencies_pluralized(insecure_dev),
+            outdated,
+            dependencies_pluralized(outdated),
+            outdated_dev,
+            dependencies_pluralized(outdated_dev),
+        ),
     };
 
     html! {
@@ -351,8 +397,8 @@ fn render_success(
                             a href="#vulnerabilities" { "bottom"} "."
                         }
                     }
-                } @else if analysis_outcome.any_dev_issues() {
-                    (render_dev_dependency_box(&analysis_outcome))
+                } @else if analysis_outcome.any_outdated() {
+                    (render_dependency_box(&analysis_outcome))
                 }
                 @for (crate_name, deps) in &analysis_outcome.crates {
                     (dependency_tables(crate_name, deps))
