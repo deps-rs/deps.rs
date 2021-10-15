@@ -158,14 +158,6 @@ fn render_title(subject_path: &SubjectPath) -> Markup {
     }
 }
 
-fn dependencies_pluralized(count: usize) -> &'static str {
-    if count == 1 {
-        "dependency"
-    } else {
-        "dependencies"
-    }
-}
-
 fn render_dependency_item(count: usize, middle: &str) -> Markup {
     match count {
         0 => html! {},
