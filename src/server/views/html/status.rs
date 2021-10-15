@@ -166,6 +166,18 @@ fn dependencies_pluralized(count: usize) -> &'static str {
     }
 }
 
+fn render_dependency_item(count: usize, middle: &str) -> Markup {
+    match count {
+        0 => html! {},
+        1 => html! {
+            li { b { (count) " " (middle) " " { "dependency" } } }
+        },
+        _ => html! {
+            li { b { (count) " " (middle) " " { "dependencies" } } }
+        },
+    }
+}
+
 fn render_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
     // assuming at least one issue in dependencies
     // zero insecure main dependencies
@@ -173,61 +185,14 @@ fn render_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
     let outdated_dev = outcome.count_dev_outdated();
     let outdated = outcome.count_outdated() - outdated_dev;
 
-    let text = match (insecure_dev > 0, outdated > 0, outdated_dev > 0) {
-        (true, false, false) => format!(
-            "{} insecure development {}",
-            insecure_dev,
-            dependencies_pluralized(insecure_dev)
-        ),
-        (false, true, false) => format!(
-            "{} outdated main {}",
-            outdated,
-            dependencies_pluralized(outdated)
-        ),
-        (false, false, true) => format!(
-            "{} outdated development {}",
-            outdated_dev,
-            dependencies_pluralized(outdated_dev)
-        ),
-
-        (true, true, false) => format!(
-            "{} insecure development {} and {} outdated main {}",
-            insecure_dev,
-            dependencies_pluralized(insecure_dev),
-            outdated,
-            dependencies_pluralized(outdated),
-        ),
-
-        (true, false, true) => format!(
-            "{} insecure development {} and {} outdated development {}",
-            insecure_dev,
-            dependencies_pluralized(insecure_dev),
-            outdated_dev,
-            dependencies_pluralized(outdated_dev),
-        ),
-
-        (false, true, true) => format!(
-            "{} outdated main {} and {} outdated development {}",
-            outdated,
-            dependencies_pluralized(outdated),
-            outdated_dev,
-            dependencies_pluralized(outdated_dev),
-        ),
-
-        _ => format!(
-            "{} insecure development {}, {} outdated main {}, and {} outdated development {}",
-            insecure_dev,
-            dependencies_pluralized(insecure_dev),
-            outdated,
-            dependencies_pluralized(outdated),
-            outdated_dev,
-            dependencies_pluralized(outdated_dev),
-        ),
-    };
-
     html! {
         div class="notification is-warning" {
-            p { "This project contains " b { (text) } "." }
+            p { "This project contains:" }
+            ul {
+                (render_dependency_item(outdated, "outdated main"))
+                (render_dependency_item(outdated_dev, "outdated development"))
+                (render_dependency_item(insecure_dev, "insecure development"))
+            }
         }
     }
 }
