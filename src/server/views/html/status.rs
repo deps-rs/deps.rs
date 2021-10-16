@@ -171,7 +171,7 @@ fn render_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
     // zero insecure main dependencies
     let insecure_dev = outcome.count_dev_insecure();
     let outdated_dev = outcome.count_dev_outdated();
-    let outdated = outcome.count_outdated() - outdated_dev;
+    let outdated = outcome.count_outdated();
 
     let components = [
         ("insecure development", insecure_dev),
