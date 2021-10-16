@@ -166,9 +166,15 @@ fn dependencies_pluralized(count: usize) -> &'static str {
     }
 }
 
+/// Renders a warning with the numbers of outdated dependencies (of both kinds)
+/// or insecure dev-dependencies.
+///
+/// The function assumes that there are no insecure main dependencies.
+/// If there is more than one kind of dependency with issues,
+/// an unordered list is rendered.
+/// Renders nothing if the counts of all three components are zero.
 fn render_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
-    // assuming at least one issue in dependencies
-    // zero insecure main dependencies
+    // assuming zero insecure main dependencies
     let insecure_dev = outcome.count_dev_insecure();
     let outdated_dev = outcome.count_dev_outdated();
     let outdated = outcome.count_outdated();
@@ -187,15 +193,17 @@ fn render_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
     })
     .collect::<Vec<_>>();
 
-    if components.len() == 1 {
-        let (c, kind, dep) = components[0];
-        html! {
-            div class="notification is-warning" {
-                p { "This project contains " b { (c) " " (kind) " " (dep) } "." }
+    match components.len() {
+        0 => html! {},
+        1 => {
+            let (c, kind, dep) = components[0];
+            html! {
+                div class="notification is-warning" {
+                    p { "This project contains " b { (c) " " (kind) " " (dep) } "." }
+                }
             }
         }
-    } else {
-        html! {
+        _ => html! {
             div class="notification is-warning" {
                 p { "This project contains:" }
                 ul {
@@ -204,7 +212,7 @@ fn render_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
                     }
                 }
             }
-        }
+        },
     }
 }
 
@@ -385,7 +393,7 @@ fn render_success(
                             a href="#vulnerabilities" { "bottom"} "."
                         }
                     }
-                } @else if analysis_outcome.any_outdated() {
+                } @else {
                     (render_dependency_box(&analysis_outcome))
                 }
                 @for (crate_name, deps) in &analysis_outcome.crates {
