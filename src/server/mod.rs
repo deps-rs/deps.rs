@@ -23,6 +23,7 @@ use crate::models::SubjectPath;
 enum StatusFormat {
     Html,
     Svg,
+    ShieldsIoJson,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -63,6 +64,10 @@ impl App {
             "/repo/:site/:qual/:name/status.svg",
             Route::RepoStatus(StatusFormat::Svg),
         );
+        router.add(
+            "/repo/:site/:qual/:name/shieldsio.json",
+            Route::RepoStatus(StatusFormat::ShieldsIoJson),
+        );
 
         router.add("/crate/:name", Route::CrateRedirect);
         router.add(
@@ -72,6 +77,10 @@ impl App {
         router.add(
             "/crate/:name/:version/status.svg",
             Route::CrateStatus(StatusFormat::Svg),
+        );
+        router.add(
+            "/crate/:name/:version/shieldsio.json",
+            Route::CrateStatus(StatusFormat::ShieldsIoJson),
         );
 
         App {
@@ -342,6 +351,7 @@ impl App {
         match format {
             StatusFormat::Svg => views::badge::response(analysis_outcome.as_ref()),
             StatusFormat::Html => views::html::status::render(analysis_outcome, subject_path),
+            StatusFormat::ShieldsIoJson => views::shieldsio::response(analysis_outcome.as_ref()),
         }
     }
 
