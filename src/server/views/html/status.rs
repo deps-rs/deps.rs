@@ -158,19 +158,61 @@ fn render_title(subject_path: &SubjectPath) -> Markup {
     }
 }
 
-fn render_dev_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
-    let insecure = outcome.count_dev_insecure();
-    let outdated = outcome.count_dev_outdated();
-    let text = if insecure > 0 {
-        format!("{} insecure development dependencies", insecure)
+fn dependencies_pluralized(count: usize) -> &'static str {
+    if count == 1 {
+        "dependency"
     } else {
-        format!("{} outdated development dependencies", outdated)
-    };
+        "dependencies"
+    }
+}
 
-    html! {
-        div class="notification is-warning" {
-            p { "This project contains " b { (text) } "." }
+/// Renders a warning with the numbers of outdated dependencies (of both kinds)
+/// or insecure dev-dependencies.
+///
+/// The function assumes that there are no insecure main dependencies.
+/// If there is more than one kind of dependency with issues,
+/// an unordered list is rendered.
+/// Renders nothing if the counts of all three components are zero.
+fn render_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
+    // assuming zero insecure main dependencies
+    let insecure_dev = outcome.count_dev_insecure();
+    let outdated_dev = outcome.count_dev_outdated();
+    let outdated = outcome.count_outdated();
+
+    let components = [
+        ("insecure development", insecure_dev),
+        ("outdated main", outdated),
+        ("outdated development", outdated_dev),
+    ]
+    .iter()
+    .copied()
+    .filter(|&(_, c)| c > 0)
+    .map(|(kind, c)| {
+        let pluralized = dependencies_pluralized(c);
+        (c, kind, pluralized)
+    })
+    .collect::<Vec<_>>();
+
+    match components.len() {
+        0 => html! {},
+        1 => {
+            let (c, kind, dep) = components[0];
+            html! {
+                div class="notification is-warning" {
+                    p { "This project contains " b { (c) " " (kind) " " (dep) } "." }
+                }
+            }
         }
+        _ => html! {
+            div class="notification is-warning" {
+                p { "This project contains:" }
+                ul {
+                    @for (c, kind, dep) in components {
+                        li { b { (c) " " (kind) " " (dep) } }
+                    }
+                }
+            }
+        },
     }
 }
 
@@ -351,8 +393,8 @@ fn render_success(
                             a href="#vulnerabilities" { "bottom"} "."
                         }
                     }
-                } @else if analysis_outcome.any_dev_issues() {
-                    (render_dev_dependency_box(&analysis_outcome))
+                } @else {
+                    (render_dependency_box(&analysis_outcome))
                 }
                 @for (crate_name, deps) in &analysis_outcome.crates {
                     (dependency_tables(crate_name, deps))

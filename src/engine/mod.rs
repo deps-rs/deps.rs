@@ -97,7 +97,7 @@ pub struct AnalyzeDependenciesOutcome {
 
 impl AnalyzeDependenciesOutcome {
     pub fn any_outdated(&self) -> bool {
-        self.crates.iter().any(|&(_, ref deps)| deps.any_outdated())
+        self.crates.iter().any(|(_, deps)| deps.any_outdated())
     }
 
     // TODO(feliix42): Why is this different from the any_outdated() function above?
@@ -105,28 +105,29 @@ impl AnalyzeDependenciesOutcome {
     pub fn any_insecure(&self) -> bool {
         self.crates
             .iter()
-            .any(|&(_, ref deps)| deps.count_insecure() > 0)
+            .any(|(_, deps)| deps.count_insecure() > 0)
     }
 
     /// Checks if any always insecure main or build dependencies exist in the scanned crates
     pub fn any_always_insecure(&self) -> bool {
         self.crates
             .iter()
-            .any(|&(_, ref deps)| deps.count_always_insecure() > 0)
+            .any(|(_, deps)| deps.count_always_insecure() > 0)
     }
 
-    /// Checks if any dev-dependencies in the scanned crates are either outdated or insecure
-    pub fn any_dev_issues(&self) -> bool {
+    /// Returns the number of outdated main and dev dependencies
+    pub fn count_outdated(&self) -> usize {
         self.crates
             .iter()
-            .any(|&(_, ref deps)| deps.any_dev_issues())
+            .map(|(_, deps)| deps.count_outdated())
+            .sum()
     }
 
     /// Returns the number of outdated dev-dependencies
     pub fn count_dev_outdated(&self) -> usize {
         self.crates
             .iter()
-            .map(|&(_, ref deps)| deps.count_dev_outdated())
+            .map(|(_, deps)| deps.count_dev_outdated())
             .sum()
     }
 
@@ -134,7 +135,7 @@ impl AnalyzeDependenciesOutcome {
     pub fn count_dev_insecure(&self) -> usize {
         self.crates
             .iter()
-            .map(|&(_, ref deps)| deps.count_dev_insecure())
+            .map(|(_, deps)| deps.count_dev_insecure())
             .sum()
     }
 
@@ -142,7 +143,7 @@ impl AnalyzeDependenciesOutcome {
     pub fn outdated_ratio(&self) -> (usize, usize) {
         self.crates
             .iter()
-            .fold((0, 0), |(outdated, total), &(_, ref deps)| {
+            .fold((0, 0), |(outdated, total), (_, deps)| {
                 (outdated + deps.count_outdated(), total + deps.count_total())
             })
     }
