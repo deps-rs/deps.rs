@@ -6,7 +6,7 @@ authors = ["Onur Aslan <onur@onur.im>"]
 license-file = "LICENSE"
 repository = "https://github.com/onur/docs.rs"
 documentation = "https://docs.rs/badge"
-edition = "2018"
+edition = "2021"
 
 [lib]
 path = "badge.rs"
