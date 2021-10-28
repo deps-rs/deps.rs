@@ -1,9 +1,9 @@
-FROM rust:latest as build
+FROM rust:bullseye as build
 
 COPY . /src
 RUN cargo install --path /src
 
-FROM debian:buster
+FROM debian:bullseye
 
 LABEL org.opencontainers.image.source https://github.com/deps-rs/deps.rs
 
