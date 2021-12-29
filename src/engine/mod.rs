@@ -34,7 +34,7 @@ use self::fut::{analyze_dependencies, crawl_manifest};
 pub struct Engine {
     client: reqwest::Client,
     logger: Logger,
-    metrics: StatsdClient,
+    metrics: Arc<StatsdClient>,
     query_crate: Cache<QueryCrate, CrateName>,
     get_popular_crates: Cache<GetPopularCrates, ()>,
     get_popular_repos: Cache<GetPopularRepos, ()>,
@@ -44,7 +44,7 @@ pub struct Engine {
 
 impl Engine {
     pub fn new(client: reqwest::Client, index: Index, logger: Logger) -> Engine {
-        let metrics = StatsdClient::from_sink("engine", NopMetricSink);
+        let metrics = Arc::new(StatsdClient::from_sink("engine", NopMetricSink));
 
         let query_crate = Cache::new(
             QueryCrate::new(index),
@@ -85,7 +85,7 @@ impl Engine {
     }
 
     pub fn set_metrics<M: MetricSink + Send + Sync + RefUnwindSafe + 'static>(&mut self, sink: M) {
-        self.metrics = StatsdClient::from_sink("engine", sink);
+        self.metrics = Arc::new(StatsdClient::from_sink("engine", sink));
     }
 }
 
