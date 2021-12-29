@@ -15,25 +15,6 @@ use crate::{
 
 const CRATES_API_BASE_URI: &str = "https://crates.io/api/v1";
 
-#[derive(Deserialize, Debug)]
-struct RegistryPackageDep {
-    name: String,
-    req: VersionReq,
-    #[serde(default)]
-    kind: Option<String>,
-    #[serde(default)]
-    package: Option<String>,
-}
-
-#[derive(Deserialize, Debug)]
-struct RegistryPackage {
-    vers: Version,
-    #[serde(default)]
-    deps: Vec<RegistryPackageDep>,
-    #[serde(default)]
-    yanked: bool,
-}
-
 fn convert_pkgs(krate: Crate) -> Result<QueryCrateResponse, Error> {
     let name: CrateName = krate.name().parse()?;
 

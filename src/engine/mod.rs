@@ -32,8 +32,6 @@ use self::fut::{analyze_dependencies, crawl_manifest};
 
 #[derive(Clone, Debug)]
 pub struct Engine {
-    client: reqwest::Client,
-    logger: Logger,
     metrics: Arc<StatsdClient>,
     query_crate: Cache<QueryCrate, CrateName>,
     get_popular_crates: Cache<GetPopularCrates, ()>,
@@ -66,15 +64,13 @@ impl Engine {
         );
         let retrieve_file_at_path = RetrieveFileAtPath::new(client.clone());
         let fetch_advisory_db = Cache::new(
-            FetchAdvisoryDatabase::new(client.clone()),
+            FetchAdvisoryDatabase::new(client),
             Duration::from_secs(1800),
             1,
-            logger.clone(),
+            logger,
         );
 
         Engine {
-            client,
-            logger,
             metrics,
             query_crate,
             get_popular_crates,
