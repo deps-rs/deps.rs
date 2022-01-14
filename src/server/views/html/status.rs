@@ -126,9 +126,9 @@ fn get_site_icon(site: &RepoSite) -> (FaType, &'static str) {
         RepoSite::Github => (FaType::Brands, "github"),
         RepoSite::Gitlab => (FaType::Brands, "gitlab"),
         RepoSite::Bitbucket => (FaType::Brands, "bitbucket"),
-        // FIXME: There is no brands/sourcehut icon, so just use a regular
-        // circle which looks pretty much like sr.ht's circle.
-        RepoSite::Sourcehut => (FaType::Regular, "circle"),
+        // FIXME: There is no brands/sourcehut/codeberg icon, so just use a
+        // regular circle which looks close enough.
+        RepoSite::Sourcehut | RepoSite::Codeberg => (FaType::Regular, "circle"),
     }
 }
 

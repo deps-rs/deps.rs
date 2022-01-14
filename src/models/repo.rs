@@ -55,6 +55,7 @@ pub enum RepoSite {
     Gitlab,
     Bitbucket,
     Sourcehut,
+    Codeberg,
 }
 
 impl RepoSite {
@@ -64,6 +65,7 @@ impl RepoSite {
             RepoSite::Gitlab => "https://gitlab.com",
             RepoSite::Bitbucket => "https://bitbucket.org",
             RepoSite::Sourcehut => "https://git.sr.ht",
+            RepoSite::Codeberg => "https://codeberg.org",
         }
     }
 
@@ -73,12 +75,13 @@ impl RepoSite {
             RepoSite::Gitlab => "https://gitlab.com",
             RepoSite::Bitbucket => "https://bitbucket.org",
             RepoSite::Sourcehut => "https://git.sr.ht",
+            RepoSite::Codeberg => "https://codeberg.org",
         }
     }
 
     pub fn to_usercontent_repo_suffix(self) -> &'static str {
         match self {
-            RepoSite::Github => "HEAD",
+            RepoSite::Github | RepoSite::Codeberg => "HEAD",
             RepoSite::Gitlab | RepoSite::Bitbucket => "raw/HEAD",
             RepoSite::Sourcehut => "blob/HEAD",
         }
@@ -94,6 +97,7 @@ impl FromStr for RepoSite {
             "gitlab" => Ok(RepoSite::Gitlab),
             "bitbucket" => Ok(RepoSite::Bitbucket),
             "sourcehut" => Ok(RepoSite::Sourcehut),
+            "codeberg" => Ok(RepoSite::Codeberg),
             _ => Err(anyhow!("unknown repo site identifier")),
         }
     }
@@ -106,6 +110,7 @@ impl AsRef<str> for RepoSite {
             RepoSite::Gitlab => "gitlab",
             RepoSite::Bitbucket => "bitbucket",
             RepoSite::Sourcehut => "sourcehut",
+            RepoSite::Codeberg => "codeberg",
         }
     }
 }
