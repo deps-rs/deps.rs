@@ -1,5 +1,5 @@
 use anyhow::Error;
-use futures::StreamExt;
+use futures_util::StreamExt as _;
 
 use crate::{
     engine::machines::analyzer::DependencyAnalyzer,

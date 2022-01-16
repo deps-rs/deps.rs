@@ -8,14 +8,17 @@ use std::{
 use anyhow::{anyhow, Error};
 use cadence::{MetricSink, NopMetricSink, StatsdClient};
 use crates_index::Index;
-use futures::{future::try_join_all, stream, StreamExt};
+use futures_util::{
+    future::try_join_all,
+    stream::{self, BoxStream},
+    StreamExt as _,
+};
 use hyper::service::Service;
 use once_cell::sync::Lazy;
 use relative_path::{RelativePath, RelativePathBuf};
 use rustsec::database::Database;
 use semver::VersionReq;
 use slog::Logger;
-use stream::BoxStream;
 
 use crate::interactors::crates::{GetPopularCrates, QueryCrate};
 use crate::interactors::github::GetPopularRepos;

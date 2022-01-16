@@ -1,5 +1,5 @@
 use anyhow::Error;
-use futures::{future::BoxFuture, stream::FuturesOrdered, FutureExt as _, StreamExt as _};
+use futures_util::{future::BoxFuture, stream::FuturesOrdered, FutureExt as _, StreamExt as _};
 use relative_path::RelativePathBuf;
 
 use crate::models::repo::RepoPath;

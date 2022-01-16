@@ -1,6 +1,6 @@
 use std::{env, sync::Arc, time::Instant};
 
-use futures::future;
+use futures_util::future;
 use hyper::{
     header::{CACHE_CONTROL, CONTENT_TYPE, ETAG, LOCATION},
     Body, Error as HyperError, Method, Request, Response, StatusCode,
