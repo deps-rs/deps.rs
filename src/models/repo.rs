@@ -81,9 +81,10 @@ impl RepoSite {
 
     pub fn to_usercontent_repo_suffix(self) -> &'static str {
         match self {
-            RepoSite::Github | RepoSite::Codeberg => "HEAD",
+            RepoSite::Github => "HEAD",
             RepoSite::Gitlab | RepoSite::Bitbucket => "raw/HEAD",
             RepoSite::Sourcehut => "blob/HEAD",
+            RepoSite::Codeberg => "raw",
         }
     }
 }
@@ -204,6 +205,14 @@ mod tests {
                 "https://bitbucket.org/deps-rs/deps.rs/raw/HEAD/{}",
                 expected
             );
+            assert_eq!(out.to_string(), exp);
+        }
+
+        for (input, expected) in &paths {
+            let repo = RepoPath::from_parts("codeberg", "deps-rs", "deps.rs").unwrap();
+            let out = repo.to_usercontent_file_url(RelativePath::new(input));
+
+            let exp = format!("https://codeberg.org/deps-rs/deps.rs/raw/{}", expected);
             assert_eq!(out.to_string(), exp);
         }
     }
