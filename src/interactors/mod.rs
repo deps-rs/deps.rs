@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Error};
-use futures::FutureExt as _;
+use futures_util::FutureExt as _;
 use hyper::service::Service;
 use relative_path::RelativePathBuf;
 
