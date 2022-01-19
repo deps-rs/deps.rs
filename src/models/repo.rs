@@ -55,6 +55,7 @@ pub enum RepoSite {
     Gitlab,
     Bitbucket,
     Sourcehut,
+    Codeberg,
 }
 
 impl RepoSite {
@@ -64,6 +65,7 @@ impl RepoSite {
             RepoSite::Gitlab => "https://gitlab.com",
             RepoSite::Bitbucket => "https://bitbucket.org",
             RepoSite::Sourcehut => "https://git.sr.ht",
+            RepoSite::Codeberg => "https://codeberg.org",
         }
     }
 
@@ -73,6 +75,7 @@ impl RepoSite {
             RepoSite::Gitlab => "https://gitlab.com",
             RepoSite::Bitbucket => "https://bitbucket.org",
             RepoSite::Sourcehut => "https://git.sr.ht",
+            RepoSite::Codeberg => "https://codeberg.org",
         }
     }
 
@@ -81,6 +84,7 @@ impl RepoSite {
             RepoSite::Github => "HEAD",
             RepoSite::Gitlab | RepoSite::Bitbucket => "raw/HEAD",
             RepoSite::Sourcehut => "blob/HEAD",
+            RepoSite::Codeberg => "raw",
         }
     }
 }
@@ -94,6 +98,7 @@ impl FromStr for RepoSite {
             "gitlab" => Ok(RepoSite::Gitlab),
             "bitbucket" => Ok(RepoSite::Bitbucket),
             "sourcehut" => Ok(RepoSite::Sourcehut),
+            "codeberg" => Ok(RepoSite::Codeberg),
             _ => Err(anyhow!("unknown repo site identifier")),
         }
     }
@@ -106,6 +111,7 @@ impl AsRef<str> for RepoSite {
             RepoSite::Gitlab => "gitlab",
             RepoSite::Bitbucket => "bitbucket",
             RepoSite::Sourcehut => "sourcehut",
+            RepoSite::Codeberg => "codeberg",
         }
     }
 }
@@ -199,6 +205,14 @@ mod tests {
                 "https://bitbucket.org/deps-rs/deps.rs/raw/HEAD/{}",
                 expected
             );
+            assert_eq!(out.to_string(), exp);
+        }
+
+        for (input, expected) in &paths {
+            let repo = RepoPath::from_parts("codeberg", "deps-rs", "deps.rs").unwrap();
+            let out = repo.to_usercontent_file_url(RelativePath::new(input));
+
+            let exp = format!("https://codeberg.org/deps-rs/deps.rs/raw/{}", expected);
             assert_eq!(out.to_string(), exp);
         }
     }
