@@ -3,6 +3,7 @@
 use base64::display::Base64Display;
 use once_cell::sync::Lazy;
 use rusttype::{point, Font, Point, PositionedGlyph, Scale};
+use serde::Deserialize;
 
 const FONT_DATA: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/DejaVuSans.ttf"));
 const FONT_SIZE: f32 = 11.;
@@ -11,13 +12,37 @@ const SCALE: Scale = Scale {
     y: FONT_SIZE,
 };
 
+/// Badge style name.
+///
+/// Default style is "flat".
+///
+/// Matches style names from shields.io.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum BadgeStyle {
+    Flat,
+    FlatSquare,
+}
+
+impl Default for BadgeStyle {
+    fn default() -> Self {
+        Self::Flat
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct BadgeOptions {
     /// Subject will be displayed on the left side of badge
     pub subject: String,
+
     /// Status will be displayed on the right side of badge
     pub status: String,
+
     /// HTML color of badge
     pub color: String,
+
+    /// Style of badge.
+    pub style: BadgeStyle,
 }
 
 impl Default for BadgeOptions {
@@ -26,6 +51,7 @@ impl Default for BadgeOptions {
             subject: "build".to_owned(),
             status: "passing".to_owned(),
             color: "#4c1".to_owned(),
+            style: BadgeStyle::Flat,
         }
     }
 }
@@ -66,48 +92,78 @@ impl Badge {
     }
 
     pub fn to_svg(&self) -> String {
+        match self.options.style {
+            BadgeStyle::Flat => self.to_flat_svg(),
+            BadgeStyle::FlatSquare => self.to_flat_square_svg(),
+        }
+    }
+
+    pub fn to_flat_svg(&self) -> String {
         let left_width = self.calculate_width(&self.options.subject) + 6;
         let right_width = self.calculate_width(&self.options.status) + 6;
+        let total_width = left_width + right_width;
+
+        let left_center = left_width / 2;
+        let right_center = left_width + (right_width / 2);
+
+        let color = &self.options.color;
+        let subject = &self.options.subject;
+        let status = &self.options.status;
 
         let svg = format!(
-            r###"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{}" height="20">
+            r###"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{total_width}" height="20">
   <linearGradient id="smooth" x2="0" y2="100%">
     <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
     <stop offset="1" stop-opacity=".1"/>
   </linearGradient>
 
   <mask id="round">
-    <rect width="{}" height="20" rx="3" fill="#fff"/>
+    <rect width="{total_width}" height="20" rx="3" fill="#fff"/>
   </mask>
 
   <g mask="url(#round)">
-    <rect width="{}" height="20" fill="#555"/>
-    <rect x="{}" width="{}" height="20" fill="{}"/>
-    <rect width="{}" height="20" fill="url(#smooth)"/>
+    <rect width="{left_width}" height="20" fill="#555"/>
+    <rect width="{right_width}" height="20" x="{left_width}" fill="{color}"/>
+    <rect width="{total_width}" height="20" fill="url(#smooth)"/>
   </g>
 
   <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
-    <text x="{}" y="15" fill="#010101" fill-opacity=".3">{}</text>
-    <text x="{}" y="14">{}</text>
-    <text x="{}" y="15" fill="#010101" fill-opacity=".3">{}</text>
-    <text x="{}" y="14">{}</text>
+    <text x="{left_center}" y="15" fill="#010101" fill-opacity=".3">{subject}</text>
+    <text x="{left_center}" y="14">{subject}</text>
+    <text x="{right_center}" y="15" fill="#010101" fill-opacity=".3">{status}</text>
+    <text x="{right_center}" y="14">{status}</text>
   </g>
-</svg>"###,
-            left_width + right_width,
-            left_width + right_width,
-            left_width,
-            left_width,
-            right_width,
-            self.options.color,
-            left_width + right_width,
-            (left_width) / 2,
-            self.options.subject,
-            (left_width) / 2,
-            self.options.subject,
-            left_width + (right_width / 2),
-            self.options.status,
-            left_width + (right_width / 2),
-            self.options.status
+</svg>"###
+        );
+
+        svg
+    }
+
+    pub fn to_flat_square_svg(&self) -> String {
+        let left_width = self.calculate_width(&self.options.subject) + 6;
+        let right_width = self.calculate_width(&self.options.status) + 6;
+        let total_width = left_width + right_width;
+
+        let left_center = left_width / 2;
+        let right_center = left_width + (right_width / 2);
+
+        let color = &self.options.color;
+        let subject = &self.options.subject;
+        let status = &self.options.status;
+
+        let svg = format!(
+            r###"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{total_width}" height="20">
+  <g mask="url(#round)">
+    <rect width="{left_width}" height="20" fill="#555"/>
+    <rect width="{right_width}" height="20" x="{left_width}" fill="{color}"/>
+  </g>
+
+  <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+    <text x="{left_center}" y="14">{subject}</text>
+    <text x="{right_center}" y="14">{status}</text>
+  </g>
+</svg>
+"###,
         );
 
         svg
@@ -157,5 +213,19 @@ mod tests {
         };
         let badge = Badge::new(options);
         file.write_all(badge.to_svg().as_bytes()).unwrap();
+    }
+
+    #[test]
+    fn deserialize_badge_style() {
+        #[derive(Debug, Deserialize)]
+        struct Foo {
+            style: BadgeStyle,
+        }
+
+        let style = serde_urlencoded::from_str::<Foo>("style=flat").unwrap();
+        assert_eq!(style.style, BadgeStyle::Flat);
+
+        let style = serde_urlencoded::from_str::<Foo>("style=flat-square").unwrap();
+        assert_eq!(style.style, BadgeStyle::FlatSquare);
     }
 }

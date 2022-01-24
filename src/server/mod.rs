@@ -1,5 +1,6 @@
 use std::{env, sync::Arc, time::Instant};
 
+use badge::BadgeStyle;
 use futures_util::future;
 use hyper::{
     header::{CACHE_CONTROL, CONTENT_TYPE, ETAG, LOCATION},
@@ -8,6 +9,7 @@ use hyper::{
 use once_cell::sync::Lazy;
 use route_recognizer::{Params, Router};
 use semver::VersionReq;
+use serde::Deserialize;
 use slog::{error, info, o, Logger};
 
 mod assets;
@@ -162,7 +164,7 @@ impl App {
 
     async fn repo_status(
         &self,
-        _req: Request<Body>,
+        req: Request<Body>,
         params: Params,
         logger: Logger,
         format: StatusFormat,
@@ -172,6 +174,8 @@ impl App {
         let site = params.find("site").expect("route param 'site' not found");
         let qual = params.find("qual").expect("route param 'qual' not found");
         let name = params.find("name").expect("route param 'name' not found");
+
+        let badge_knobs = BadgeKnobs::from_query_string(req.uri().query());
 
         let repo_path_result = RepoPath::from_parts(site, qual, name);
 
@@ -195,8 +199,12 @@ impl App {
                 match analyze_result {
                     Err(err) => {
                         error!(logger, "error: {}", err);
-                        let response =
-                            App::status_format_analysis(None, format, SubjectPath::Repo(repo_path));
+                        let response = App::status_format_analysis(
+                            None,
+                            format,
+                            SubjectPath::Repo(repo_path),
+                            badge_knobs,
+                        );
                         Ok(response)
                     }
                     Ok(analysis_outcome) => {
@@ -204,6 +212,7 @@ impl App {
                             Some(analysis_outcome),
                             format,
                             SubjectPath::Repo(repo_path),
+                            badge_knobs,
                         );
                         Ok(response)
                     }
@@ -280,7 +289,7 @@ impl App {
 
     async fn crate_status(
         &self,
-        _req: Request<Body>,
+        req: Request<Body>,
         params: Params,
         logger: Logger,
         format: StatusFormat,
@@ -291,6 +300,8 @@ impl App {
         let version = params
             .find("version")
             .expect("route param 'version' not found");
+
+        let badge_knobs = BadgeKnobs::from_query_string(req.uri().query());
 
         let crate_path_result = CratePath::from_parts(name, version);
 
@@ -317,6 +328,7 @@ impl App {
                             None,
                             format,
                             SubjectPath::Crate(crate_path),
+                            badge_knobs,
                         );
                         Ok(response)
                     }
@@ -325,6 +337,7 @@ impl App {
                             Some(analysis_outcome),
                             format,
                             SubjectPath::Crate(crate_path),
+                            badge_knobs,
                         );
 
                         Ok(response)
@@ -338,9 +351,10 @@ impl App {
         analysis_outcome: Option<AnalyzeDependenciesOutcome>,
         format: StatusFormat,
         subject_path: SubjectPath,
+        badge_knobs: BadgeKnobs,
     ) -> Response<Body> {
         match format {
-            StatusFormat::Svg => views::badge::response(analysis_outcome.as_ref()),
+            StatusFormat::Svg => views::badge::response(analysis_outcome.as_ref(), badge_knobs),
             StatusFormat::Html => views::html::status::render(analysis_outcome, subject_path),
         }
     }
@@ -367,3 +381,28 @@ fn not_found() -> Response<Body> {
 
 static SELF_BASE_URL: Lazy<String> =
     Lazy::new(|| env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string()));
+
+#[derive(Debug, Clone, Default)]
+pub struct BadgeKnobs {
+    style: BadgeStyle,
+    compact: bool,
+}
+
+impl BadgeKnobs {
+    fn from_query_string(qs: Option<&str>) -> Self {
+        #[derive(Debug, Clone, Default, Deserialize)]
+        struct BadgeKnobsPartial {
+            style: Option<BadgeStyle>,
+            compact: Option<bool>,
+        }
+
+        let badge_knobs = qs
+            .and_then(|qs| serde_urlencoded::from_str::<BadgeKnobsPartial>(qs).ok())
+            .unwrap_or_default();
+
+        Self {
+            style: badge_knobs.style.unwrap_or_default(),
+            compact: badge_knobs.compact.unwrap_or_default(),
+        }
+    }
+}

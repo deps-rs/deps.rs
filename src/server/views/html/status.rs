@@ -11,6 +11,7 @@ use crate::models::crates::{AnalyzedDependencies, AnalyzedDependency, CrateName}
 use crate::models::repo::RepoSite;
 use crate::models::SubjectPath;
 use crate::server::views::badge;
+use crate::server::BadgeKnobs;
 
 fn get_crates_url(name: impl AsRef<str>) -> String {
     format!("https://crates.io/crates/{}", name.as_ref())
@@ -343,7 +344,8 @@ fn render_success(
     };
     let status_base_url = format!("{}/{}", &super::SELF_BASE_URL as &str, self_path);
 
-    let status_data_uri = badge::badge(Some(&analysis_outcome)).to_svg_data_uri();
+    let status_data_uri =
+        badge::badge(Some(&analysis_outcome), BadgeKnobs::default()).to_svg_data_uri();
 
     let hero_class = if analysis_outcome.any_always_insecure() {
         "is-danger"
