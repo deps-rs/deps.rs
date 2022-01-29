@@ -15,7 +15,14 @@ To analyze the state of your dependencies you can use the following URLs:
 - for projects on crates.io: `https://deps.rs/crate/<NAME>`
 - for projects on Github, Gitlab, Bitbucket, SourceHut, or Codeberg: `https://deps.rs/repo/<HOSTER>/<USER>/<REPO>` (where `<HOSTER>` is either `github`, `gitlab`, `bitbucket`, `sourcehut`, or `codeberg`)
 
+## Badges
+
 On the analysis page, you will also find the markdown code to include a fancy badge in your project README so visitors (and you) can see at a glance if your dependencies are still up to date!
+
+Badges have a few style options, specified with query parameters, that match the styles from `shields.io`:
+- `?style=flat` (default)
+- `?style=flat-square`
+- `?style=for-the-badge`
 
 ## Contributing
 

@@ -22,6 +22,7 @@ const SCALE: Scale = Scale {
 pub enum BadgeStyle {
     Flat,
     FlatSquare,
+    ForTheBadge,
 }
 
 impl Default for BadgeStyle {
@@ -95,6 +96,7 @@ impl Badge {
         match self.options.style {
             BadgeStyle::Flat => self.to_flat_svg(),
             BadgeStyle::FlatSquare => self.to_flat_square_svg(),
+            BadgeStyle::ForTheBadge => self.to_for_the_badge_svg(),
         }
     }
 
@@ -127,7 +129,7 @@ impl Badge {
     <rect width="{total_width}" height="20" fill="url(#smooth)"/>
   </g>
 
-  <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+  <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11" text-rendering="geometricPrecision">
     <text x="{left_center}" y="15" fill="#010101" fill-opacity=".3">{subject}</text>
     <text x="{left_center}" y="14">{subject}</text>
     <text x="{right_center}" y="15" fill="#010101" fill-opacity=".3">{status}</text>
@@ -152,8 +154,8 @@ impl Badge {
         let status = &self.options.status;
 
         let svg = format!(
-            r###"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{total_width}" height="20">
-  <g mask="url(#round)">
+            r###"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{total_width}" height="20" text-rendering="geometricPrecision">
+  <g>
     <rect width="{left_width}" height="20" fill="#555"/>
     <rect width="{right_width}" height="20" x="{left_width}" fill="{color}"/>
   </g>
@@ -161,6 +163,36 @@ impl Badge {
   <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
     <text x="{left_center}" y="14">{subject}</text>
     <text x="{right_center}" y="14">{status}</text>
+  </g>
+</svg>
+"###,
+        );
+
+        svg
+    }
+
+    pub fn to_for_the_badge_svg(&self) -> String {
+        let left_width = self.calculate_width(&self.options.subject) + 38;
+        let right_width = self.calculate_width(&self.options.status) + 38;
+        let total_width = left_width + right_width;
+
+        let left_center = left_width / 2;
+        let right_center = left_width + (right_width / 2);
+
+        let color = &self.options.color;
+        let subject = self.options.subject.to_uppercase();
+        let status = self.options.status.to_uppercase();
+
+        let svg = format!(
+            r###"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{total_width}" height="28">
+  <g>
+    <rect width="{left_width}" height="28" fill="#555"/>
+    <rect width="{right_width}" height="28" x="{left_width}" fill="{color}"/>
+  </g>
+
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="10" text-rendering="geometricPrecision">
+    <text x="{left_center}" y="18" letter-spacing="1">{subject}</text>
+    <text x="{right_center}" y="18" font-weight="bold" letter-spacing="1">{status}</text>
   </g>
 </svg>
 "###,
@@ -207,9 +239,10 @@ mod tests {
         use std::io::Write;
         let mut file = File::create("test.svg").unwrap();
         let options = BadgeOptions {
-            subject: "build".to_owned(),
-            status: "passing".to_owned(),
-            ..BadgeOptions::default()
+            subject: "latest".to_owned(),
+            status: "v4.0.0-beta.21".to_owned(),
+            style: BadgeStyle::ForTheBadge,
+            color: "#fe7d37".to_owned(),
         };
         let badge = Badge::new(options);
         file.write_all(badge.to_svg().as_bytes()).unwrap();
