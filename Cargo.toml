@@ -14,7 +14,7 @@ members = [
 badge = { path = "./libs/badge" }
 
 anyhow = "1"
-cadence = "0.28"
+cadence = "0.29"
 crates-index = "0.17"
 derive_more = "0.99"
 font-awesome-as-a-crate = "0.2"
