@@ -276,11 +276,11 @@ impl Engine {
         let manifest_path = path.join(RelativePath::new("Cargo.toml"));
 
         let mut service = self.retrieve_file_at_path.clone();
-        Ok(service.call((repo_path.clone(), manifest_path)).await?)
+        service.call((repo_path.clone(), manifest_path)).await
     }
 
     async fn fetch_advisory_db(&self) -> Result<Arc<Database>, Error> {
-        Ok(self.fetch_advisory_db.cached_query(()).await?)
+        self.fetch_advisory_db.cached_query(()).await
     }
 }
 
