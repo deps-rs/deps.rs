@@ -40,15 +40,11 @@ impl DependencyAnalyzer {
 
             let name: cargo_lock::Name = name.as_ref().parse().unwrap();
             let version: cargo_lock::Version = ver.to_string().parse().unwrap();
-            let query = database::Query::new().package_version(name, version);
+            let query = database::Query::crate_scope().package_version(name, version);
 
             if let Some(db) = advisory_db {
-                let vulnerabilities: Vec<_> = db
-                    .query(&query)
-                    .into_iter()
-                    .filter(|vuln| !vuln.withdrawn())
-                    .map(|v| v.to_owned())
-                    .collect();
+                let vulnerabilities: Vec<_> =
+                    db.query(&query).into_iter().map(|v| v.to_owned()).collect();
                 if !vulnerabilities.is_empty() {
                     dep.vulnerabilities = vulnerabilities;
                 }
