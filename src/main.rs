@@ -71,18 +71,15 @@ async fn main() {
 
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
 
-    let mut managed_index = ManagedIndex::new(Duration::from_secs(20), logger.clone());
-    if let Err(err) = managed_index.initial_clone().await {
-        error!(
-            logger,
-            "failed running initial clone of the crates.io-index: {err}",
-        );
-    }
+    let index = ManagedIndex::new(logger.clone());
 
-    let index = managed_index.index();
-    tokio::spawn(async move {
-        managed_index.refresh_at_interval().await;
-    });
+    {
+        let index = index.clone();
+
+        tokio::spawn(async move {
+            index.refresh_at_interval(Duration::from_secs(20)).await;
+        });
+    }
 
     let mut engine = Engine::new(client.clone(), index, logger.new(o!()));
     engine.set_metrics(metrics);

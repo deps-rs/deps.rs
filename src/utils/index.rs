@@ -1,49 +1,37 @@
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
 
-use anyhow::{Error, Result};
+use crate::models::crates::CrateName;
+use anyhow::Result;
+use crates_index::Crate;
 use crates_index::Index;
-use slog::{error, info, Logger};
+use slog::{error, Logger};
 use tokio::task::spawn_blocking;
-use tokio::time::{self, Interval};
+use tokio::time;
 
+#[derive(Clone)]
 pub struct ManagedIndex {
-    index: Index,
-    update_interval: Interval,
+    index: Arc<Mutex<Index>>,
     logger: Logger,
 }
 
 impl ManagedIndex {
-    pub fn new(update_interval: Duration, logger: Logger) -> Self {
+    pub fn new(logger: Logger) -> Self {
         // the index path is configurable through the `CARGO_HOME` env variable
-        let index = Index::new_cargo_default();
-        let update_interval = time::interval(update_interval);
-        Self {
-            index,
-            update_interval,
-            logger,
-        }
+        let index = Arc::new(Mutex::new(Index::new_cargo_default().unwrap()));
+        Self { index, logger }
     }
 
-    pub fn index(&self) -> Index {
-        self.index.clone()
+    pub fn crate_(&self, crate_name: CrateName) -> Option<Crate> {
+        let index = self.index.lock().unwrap();
+
+        index.crate_(crate_name.as_ref())
     }
 
-    pub async fn initial_clone(&mut self) -> Result<()> {
-        let index = self.index();
-        let logger = self.logger.clone();
+    pub async fn refresh_at_interval(&self, update_interval: Duration) {
+        let mut update_interval = time::interval(update_interval);
 
-        spawn_blocking(move || {
-            if !index.exists() {
-                info!(logger, "Cloning crates.io-index");
-                index.retrieve()?;
-            }
-            Ok::<_, Error>(())
-        })
-        .await??;
-        Ok(())
-    }
-
-    pub async fn refresh_at_interval(&mut self) {
         loop {
             if let Err(e) = self.refresh().await {
                 error!(
@@ -51,14 +39,19 @@ impl ManagedIndex {
                     "failed refreshing the crates.io-index, the operation will be retried: {}", e
                 );
             }
-            self.update_interval.tick().await;
+            update_interval.tick().await;
         }
     }
 
     async fn refresh(&self) -> Result<()> {
-        let index = self.index();
+        let index = Arc::clone(&self.index);
 
-        spawn_blocking(move || index.retrieve_or_update()).await??;
+        spawn_blocking(move || {
+            let mut index = index.lock().unwrap();
+
+            index.update()
+        })
+        .await??;
         Ok(())
     }
 }
