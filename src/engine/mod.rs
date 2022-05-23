@@ -7,7 +7,7 @@ use std::{
 
 use anyhow::{anyhow, Error};
 use cadence::{MetricSink, NopMetricSink, StatsdClient};
-use crates_index::Index;
+
 use futures_util::{
     future::try_join_all,
     stream::{self, BoxStream},
@@ -27,6 +27,7 @@ use crate::interactors::RetrieveFileAtPath;
 use crate::models::crates::{AnalyzedDependencies, CrateName, CratePath, CrateRelease};
 use crate::models::repo::{RepoPath, Repository};
 use crate::utils::cache::Cache;
+use crate::ManagedIndex;
 
 mod fut;
 mod machines;
@@ -44,7 +45,7 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn new(client: reqwest::Client, index: Index, logger: Logger) -> Engine {
+    pub fn new(client: reqwest::Client, index: ManagedIndex, logger: Logger) -> Engine {
         let metrics = Arc::new(StatsdClient::from_sink("engine", NopMetricSink));
 
         let query_crate = Cache::new(

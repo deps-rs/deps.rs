@@ -40,7 +40,9 @@ impl DependencyAnalyzer {
 
             let name: cargo_lock::Name = name.as_ref().parse().unwrap();
             let version: cargo_lock::Version = ver.to_string().parse().unwrap();
-            let query = database::Query::crate_scope().package_version(name, version);
+            let query = database::Query::crate_scope()
+                .package_name(name)
+                .package_version(version);
 
             if let Some(db) = advisory_db {
                 let vulnerabilities: Vec<_> =

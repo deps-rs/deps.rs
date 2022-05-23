@@ -1,16 +1,17 @@
 use std::{fmt, str, task::Context, task::Poll};
 
 use anyhow::{anyhow, Error};
-use crates_index::{Crate, DependencyKind, Index};
+use crates_index::{Crate, DependencyKind};
 use futures_util::FutureExt as _;
 use hyper::service::Service;
 use semver::{Version, VersionReq};
 use serde::Deserialize;
+
 use tokio::task::spawn_blocking;
 
 use crate::{
     models::crates::{CrateDep, CrateDeps, CrateName, CratePath, CrateRelease},
-    BoxFuture,
+    BoxFuture, ManagedIndex,
 };
 
 const CRATES_API_BASE_URI: &str = "https://crates.io/api/v1";
@@ -53,17 +54,20 @@ pub struct QueryCrateResponse {
 
 #[derive(Clone)]
 pub struct QueryCrate {
-    index: Index,
+    index: ManagedIndex,
 }
 
 impl QueryCrate {
-    pub fn new(index: Index) -> Self {
+    pub fn new(index: ManagedIndex) -> Self {
         Self { index }
     }
 
-    pub async fn query(index: Index, crate_name: CrateName) -> anyhow::Result<QueryCrateResponse> {
+    pub async fn query(
+        index: ManagedIndex,
+        crate_name: CrateName,
+    ) -> anyhow::Result<QueryCrateResponse> {
         let crate_name2 = crate_name.clone();
-        let krate = spawn_blocking(move || index.crate_(crate_name2.as_ref()))
+        let krate = spawn_blocking(move || index.crate_(crate_name2))
             .await?
             .ok_or_else(|| anyhow!("crate '{}' not found", crate_name.as_ref()))?;
 
