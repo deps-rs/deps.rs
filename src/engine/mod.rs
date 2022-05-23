@@ -237,7 +237,7 @@ impl Engine {
         }
     }
 
-    pub async fn find_latest_crate_release(
+    pub async fn find_latest_stable_crate_release(
         &self,
         name: CrateName,
         req: VersionReq,
