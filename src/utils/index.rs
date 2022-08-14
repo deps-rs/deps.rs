@@ -8,7 +8,7 @@ use crates_index::Crate;
 use crates_index::Index;
 use slog::{error, Logger};
 use tokio::task::spawn_blocking;
-use tokio::time;
+use tokio::time::{self, MissedTickBehavior};
 
 #[derive(Clone)]
 pub struct ManagedIndex {
@@ -31,6 +31,7 @@ impl ManagedIndex {
 
     pub async fn refresh_at_interval(&self, update_interval: Duration) {
         let mut update_interval = time::interval(update_interval);
+        update_interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
 
         loop {
             if let Err(e) = self.refresh().await {
