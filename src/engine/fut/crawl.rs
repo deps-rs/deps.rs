@@ -29,7 +29,7 @@ pub async fn crawl_manifest(
     }
     .boxed();
 
-    futures.push(fut);
+    futures.push_back(fut);
 
     while let Some(item) = futures.next().await {
         let (path, raw_manifest) = item?;
@@ -48,7 +48,7 @@ pub async fn crawl_manifest(
             }
             .boxed();
 
-            futures.push(fut);
+            futures.push_back(fut);
         }
     }
 
