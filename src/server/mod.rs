@@ -58,11 +58,11 @@ impl App {
         router.add("/static/logo.svg", Route::Static(StaticFile::FaviconPng));
 
         router.add(
-            "/repo/:site/:qual/:name",
+            "/repo/*site/:qual/:name",
             Route::RepoStatus(StatusFormat::Html),
         );
         router.add(
-            "/repo/:site/:qual/:name/status.svg",
+            "/repo/*site/:qual/:name/status.svg",
             Route::RepoStatus(StatusFormat::Svg),
         );
 

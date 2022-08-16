@@ -127,9 +127,11 @@ fn get_site_icon(site: &RepoSite) -> (FaType, &'static str) {
         RepoSite::Github => (FaType::Brands, "github"),
         RepoSite::Gitlab => (FaType::Brands, "gitlab"),
         RepoSite::Bitbucket => (FaType::Brands, "bitbucket"),
-        // FIXME: There is no brands/{sourcehut, codeberg} icon, so just use a
+        // FIXME: There is no brands/{sourcehut, codeberg, gitea} icon, so just use a
         // regular circle which looks close enough.
-        RepoSite::Sourcehut | RepoSite::Codeberg => (FaType::Regular, "circle"),
+        RepoSite::Sourcehut | RepoSite::Codeberg | RepoSite::Gitea(_) => {
+            (FaType::Regular, "circle")
+        }
     }
 }
 
@@ -334,7 +336,7 @@ fn render_success(
     let self_path = match subject_path {
         SubjectPath::Repo(ref repo_path) => format!(
             "repo/{}/{}/{}",
-            repo_path.site.as_ref(),
+            repo_path.site,
             repo_path.qual.as_ref(),
             repo_path.name.as_ref()
         ),
