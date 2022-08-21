@@ -13,7 +13,7 @@ We currently support projects and crates hosted on crates.io, Github, Gitlab, Bi
 To analyze the state of your dependencies you can use the following URLs:
 
 - for projects on crates.io: `https://deps.rs/crate/<NAME>`
-- for projects on Github, Gitlab, Bitbucket, SourceHut, or Codeberg: `https://deps.rs/repo/<HOSTER>/<USER>/<REPO>` (where `<HOSTER>` is either `github`, `gitlab`, `bitbucket`, `sourcehut`, or `codeberg`)
+- for projects on Github, Gitlab, Bitbucket, SourceHut, Codeberg, or Gitea: `https://deps.rs/repo/<HOSTER>/<USER>/<REPO>` (where `<HOSTER>` is either `github`, `gitlab`, `bitbucket`, `sourcehut`, `codeberg`, or `gitea/<DOMAIN>`)
 
 ## Badges
 

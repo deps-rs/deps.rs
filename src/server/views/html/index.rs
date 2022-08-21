@@ -21,12 +21,12 @@ fn popular_table(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>)
                         @for repo in popular_repos.into_iter().take(10) {
                             tr {
                                 td {
-                                    a href=(format!("{}/repo/{}/{}/{}", &super::SELF_BASE_URL as &str, repo.path.site.as_ref(), repo.path.qual.as_ref(), repo.path.name.as_ref())) {
+                                    a href=(format!("{}/repo/{}/{}/{}", &super::SELF_BASE_URL as &str, repo.path.site, repo.path.qual.as_ref(), repo.path.name.as_ref())) {
                                         (format!("{} / {}", repo.path.qual.as_ref(), repo.path.name.as_ref()))
                                     }
                                 }
                                 td class="has-text-right" {
-                                    img src=(format!("{}/repo/{}/{}/{}/status.svg", &super::SELF_BASE_URL as &str, repo.path.site.as_ref(), repo.path.qual.as_ref(), repo.path.name.as_ref()));
+                                    img src=(format!("{}/repo/{}/{}/{}/status.svg", &super::SELF_BASE_URL as &str, repo.path.site, repo.path.qual.as_ref(), repo.path.name.as_ref()));
                                 }
                             }
                         }

@@ -42,49 +42,52 @@ impl fmt::Display for RepoPath {
         write!(
             f,
             "{} => {}/{}",
-            self.site.as_ref(),
+            self.site.to_string(),
             self.qual.as_ref(),
             self.name.as_ref()
         )
     }
 }
 
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum RepoSite {
     Github,
     Gitlab,
     Bitbucket,
     Sourcehut,
     Codeberg,
+    Gitea(GiteaDomain),
 }
 
 impl RepoSite {
-    pub fn to_base_uri(self) -> &'static str {
+    pub fn to_base_uri(&self) -> &str {
         match self {
             RepoSite::Github => "https://github.com",
             RepoSite::Gitlab => "https://gitlab.com",
             RepoSite::Bitbucket => "https://bitbucket.org",
             RepoSite::Sourcehut => "https://git.sr.ht",
             RepoSite::Codeberg => "https://codeberg.org",
+            RepoSite::Gitea(domain) => domain.as_ref(),
         }
     }
 
-    pub fn to_usercontent_base_uri(self) -> &'static str {
+    pub fn to_usercontent_base_uri(&self) -> &str {
         match self {
             RepoSite::Github => "https://raw.githubusercontent.com",
             RepoSite::Gitlab => "https://gitlab.com",
             RepoSite::Bitbucket => "https://bitbucket.org",
             RepoSite::Sourcehut => "https://git.sr.ht",
             RepoSite::Codeberg => "https://codeberg.org",
+            RepoSite::Gitea(domain) => domain.as_ref(),
         }
     }
 
-    pub fn to_usercontent_repo_suffix(self) -> &'static str {
+    pub fn to_usercontent_repo_suffix(&self) -> &'static str {
         match self {
             RepoSite::Github => "HEAD",
             RepoSite::Gitlab | RepoSite::Bitbucket => "raw/HEAD",
             RepoSite::Sourcehut => "blob/HEAD",
-            RepoSite::Codeberg => "raw",
+            RepoSite::Codeberg | RepoSite::Gitea(_) => "raw",
         }
     }
 }
@@ -93,25 +96,64 @@ impl FromStr for RepoSite {
     type Err = Error;
 
     fn from_str(input: &str) -> Result<RepoSite, Error> {
-        match input {
-            "github" => Ok(RepoSite::Github),
-            "gitlab" => Ok(RepoSite::Gitlab),
-            "bitbucket" => Ok(RepoSite::Bitbucket),
-            "sourcehut" => Ok(RepoSite::Sourcehut),
-            "codeberg" => Ok(RepoSite::Codeberg),
-            _ => Err(anyhow!("unknown repo site identifier")),
+        if let Some((site, domain)) = input.split_once("/") {
+            match site {
+                "gitea" => Ok(RepoSite::Gitea(domain.parse()?)),
+                _ => Err(anyhow!("unknown repo site identifier")),
+            }
+        } else {
+            match input {
+                "github" => Ok(RepoSite::Github),
+                "gitlab" => Ok(RepoSite::Gitlab),
+                "bitbucket" => Ok(RepoSite::Bitbucket),
+                "sourcehut" => Ok(RepoSite::Sourcehut),
+                "codeberg" => Ok(RepoSite::Codeberg),
+                _ => Err(anyhow!("unknown repo site identifier")),
+            }
         }
     }
 }
 
-impl AsRef<str> for RepoSite {
-    fn as_ref(&self) -> &str {
+impl fmt::Display for RepoSite {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RepoSite::Github => "github",
-            RepoSite::Gitlab => "gitlab",
-            RepoSite::Bitbucket => "bitbucket",
-            RepoSite::Sourcehut => "sourcehut",
-            RepoSite::Codeberg => "codeberg",
+            RepoSite::Github => write!(f, "github"),
+            RepoSite::Gitlab => write!(f, "gitlab"),
+            RepoSite::Bitbucket => write!(f, "bitbucket"),
+            RepoSite::Sourcehut => write!(f, "sourcehut"),
+            RepoSite::Codeberg => write!(f, "codeberg"),
+            RepoSite::Gitea(s) => write!(f, "gitea/{s}"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct GiteaDomain(String);
+
+impl FromStr for GiteaDomain {
+    type Err = Error;
+
+    fn from_str(input: &str) -> Result<GiteaDomain, Error> {
+        if input.starts_with("https://") || input.starts_with("http://") {
+            Ok(GiteaDomain(input.to_string()))
+        } else {
+            Ok(GiteaDomain(format!("https://{input}")))
+        }
+    }
+}
+
+impl AsRef<str> for GiteaDomain {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+impl fmt::Display for GiteaDomain {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.0.starts_with("https://") {
+            f.write_str(&self.0["https://".len()..])
+        } else {
+            self.0.fmt(f)
         }
     }
 }
@@ -213,6 +255,22 @@ mod tests {
             let out = repo.to_usercontent_file_url(RelativePath::new(input));
 
             let exp = format!("https://codeberg.org/deps-rs/deps.rs/raw/{}", expected);
+            assert_eq!(out.to_string(), exp);
+        }
+
+        for (input, expected) in &paths {
+            let repo = RepoPath::from_parts("gitea/gitea.com", "deps-rs", "deps.rs").unwrap();
+            let out = repo.to_usercontent_file_url(RelativePath::new(input));
+
+            let exp = format!("https://gitea.com/deps-rs/deps.rs/raw/{}", expected);
+            assert_eq!(out.to_string(), exp);
+        }
+
+        for (input, expected) in &paths {
+            let repo = RepoPath::from_parts("gitea/example.com/git", "deps-rs", "deps.rs").unwrap();
+            let out = repo.to_usercontent_file_url(RelativePath::new(input));
+
+            let exp = format!("https://example.com/git/deps-rs/deps.rs/raw/{}", expected);
             assert_eq!(out.to_string(), exp);
         }
     }
