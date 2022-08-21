@@ -42,7 +42,7 @@ impl fmt::Display for RepoPath {
         write!(
             f,
             "{} => {}/{}",
-            self.site.to_string(),
+            self.site,
             self.qual.as_ref(),
             self.name.as_ref()
         )
@@ -96,7 +96,7 @@ impl FromStr for RepoSite {
     type Err = Error;
 
     fn from_str(input: &str) -> Result<RepoSite, Error> {
-        if let Some((site, domain)) = input.split_once("/") {
+        if let Some((site, domain)) = input.split_once('/') {
             match site {
                 "gitea" => Ok(RepoSite::Gitea(domain.parse()?)),
                 _ => Err(anyhow!("unknown repo site identifier")),
