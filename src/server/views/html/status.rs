@@ -127,11 +127,11 @@ fn get_site_icon(site: &RepoSite) -> (FaType, &'static str) {
         RepoSite::Github => (FaType::Brands, "github"),
         RepoSite::Gitlab => (FaType::Brands, "gitlab"),
         RepoSite::Bitbucket => (FaType::Brands, "bitbucket"),
-        // FIXME: There is no brands/{sourcehut, codeberg, gitea} icon, so just use a
-        // regular circle which looks close enough.
-        RepoSite::Sourcehut | RepoSite::Codeberg | RepoSite::Gitea(_) => {
-            (FaType::Regular, "circle")
-        }
+        // FIXME: There is no brands/{sourcehut, codeberg, gitea} icon, so just use an
+        // icon which looks close enough.
+        RepoSite::Sourcehut => (FaType::Regular, "circle"),
+        RepoSite::Codeberg => (FaType::Solid, "mountain"),
+        RepoSite::Gitea(_) => (FaType::Brands, "git-alt"),
     }
 }
 
