@@ -9,11 +9,11 @@
 =center($width, $height: 0)
   position: absolute
   @if $height != 0
-    left: calc(50% - (#{$width} / 2))
-    top: calc(50% - (#{$height} / 2))
+    left: calc(50% - (#{$width} * 0.5))
+    top: calc(50% - (#{$height} * 0.5))
   @else
-    left: calc(50% - (#{$width} / 2))
-    top: calc(50% - (#{$width} / 2))
+    left: calc(50% - (#{$width} * 0.5))
+    top: calc(50% - (#{$width} * 0.5))
 
 =fa($size, $dimensions)
   display: inline-block
@@ -25,6 +25,11 @@
   width: $dimensions
 
 =hamburger($dimensions)
+  -moz-appearance: none
+  -webkit-appearance: none
+  appearance: none
+  background: none
+  border: none
   cursor: pointer
   display: block
   height: $dimensions
@@ -68,6 +73,18 @@
     &:#{$placeholder}-placeholder
       @content
 
+=reset
+  -moz-appearance: none
+  -webkit-appearance: none
+  appearance: none
+  background: none
+  border: none
+  color: currentColor
+  font-family: inherit
+  font-size: 1em
+  margin: 0
+  padding: 0
+
 // Responsiveness
 
 =from($device)
@@ -76,6 +93,10 @@
 
 =until($device)
   @media screen and (max-width: $device - 1px)
+    @content
+
+=between($from, $until)
+  @media screen and (min-width: $from) and (max-width: $until - 1px)
     @content
 
 =mobile
@@ -127,6 +148,21 @@
   @if $fullhd-enabled
     @media screen and (min-width: $fullhd)
       @content
+
+=breakpoint($name)
+  $breakpoint: map-get($breakpoints, $name)
+  @if $breakpoint
+    $from: map-get($breakpoint, "from")
+    $until: map-get($breakpoint, "until")
+    @if $from and $until
+      +between($from, $until)
+        @content
+    @else if $from
+      +from($from)
+        @content
+    @else if $until
+      +until($until)
+        @content
 
 =ltr
   @if not $rtl
@@ -265,4 +301,3 @@
   position: absolute
   right: $offset
   top: $offset
-
