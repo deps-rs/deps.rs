@@ -1,18 +1,18 @@
 function buildRepoLink() {
-    var formRef = document.forms["repoSelect"];
+    let formRef = document.forms["repoSelect"];
 
-    var hoster = formRef.elements["hosterSelect"].value.toLowerCase();
-    var owner = formRef.elements["owner"].value;
-    var repoName = formRef.elements["repoName"].value;
+    let hoster = formRef.elements["hosterSelect"].value.toLowerCase();
+    let owner = formRef.elements["owner"].value;
+    let repoName = formRef.elements["repoName"].value;
 
     if (hoster === "gitea") {
-        var baseUrl = formRef.elements["baseUrl"].value;
+        let baseUrl = formRef.elements["baseUrl"].value;
 
         // verify that the Base URL is not empty
         if(baseUrl.length == 0) {
             formRef.elements["baseUrl"].classList.add("is-danger");
             document.getElementById("baseUrlHelp").classList.add("is-danger");
-            var hostName = formRef.elements["hosterSelect"].value;
+            let hostName = formRef.elements["hosterSelect"].value;
             document.getElementById("baseUrlHelp").innerHTML = `A Base URL is required for Hosting Provider ${hostName}.`
             
             return;
@@ -25,10 +25,10 @@ function buildRepoLink() {
 }
 
 function buildCrateLink() {
-    var formRef = document.forms["crateSelect"];
+    let formRef = document.forms["crateSelect"];
 
-    var crate = formRef.elements["crateName"].value;
-    var crateVer = formRef.elements["crateVersion"].value;
+    let crate = formRef.elements["crateName"].value;
+    let crateVer = formRef.elements["crateVersion"].value;
 
     if (crateVer.length == 0) {
         console.log("Aight, Imma get da crate");
