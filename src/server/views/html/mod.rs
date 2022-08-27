@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use hyper::header::CONTENT_TYPE;
 use hyper::{Body, Response};
-use maud::{DOCTYPE, html, Markup, Render};
+use maud::{html, Markup, Render, DOCTYPE};
 
 pub mod error;
 pub mod index;
