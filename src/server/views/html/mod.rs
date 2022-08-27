@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use hyper::header::CONTENT_TYPE;
 use hyper::{Body, Response};
-use maud::{html, Markup, Render};
+use maud::{DOCTYPE, html, Markup, Render};
 
 pub mod error;
 pub mod index;
@@ -13,6 +13,7 @@ use crate::server::SELF_BASE_URL;
 
 fn render_html<B: Render>(title: &str, body: B) -> Response<Body> {
     let rendered = html! {
+        (DOCTYPE)
         html {
             head {
                 meta charset="utf-8";
