@@ -15,7 +15,9 @@ use slog::{error, info, o, Logger};
 mod assets;
 mod views;
 
-use self::assets::{STATIC_STYLE_CSS_ETAG, STATIC_STYLE_CSS_PATH, STATIC_LINKS_JS_ETAG, STATIC_LINKS_JS_PATH};
+use self::assets::{
+    STATIC_LINKS_JS_ETAG, STATIC_LINKS_JS_PATH, STATIC_STYLE_CSS_ETAG, STATIC_STYLE_CSS_PATH,
+};
 use crate::engine::{AnalyzeDependenciesOutcome, Engine};
 use crate::models::crates::{CrateName, CratePath};
 use crate::models::repo::RepoPath;
@@ -378,7 +380,7 @@ impl App {
                 .header(ETAG, STATIC_LINKS_JS_ETAG)
                 .header(CACHE_CONTROL, "public, max-age=365000000, immutable")
                 .body(Body::from(assets::STATIC_LINKS_JS))
-                .unwrap()
+                .unwrap(),
         }
     }
 }
