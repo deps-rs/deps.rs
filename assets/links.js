@@ -13,7 +13,7 @@ function buildRepoLink() {
             formRef.elements["baseUrl"].classList.add("is-danger");
             document.getElementById("baseUrlHelp").classList.add("is-danger");
             let hostName = formRef.elements["hosterSelect"].value;
-            document.getElementById("baseUrlHelp").innerHTML = `A Base URL is required for Hosting Provider ${hostName}.`
+            document.getElementById("baseUrlHelp").textContent = `A Base URL is required for Hosting Provider ${hostName}.`
             
             return;
         }
