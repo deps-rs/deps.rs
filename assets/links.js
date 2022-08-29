@@ -9,7 +9,7 @@ function buildRepoLink() {
         let baseUrl = formRef.elements["baseUrl"].value;
 
         // verify that the Base URL is not empty
-        if(baseUrl.length == 0) {
+        if(baseUrl.length === 0) {
             formRef.elements["baseUrl"].classList.add("is-danger");
             document.getElementById("baseUrlHelp").classList.add("is-danger");
             let hostName = formRef.elements["hosterSelect"].value;
