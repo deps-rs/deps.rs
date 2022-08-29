@@ -31,11 +31,9 @@ function buildCrateLink() {
     let crateVer = formRef.elements["crateVersion"].value;
 
     if (crateVer.length == 0) {
-        console.log("Aight, Imma get da crate");
         // default to latest version
         window.location.href = `/crate/${crate}`;
     } else {
-        console.log("Got a version??");
         window.location.href = `/crate/${crate}/${crateVer}`;
     }
 }
