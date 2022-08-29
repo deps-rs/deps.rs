@@ -15,7 +15,9 @@ use slog::{error, info, o, Logger};
 mod assets;
 mod views;
 
-use self::assets::{STATIC_STYLE_CSS_ETAG, STATIC_STYLE_CSS_PATH};
+use self::assets::{
+    STATIC_LINKS_JS_ETAG, STATIC_LINKS_JS_PATH, STATIC_STYLE_CSS_ETAG, STATIC_STYLE_CSS_PATH,
+};
 use crate::engine::{AnalyzeDependenciesOutcome, Engine};
 use crate::models::crates::{CrateName, CratePath};
 use crate::models::repo::RepoPath;
@@ -31,6 +33,7 @@ enum StatusFormat {
 enum StaticFile {
     StyleCss,
     FaviconPng,
+    LinksJs,
 }
 
 enum Route {
@@ -56,6 +59,7 @@ impl App {
 
         router.add(STATIC_STYLE_CSS_PATH, Route::Static(StaticFile::StyleCss));
         router.add("/static/logo.svg", Route::Static(StaticFile::FaviconPng));
+        router.add(STATIC_LINKS_JS_PATH, Route::Static(StaticFile::LinksJs));
 
         router.add(
             "/repo/*site/:qual/:name",
@@ -370,6 +374,12 @@ impl App {
             StaticFile::FaviconPng => Response::builder()
                 .header(CONTENT_TYPE, "image/svg+xml")
                 .body(Body::from(assets::STATIC_FAVICON))
+                .unwrap(),
+            StaticFile::LinksJs => Response::builder()
+                .header(CONTENT_TYPE, "text/javascript; charset=utf-8")
+                .header(ETAG, STATIC_LINKS_JS_ETAG)
+                .header(CACHE_CONTROL, "public, max-age=365000000, immutable")
+                .body(Body::from(assets::STATIC_LINKS_JS))
                 .unwrap(),
         }
     }

@@ -4,6 +4,94 @@ use maud::{html, Markup};
 use crate::models::crates::CratePath;
 use crate::models::repo::Repository;
 
+use crate::server::assets::STATIC_LINKS_JS_PATH;
+
+fn link_forms() -> Markup {
+    html! {
+        div class="columns" {
+            div class="column" {
+                div class="box" {
+                    h2 class="title c is-3" { "Check a Repository" }
+
+                    form id="repoSelect" action="#" {
+                        div class="field" {
+                            label class="label" { "Hosting Provider" }
+
+                            div class="control" {
+                                div class="select" {
+                                    select id="hosterSelect" {
+                                        option { "Github" }
+                                        option { "Gitlab" }
+                                        option { "Bitbucket" }
+                                        option { "Sourcehut" }
+                                        option { "Codeberg" }
+                                        option { "Gitea" }
+                                    }
+                                }
+                            }
+                        }
+
+                        div class="field" {
+                            label class="label" { "Owner" }
+
+                            div class="control" {
+                                input class="input" type="text" id="owner" placeholder="rust-lang" required;
+                            }
+                        }
+
+                        div class="field" {
+                            label class="label" { "Repository Name" }
+
+                            div class="control" {
+                                input class="input" type="text" id="repoName" placeholder="cargo" required;
+                            }
+                        }
+
+                        div class="field" {
+                            label class="label" { "Git instance URL" }
+
+                            div class="control" {
+                                input class="input" type="text" id="baseUrl" placeholder="gitea.com";
+                            }
+
+                            p class="help" id="baseUrlHelp" { "Base URL of the Git instance the project is hosted on. Only relevant for Gitea Instances." }
+                        }
+
+                        input type="submit" class="button is-primary" value="Check" onclick="buildRepoLink();";
+                    }
+                }
+            }
+            div class="column" {
+                div class="box" {
+                    h2 class="title is-3" { "Check a Crate" }
+
+                    form id="crateSelect" action="#" {
+                        div class="field" {
+                            label class="label" { "Crate Name" }
+
+                            div class="control" {
+                                input class="input" type="text" id="crateName" placeholder="serde-derive" required;
+                            }
+                        }
+
+                        div class="field" {
+                            label class="label" { "Version (optional)" }
+
+                            div class="control" {
+                                input class="input" type="text" id="crateVersion" placeholder="1.0.0";
+                            }
+
+                            p class="help" { "If left blank, defaults to the latest version." }
+                        }
+
+                        input type="submit" class="button is-primary" value="Check" onclick="buildCrateLink();";
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn popular_table(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>) -> Markup {
     html! {
         div class="columns" {
@@ -83,7 +171,11 @@ pub fn render(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>) ->
             section class="section" {
                 div class="container" { (popular_table(popular_repos, popular_crates)) }
             }
+            section class="section" {
+                div class="container" { (link_forms()) }
+            }
             (super::render_footer(None))
+            script src=(STATIC_LINKS_JS_PATH) {}
         },
     )
 }

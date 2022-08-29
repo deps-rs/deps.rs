@@ -18,6 +18,7 @@ fn build_style() -> String {
 fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
 
+    // compile the sass files into a single CSS file to be served and cached
     let style = build_style();
 
     let css_path = Path::new(&out_dir).join("style.css");
@@ -26,4 +27,13 @@ fn main() {
     let hash_path = Path::new(&out_dir).join("style.css.sha1");
     let digest = Sha1::digest(style.as_bytes());
     fs::write(hash_path, format!("{:x}", digest)).unwrap();
+
+    // hash and copy the JS file
+    let js_blob = fs::read("./assets/links.js").unwrap();
+    let js_path = Path::new(&out_dir).join("links.js");
+    fs::write(js_path, &js_blob).unwrap();
+
+    let js_hash_path = Path::new(&out_dir).join("links.js.sha1");
+    let js_digest = Sha1::digest(&js_blob);
+    fs::write(js_hash_path, format!("{:x}", js_digest)).unwrap();
 }
