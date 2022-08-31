@@ -179,7 +179,7 @@ impl App {
         let qual = params.find("qual").expect("route param 'qual' not found");
         let name = params.find("name").expect("route param 'name' not found");
 
-        let badge_knobs = BadgeKnobs::from_query_string(req.uri().query());
+        let extra_knobs = ExtraConfig::from_query_string(req.uri().query());
 
         let repo_path_result = RepoPath::from_parts(site, qual, name);
 
@@ -197,7 +197,7 @@ impl App {
             Ok(repo_path) => {
                 let analyze_result = server
                     .engine
-                    .analyze_repo_dependencies(repo_path.clone())
+                    .analyze_repo_dependencies(repo_path.clone(), &extra_knobs.path)
                     .await;
 
                 match analyze_result {
@@ -207,7 +207,7 @@ impl App {
                             None,
                             format,
                             SubjectPath::Repo(repo_path),
-                            badge_knobs,
+                            extra_knobs,
                         );
                         Ok(response)
                     }
@@ -216,7 +216,7 @@ impl App {
                             Some(analysis_outcome),
                             format,
                             SubjectPath::Repo(repo_path),
-                            badge_knobs,
+                            extra_knobs,
                         );
                         Ok(response)
                     }
@@ -305,7 +305,7 @@ impl App {
             .find("version")
             .expect("route param 'version' not found");
 
-        let badge_knobs = BadgeKnobs::from_query_string(req.uri().query());
+        let badge_knobs = ExtraConfig::from_query_string(req.uri().query());
 
         let crate_path_result = CratePath::from_parts(name, version);
 
@@ -355,7 +355,7 @@ impl App {
         analysis_outcome: Option<AnalyzeDependenciesOutcome>,
         format: StatusFormat,
         subject_path: SubjectPath,
-        badge_knobs: BadgeKnobs,
+        badge_knobs: ExtraConfig,
     ) -> Response<Body> {
         match format {
             StatusFormat::Svg => views::badge::response(analysis_outcome.as_ref(), badge_knobs),
@@ -392,27 +392,34 @@ fn not_found() -> Response<Body> {
 static SELF_BASE_URL: Lazy<String> =
     Lazy::new(|| env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string()));
 
+/// Configuration options supplied through Get Parameters
 #[derive(Debug, Clone, Default)]
-pub struct BadgeKnobs {
+pub struct ExtraConfig {
+    /// Badge style to show
     style: BadgeStyle,
+    /// Whether the inscription _"dependencies"_ should be abbreviated as _"deps"_ in the badge.
     compact: bool,
+    /// Path in which the crate resides within the repository
+    path: Option<String>,
 }
 
-impl BadgeKnobs {
+impl ExtraConfig {
     fn from_query_string(qs: Option<&str>) -> Self {
         #[derive(Debug, Clone, Default, Deserialize)]
-        struct BadgeKnobsPartial {
+        struct ExtraConfigPartial {
             style: Option<BadgeStyle>,
             compact: Option<bool>,
+            path: Option<String>
         }
 
-        let badge_knobs = qs
-            .and_then(|qs| serde_urlencoded::from_str::<BadgeKnobsPartial>(qs).ok())
+        let extra_config = qs
+            .and_then(|qs| serde_urlencoded::from_str::<ExtraConfigPartial>(qs).ok())
             .unwrap_or_default();
 
         Self {
-            style: badge_knobs.style.unwrap_or_default(),
-            compact: badge_knobs.compact.unwrap_or_default(),
+            style: extra_config.style.unwrap_or_default(),
+            compact: extra_config.compact.unwrap_or_default(),
+            path: extra_config.path,
         }
     }
 }

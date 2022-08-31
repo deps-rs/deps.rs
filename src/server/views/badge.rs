@@ -3,11 +3,11 @@ use hyper::header::CONTENT_TYPE;
 use hyper::{Body, Response};
 
 use crate::engine::AnalyzeDependenciesOutcome;
-use crate::server::BadgeKnobs;
+use crate::server::ExtraConfig;
 
 pub fn badge(
     analysis_outcome: Option<&AnalyzeDependenciesOutcome>,
-    badge_knobs: BadgeKnobs,
+    badge_knobs: ExtraConfig,
 ) -> Badge {
     let subject = if badge_knobs.compact {
         "deps"
@@ -74,7 +74,7 @@ pub fn badge(
 
 pub fn response(
     analysis_outcome: Option<&AnalyzeDependenciesOutcome>,
-    badge_knobs: BadgeKnobs,
+    badge_knobs: ExtraConfig,
 ) -> Response<Body> {
     let badge = badge(analysis_outcome, badge_knobs).to_svg();
 
