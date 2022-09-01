@@ -4,6 +4,12 @@ function buildRepoLink() {
     let hoster = formRef.elements["hosterSelect"].value.toLowerCase();
     let owner = formRef.elements["owner"].value;
     let repoName = formRef.elements["repoName"].value;
+    let innerPath = formRef.elements["innerPath"].value;
+
+    let qparams = "";
+    if (innerPath.length != 0) {
+        qparams = "?path=" + innerPath;
+    }
 
     if (hoster === "gitea") {
         let baseUrl = formRef.elements["baseUrl"].value;
@@ -18,9 +24,9 @@ function buildRepoLink() {
             return;
         }
 
-        window.location.href = `/repo/${hoster}/${baseUrl}/${owner}/${repoName}`;
+        window.location.assign(`/repo/${hoster}/${baseUrl}/${owner}/${repoName}${qparams}`);
     } else {
-        window.location.href = `/repo/${hoster}/${owner}/${repoName}`;
+        window.location.assign(`/repo/${hoster}/${owner}/${repoName}${qparams}`);
     }
 }
 
@@ -32,8 +38,8 @@ function buildCrateLink() {
 
     if (crateVer.length == 0) {
         // default to latest version
-        window.location.href = `/crate/${crate}`;
+        window.location.assign(`/crate/${crate}`);
     } else {
-        window.location.href = `/crate/${crate}/${crateVer}`;
+        window.location.assign(`/crate/${crate}/${crateVer}`);
     }
 }

@@ -57,6 +57,16 @@ fn link_forms() -> Markup {
                             p class="help" id="baseUrlHelp" { "Base URL of the Git instance the project is hosted on. Only relevant for Gitea Instances." }
                         }
 
+                        div class="field" {
+                            label class="label" { "Path in Repository" }
+
+                            div class="control" {
+                                input class="input" type="text" id="innerPath" placeholder="project1/rust-stuff";
+                            }
+
+                            p class="help" id="baseUrlHelp" { "Path within the repository where the " code { "Cargo.toml" } " file is located." }
+                        }
+
                         input type="submit" class="button is-primary" value="Check" onclick="buildRepoLink();";
                     }
                 }
