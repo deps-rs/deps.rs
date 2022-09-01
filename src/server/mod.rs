@@ -359,7 +359,9 @@ impl App {
     ) -> Response<Body> {
         match format {
             StatusFormat::Svg => views::badge::response(analysis_outcome.as_ref(), badge_knobs),
-            StatusFormat::Html => views::html::status::render(analysis_outcome, subject_path, badge_knobs),
+            StatusFormat::Html => {
+                views::html::status::render(analysis_outcome, subject_path, badge_knobs)
+            }
         }
     }
 

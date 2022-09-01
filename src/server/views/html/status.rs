@@ -349,7 +349,7 @@ fn render_failure(subject_path: SubjectPath) -> Markup {
 fn render_success(
     analysis_outcome: AnalyzeDependenciesOutcome,
     subject_path: SubjectPath,
-    extra_config: ExtraConfig
+    extra_config: ExtraConfig,
 ) -> Markup {
     let self_path = match subject_path {
         SubjectPath::Repo(ref repo_path) => format!(
@@ -378,7 +378,11 @@ fn render_success(
     // NOTE(feliix42): While we could encode the whole `ExtraConfig` struct here, I've decided
     // against doing so as this would always append the defaults for badge style and compactness
     // settings to the URL, bloating it unnecessarily, we can do that once it's needed.
-    let options = serde_urlencoded::to_string([("path", extra_config.path.clone().unwrap_or_default().as_str())]).unwrap();
+    let options = serde_urlencoded::to_string([(
+        "path",
+        extra_config.path.clone().unwrap_or_default().as_str(),
+    )])
+    .unwrap();
 
     html! {
         section class=(format!("hero {}", hero_class)) {
@@ -391,7 +395,7 @@ fn render_success(
 
                     @if let Some(ref path) = extra_config.path {
                         p class="subtitle" {
-                            (render_path(&path))
+                            (render_path(path))
                         }
                     }
 
