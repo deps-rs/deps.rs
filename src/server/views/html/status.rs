@@ -375,6 +375,11 @@ fn render_success(
         "is-success"
     };
 
+    // NOTE(feliix42): While we could encode the whole `ExtraConfig` struct here, I've decided
+    // against doing so as this would always append the defaults for badge style and compactness
+    // settings to the URL, bloating it unnecessarily, we can do that once it's needed.
+    let options = serde_urlencoded::to_string([("path", extra_config.path.clone().unwrap_or_default().as_str())]).unwrap();
+
     html! {
         section class=(format!("hero {}", hero_class)) {
             div class="hero-head" { (super::render_navbar()) }
@@ -384,7 +389,7 @@ fn render_success(
                         (render_title(&subject_path))
                     }
 
-                    @if let Some(path) = extra_config.path {
+                    @if let Some(ref path) = extra_config.path {
                         p class="subtitle" {
                             (render_path(&path))
                         }
@@ -396,7 +401,11 @@ fn render_success(
             div class="hero-footer" {
                 div class="container" {
                     pre class="is-size-7" {
-                        (format!("[![dependency status]({}/status.svg)]({})", status_base_url, status_base_url))
+                        @if extra_config.path.is_some() {
+                            (format!("[![dependency status]({}/status.svg?{opt})]({}?{opt})", status_base_url, status_base_url, opt = options))
+                        } @else {
+                            (format!("[![dependency status]({}/status.svg)]({})", status_base_url, status_base_url))
+                        }
                     }
                 }
             }
