@@ -409,7 +409,7 @@ impl ExtraConfig {
         struct ExtraConfigPartial {
             style: Option<BadgeStyle>,
             compact: Option<bool>,
-            path: Option<String>
+            path: Option<String>,
         }
 
         let extra_config = qs
