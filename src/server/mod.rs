@@ -42,6 +42,7 @@ enum Route {
     RepoStatus(StatusFormat),
     CrateRedirect,
     CrateStatus(StatusFormat),
+    LatestCrateBadge,
 }
 
 #[derive(Clone)]
@@ -75,6 +76,7 @@ impl App {
             "/crate/:name/:version",
             Route::CrateStatus(StatusFormat::Html),
         );
+        router.add("/crate/:name/latest/status.svg", Route::LatestCrateBadge);
         router.add(
             "/crate/:name/:version/status.svg",
             Route::CrateStatus(StatusFormat::Svg),
@@ -108,6 +110,11 @@ impl App {
 
                 (&Method::GET, Route::CrateStatus(format)) => {
                     self.crate_status(req, route_match.params().clone(), logger, *format)
+                        .await
+                }
+
+                (&Method::GET, Route::LatestCrateBadge) => {
+                    self.crate_status(req, route_match.params().clone(), logger, StatusFormat::Svg)
                         .await
                 }
 
@@ -249,7 +256,7 @@ impl App {
 
             Ok(crate_name) => {
                 let release_result = engine
-                    .find_latest_crate_release(crate_name, VersionReq::STAR)
+                    .find_latest_stable_crate_release(crate_name, VersionReq::STAR)
                     .await;
 
                 match release_result {
@@ -301,13 +308,44 @@ impl App {
         let server = self.clone();
 
         let name = params.find("name").expect("route param 'name' not found");
-        let version = params
-            .find("version")
-            .expect("route param 'version' not found");
 
+        let version = match params.find("version") {
+            Some(ver) => ver.to_owned(),
+            None => {
+                let crate_name = match name.parse() {
+                    Ok(name) => name,
+                    Err(_) => {
+                        let mut response = views::html::error::render(
+                            "Could not parse crate path",
+                            "Please make sure to provide a valid crate name and version.",
+                        );
+                        *response.status_mut() = StatusCode::BAD_REQUEST;
+                        return Ok(response);
+                    }
+                };
+
+                match server
+                    .engine
+                    .find_latest_stable_crate_release(crate_name, VersionReq::STAR)
+                    .await
+                {
+                    Ok(Some(latest_rel)) => latest_rel.version.to_string(),
+                    Ok(None) => return Ok(not_found()),
+                    Err(err) => {
+                        error!(logger, "error: {}", err);
+                        let mut response = views::html::error::render(
+                            "Could not fetch crate information",
+                            "Please make sure to provide a valid crate name.",
+                        );
+                        *response.status_mut() = StatusCode::NOT_FOUND;
+                        return Ok(response);
+                    }
+                }
+            }
+        };
+
+        let crate_path_result = CratePath::from_parts(name, &version);
         let badge_knobs = BadgeKnobs::from_query_string(req.uri().query());
-
-        let crate_path_result = CratePath::from_parts(name, version);
 
         match crate_path_result {
             Err(err) => {
