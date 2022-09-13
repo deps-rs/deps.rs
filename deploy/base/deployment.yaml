@@ -28,5 +28,5 @@ spec:
               name: cargo
           readinessProbe:
             httpGet:
-              path: /
+              path: /repo/github/deps-rs/deps.rs
               port: 8080
