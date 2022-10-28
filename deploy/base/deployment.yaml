@@ -26,6 +26,10 @@ spec:
           volumeMounts:
             - mountPath: /home/deps/.cargo
               name: cargo
+          readynessProbe:
+            httpGet:
+              path: /
+              port: 8080
           livenessProbe:
             httpGet:
               path: /repo/github/deps-rs/deps.rs
