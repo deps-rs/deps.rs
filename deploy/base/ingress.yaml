@@ -11,9 +11,12 @@ spec:
       http:
         paths:
           - backend:
-              serviceName: deps-rs
-              servicePort: http
+              service:
+                name: deps-rs
+                port:
+                  name: http
             path: /
+            pathType: Prefix
   tls:
     - secretName: deps-rs-tls
       hosts:
