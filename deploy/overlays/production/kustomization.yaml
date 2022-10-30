@@ -12,7 +12,7 @@ resources:
 patches:
   - path: patch-ingress.json
     target:
-      group: extensions
-      version: v1beta1
+      group: networking.k8s.io
+      version: v1
       kind: Ingress
       name: deps-rs
