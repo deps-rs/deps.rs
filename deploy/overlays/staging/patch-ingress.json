@@ -6,6 +6,11 @@
   },
   {
     "op": "replace",
+    "path": "/spec/rules/0/http/paths/0/backend/service/name",
+    "value": "deps-rs-stg"
+  },
+  {
+    "op": "replace",
     "path": "/spec/tls/0/secretName",
     "value": "staging-deps-rs-tls"
   }
