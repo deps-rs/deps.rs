@@ -30,3 +30,9 @@ spec:
             httpGet:
               path: /
               port: 8080
+          livenessProbe:
+            httpGet:
+              path: /repo/github/deps-rs/deps.rs
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10

@@ -287,7 +287,7 @@ fn vulnerability_list(analysis_outcome: &AnalyzeDependenciesOutcome) -> Markup {
         @for vuln in vulnerabilities {
             div class="box" {
                 h3 class="title is-4" { code { (vuln.metadata.package.as_str()) } ": " (vuln.title()) }
-                p class="subtitle is-5" style="margin-top: -0.5rem;" { a href=(build_rustsec_link(vuln)) { (vuln.id()) } }
+                p class="subtitle is-5" style="margin-top: -0.5rem;" { a href=(build_rustsec_link(vuln)) { (vuln.id().to_string()) } }
 
                 article { (render_markdown(vuln.description())) }
 
@@ -299,7 +299,7 @@ fn vulnerability_list(analysis_outcome: &AnalyzeDependenciesOutcome) -> Markup {
                                 p class="is-grey" { "None"}
                             } @else {
                                 @for item in vuln.versions.unaffected() {
-                                    p { code { (item) } }
+                                    p { code { (item.to_string()) } }
                                 }
                             }
                         }
@@ -311,7 +311,7 @@ fn vulnerability_list(analysis_outcome: &AnalyzeDependenciesOutcome) -> Markup {
                                 p class="has-text-grey" { "None"}
                             } @else {
                                 @for item in vuln.versions.patched() {
-                                    p { code { (item) } }
+                                    p { code { (item.to_string()) } }
                                 }
                             }
                         }
