@@ -85,7 +85,7 @@ fn dependency_table(title: &str, deps: &IndexMap<CrateName, AnalyzedDependency>)
                 @for (name, dep) in deps {
                     tr {
                         td {
-                            a class="has-text-grey" href=(get_crates_url(&name)) {
+                            a class="has-text-grey" href=(get_crates_url(name)) {
                                 { (fa_cube) }
                             }
                             { "\u{00A0}" } // non-breaking space
