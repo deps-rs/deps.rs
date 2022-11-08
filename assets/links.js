@@ -7,8 +7,8 @@ function buildRepoLink() {
     let innerPath = formRef.elements["innerPath"].value;
 
     let qparams = "";
-    if (innerPath.length != 0) {
-        qparams = "?path=" + innerPath;
+    if (innerPath.length > 0) {
+        qparams = "?path=" + encodeURIComponent(innerPath);
     }
 
     if (hoster === "gitea") {
