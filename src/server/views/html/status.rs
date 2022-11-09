@@ -11,7 +11,7 @@ use crate::models::crates::{AnalyzedDependencies, AnalyzedDependency, CrateName}
 use crate::models::repo::RepoSite;
 use crate::models::SubjectPath;
 use crate::server::views::badge;
-use crate::server::BadgeKnobs;
+use crate::server::ExtraConfig;
 
 fn get_crates_url(name: impl AsRef<str>) -> String {
     format!("https://crates.io/crates/{}", name.as_ref())
@@ -158,6 +158,23 @@ fn render_title(subject_path: &SubjectPath) -> Markup {
                 }
             }
         }
+    }
+}
+
+/// Renders a path within a repository as HTML.
+///
+/// Panics, when the string is empty.
+fn render_path(inner_path: &str) -> Markup {
+    let path_icon = PreEscaped(fa(FaType::Regular, "folder-open").unwrap());
+
+    let mut splitted = inner_path.trim_matches('/').split('/');
+    let init = splitted.next().unwrap().to_string();
+    let path_spaced = splitted.fold(init, |b, val| b + " / " + val);
+
+    html! {
+        { (path_icon) }
+        " / "
+        (path_spaced)
     }
 }
 
@@ -332,6 +349,7 @@ fn render_failure(subject_path: SubjectPath) -> Markup {
 fn render_success(
     analysis_outcome: AnalyzeDependenciesOutcome,
     subject_path: SubjectPath,
+    extra_config: ExtraConfig,
 ) -> Markup {
     let self_path = match subject_path {
         SubjectPath::Repo(ref repo_path) => format!(
@@ -347,7 +365,7 @@ fn render_success(
     let status_base_url = format!("{}/{}", &super::SELF_BASE_URL as &str, self_path);
 
     let status_data_uri =
-        badge::badge(Some(&analysis_outcome), BadgeKnobs::default()).to_svg_data_uri();
+        badge::badge(Some(&analysis_outcome), extra_config.clone()).to_svg_data_uri();
 
     let hero_class = if analysis_outcome.any_always_insecure() {
         "is-danger"
@@ -356,6 +374,15 @@ fn render_success(
     } else {
         "is-success"
     };
+
+    // NOTE(feliix42): While we could encode the whole `ExtraConfig` struct here, I've decided
+    // against doing so as this would always append the defaults for badge style and compactness
+    // settings to the URL, bloating it unnecessarily, we can do that once it's needed.
+    let options = serde_urlencoded::to_string([(
+        "path",
+        extra_config.path.clone().unwrap_or_default().as_str(),
+    )])
+    .unwrap();
 
     html! {
         section class=(format!("hero {}", hero_class)) {
@@ -366,13 +393,23 @@ fn render_success(
                         (render_title(&subject_path))
                     }
 
+                    @if let Some(ref path) = extra_config.path {
+                        p class="subtitle" {
+                            (render_path(path))
+                        }
+                    }
+
                     img src=(status_data_uri);
                 }
             }
             div class="hero-footer" {
                 div class="container" {
                     pre class="is-size-7" {
-                        (format!("[![dependency status]({}/status.svg)]({})", status_base_url, status_base_url))
+                        @if extra_config.path.is_some() {
+                            (format!("[![dependency status]({}/status.svg?{opt})]({}?{opt})", status_base_url, status_base_url, opt = options))
+                        } @else {
+                            (format!("[![dependency status]({}/status.svg)]({})", status_base_url, status_base_url))
+                        }
                     }
                 }
             }
@@ -416,6 +453,7 @@ fn render_success(
 pub fn render(
     analysis_outcome: Option<AnalyzeDependenciesOutcome>,
     subject_path: SubjectPath,
+    extra_config: ExtraConfig,
 ) -> Response<Body> {
     let title = match subject_path {
         SubjectPath::Repo(ref repo_path) => {
@@ -427,7 +465,7 @@ pub fn render(
     };
 
     if let Some(outcome) = analysis_outcome {
-        super::render_html(&title, render_success(outcome, subject_path))
+        super::render_html(&title, render_success(outcome, subject_path, extra_config))
     } else {
         super::render_html(&title, render_failure(subject_path))
     }

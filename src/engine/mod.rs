@@ -170,20 +170,25 @@ impl Engine {
     pub async fn analyze_repo_dependencies(
         &self,
         repo_path: RepoPath,
+        sub_path: &Option<String>,
     ) -> Result<AnalyzeDependenciesOutcome, Error> {
         let start = Instant::now();
 
-        let entry_point = RelativePath::new("/").to_relative_path_buf();
+        let mut entry_point = RelativePath::new("/").to_relative_path_buf();
+
+        if let Some(inner_path) = sub_path {
+            entry_point.push(inner_path);
+        }
+
         let engine = self.clone();
 
         let manifest_output = crawl_manifest(self.clone(), repo_path.clone(), entry_point).await?;
 
-        let engine_for_analyze = engine.clone();
         let futures = manifest_output
             .crates
             .into_iter()
             .map(|(crate_name, deps)| async {
-                let analyzed_deps = analyze_dependencies(engine_for_analyze.clone(), deps).await?;
+                let analyzed_deps = analyze_dependencies(engine.clone(), deps).await?;
                 Ok::<_, Error>((crate_name, analyzed_deps))
             })
             .collect::<Vec<_>>();
