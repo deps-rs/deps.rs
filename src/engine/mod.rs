@@ -56,20 +56,20 @@ impl Engine {
         );
         let get_popular_crates = Cache::new(
             GetPopularCrates::new(client.clone()),
-            Duration::from_secs(120),
+            Duration::from_secs(15 * 60),
             1,
             logger.clone(),
         );
         let get_popular_repos = Cache::new(
             GetPopularRepos::new(client.clone()),
-            Duration::from_secs(120),
+            Duration::from_secs(5 * 60),
             1,
             logger.clone(),
         );
         let retrieve_file_at_path = RetrieveFileAtPath::new(client.clone());
         let fetch_advisory_db = Cache::new(
             FetchAdvisoryDatabase::new(client),
-            Duration::from_secs(1800),
+            Duration::from_secs(30 * 60),
             1,
             logger,
         );
