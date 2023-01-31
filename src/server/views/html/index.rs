@@ -67,7 +67,7 @@ fn link_forms() -> Markup {
                             p class="help" id="baseUrlHelp" { "Path within the repository where the " code { "Cargo.toml" } " file is located." }
                         }
 
-                        input type="submit" class="button is-primary" value="Check" onclick="buildRepoLink();";
+                        input type="submit" class="button is-primary" value="Check" onclick="return buildRepoLink();";
                     }
                 }
             }
@@ -80,7 +80,7 @@ fn link_forms() -> Markup {
                             label class="label" { "Crate Name" }
 
                             div class="control" {
-                                input class="input" type="text" id="crateName" placeholder="serde-derive" required;
+                                input class="input" type="text" id="crateName" placeholder="serde" required;
                             }
                         }
 
@@ -94,7 +94,7 @@ fn link_forms() -> Markup {
                             p class="help" { "If left blank, defaults to the latest version." }
                         }
 
-                        input type="submit" class="button is-primary" value="Check" onclick="buildCrateLink();";
+                        input type="submit" class="button is-primary" value="Check" onclick="return buildCrateLink();";
                     }
                 }
             }

@@ -28,6 +28,8 @@ function buildRepoLink() {
     } else {
         window.location.assign(`/repo/${hoster}/${owner}/${repoName}${qparams}`);
     }
+
+    return false;
 }
 
 function buildCrateLink() {
@@ -36,10 +38,12 @@ function buildCrateLink() {
     let crate = formRef.elements["crateName"].value;
     let crateVer = formRef.elements["crateVersion"].value;
 
-    if (crateVer.length == 0) {
+    if (crateVer.length === 0) {
         // default to latest version
         window.location.assign(`/crate/${crate}`);
     } else {
         window.location.assign(`/crate/${crate}/${crateVer}`);
     }
+
+    return false;
 }
