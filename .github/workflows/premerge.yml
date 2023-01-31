@@ -2,7 +2,7 @@ name: Premerge
 
 on:
   pull_request:
-    branches: [main]
+    types: [opened, synchronize, reopened]
   push:
     branches: [main]
   schedule:
@@ -12,44 +12,31 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v2
+      - name: checkout source
+        uses: actions/checkout@v3
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+      - name: install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1.3.5
 
-      - name: Build check
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
+      - name: check
+        run: cargo check
 
-      - name: Tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+      - name: test
+        run: cargo test
 
   linting:
     if: ${{ github.ref != 'main' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v2
+      - name: checkout source
+        uses: actions/checkout@v3
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
-          components: rustfmt, clippy
+      - name: install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1.3.5
+        with: { components: rustfmt, clippy }
 
       - name: format
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: cargo fmt --all -- --check
 
       - name: clippy
         uses: actions-rs/clippy-check@v1

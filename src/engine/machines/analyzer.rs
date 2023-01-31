@@ -64,7 +64,8 @@ impl DependencyAnalyzer {
     }
 
     pub fn process<I: IntoIterator<Item = CrateRelease>>(&mut self, releases: I) {
-        let advisory_db = self.advisory_db.as_ref().map(|r| r.as_ref());
+        let advisory_db = self.advisory_db.as_deref();
+
         for release in releases.into_iter().filter(|r| !r.yanked) {
             if let Some(main_dep) = self.deps.main.get_mut(&release.name) {
                 DependencyAnalyzer::process_single(
