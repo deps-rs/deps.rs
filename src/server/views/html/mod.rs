@@ -18,7 +18,7 @@ fn render_html<B: Render>(title: &str, body: B) -> Response<Body> {
             head {
                 meta charset="utf-8";
                 meta name="viewport" content="width=device-width, initial-scale=1";
-                title { (format!("{} - Deps.rs", title)) }
+                title { (format!("{title} - Deps.rs")) }
                 link rel="icon" type="image/svg+xml" href="/static/logo.svg";
                 link rel="stylesheet" type="text/css" href=(STATIC_STYLE_CSS_PATH);
                 link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600";
@@ -67,7 +67,7 @@ fn render_footer(duration: Option<Duration>) -> Markup {
                         "."
                     }
                     @if let Some(millis) = duration_millis {
-                        p class="has-text-grey is-size-7" { (format!("(rendered in {} ms)", millis)) }
+                        p class="has-text-grey is-size-7" { (format!("(rendered in {millis} ms)")) }
                     }
                 }
             }

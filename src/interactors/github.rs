@@ -44,10 +44,7 @@ impl GetPopularRepos {
     }
 
     pub async fn query(client: reqwest::Client) -> anyhow::Result<Vec<Repository>> {
-        let url = format!(
-            "{}/search/repositories?q=language:rust&sort=stars",
-            GITHUB_API_BASE_URI
-        );
+        let url = format!("{GITHUB_API_BASE_URI}/search/repositories?q=language:rust&sort=stars");
 
         let res = client.get(&url).send().await?.error_for_status()?;
         let summary: GithubSearchResponse = res.json().await?;

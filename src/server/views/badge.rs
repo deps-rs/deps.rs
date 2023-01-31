@@ -31,7 +31,7 @@ pub fn badge(
                 if outdated > 0 {
                     BadgeOptions {
                         subject,
-                        status: format!("{} of {} outdated", outdated, total),
+                        status: format!("{outdated} of {total} outdated"),
                         color: "#dfb317".into(),
                         style: badge_knobs.style,
                     }

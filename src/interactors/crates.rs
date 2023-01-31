@@ -132,7 +132,7 @@ impl GetPopularCrates {
     }
 
     pub async fn query(client: reqwest::Client) -> anyhow::Result<Vec<CratePath>> {
-        let url = format!("{}/summary", CRATES_API_BASE_URI);
+        let url = format!("{CRATES_API_BASE_URI}/summary");
         let res = client.get(&url).send().await?.error_for_status()?;
 
         let summary: SummaryResponse = res.json().await?;

@@ -224,10 +224,7 @@ mod tests {
             let repo = RepoPath::from_parts("github", "deps-rs", "deps.rs").unwrap();
             let out = repo.to_usercontent_file_url(RelativePath::new(input));
 
-            let exp = format!(
-                "https://raw.githubusercontent.com/deps-rs/deps.rs/HEAD/{}",
-                expected
-            );
+            let exp = format!("https://raw.githubusercontent.com/deps-rs/deps.rs/HEAD/{expected}");
             assert_eq!(out.to_string(), exp);
         }
 
@@ -235,7 +232,7 @@ mod tests {
             let repo = RepoPath::from_parts("gitlab", "deps-rs", "deps.rs").unwrap();
             let out = repo.to_usercontent_file_url(RelativePath::new(input));
 
-            let exp = format!("https://gitlab.com/deps-rs/deps.rs/raw/HEAD/{}", expected);
+            let exp = format!("https://gitlab.com/deps-rs/deps.rs/raw/HEAD/{expected}");
             assert_eq!(out.to_string(), exp);
         }
 
@@ -243,10 +240,7 @@ mod tests {
             let repo = RepoPath::from_parts("bitbucket", "deps-rs", "deps.rs").unwrap();
             let out = repo.to_usercontent_file_url(RelativePath::new(input));
 
-            let exp = format!(
-                "https://bitbucket.org/deps-rs/deps.rs/raw/HEAD/{}",
-                expected
-            );
+            let exp = format!("https://bitbucket.org/deps-rs/deps.rs/raw/HEAD/{expected}");
             assert_eq!(out.to_string(), exp);
         }
 
@@ -254,7 +248,7 @@ mod tests {
             let repo = RepoPath::from_parts("codeberg", "deps-rs", "deps.rs").unwrap();
             let out = repo.to_usercontent_file_url(RelativePath::new(input));
 
-            let exp = format!("https://codeberg.org/deps-rs/deps.rs/raw/{}", expected);
+            let exp = format!("https://codeberg.org/deps-rs/deps.rs/raw/{expected}");
             assert_eq!(out.to_string(), exp);
         }
 
@@ -262,7 +256,7 @@ mod tests {
             let repo = RepoPath::from_parts("gitea/gitea.com", "deps-rs", "deps.rs").unwrap();
             let out = repo.to_usercontent_file_url(RelativePath::new(input));
 
-            let exp = format!("https://gitea.com/deps-rs/deps.rs/raw/{}", expected);
+            let exp = format!("https://gitea.com/deps-rs/deps.rs/raw/{expected}");
             assert_eq!(out.to_string(), exp);
         }
 
@@ -270,7 +264,7 @@ mod tests {
             let repo = RepoPath::from_parts("gitea/example.com/git", "deps-rs", "deps.rs").unwrap();
             let out = repo.to_usercontent_file_url(RelativePath::new(input));
 
-            let exp = format!("https://example.com/git/deps-rs/deps.rs/raw/{}", expected);
+            let exp = format!("https://example.com/git/deps-rs/deps.rs/raw/{expected}");
             assert_eq!(out.to_string(), exp);
         }
     }

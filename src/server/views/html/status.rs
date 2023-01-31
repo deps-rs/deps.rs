@@ -61,14 +61,14 @@ fn dependency_table(title: &str, deps: &IndexMap<CrateName, AnalyzedDependency>)
         h3 class="title is-4" { (title) }
         p class="subtitle is-5" {
             (match (count_outdated, count_always_insecure, count_insecure - count_always_insecure) {
-                (0, 0, 0) => format!("({} total, all up-to-date)", count_total),
-                (0, 0, c) => format!("({} total, {} possibly insecure)", count_total, c),
-                (_, 0, 0) => format!("({} total, {} outdated)", count_total, count_outdated),
-                (0, _, 0) => format!("({} total, {} insecure)", count_total, count_always_insecure),
-                (0, _, c) => format!("({} total, {} insecure, {} possibly insecure)", count_total, count_always_insecure, c),
-                (_, 0, c) => format!("({} total, {} outdated, {} possibly insecure)", count_total, count_outdated, c),
-                (_, _, 0) => format!("({} total, {} outdated, {} insecure)", count_total, count_outdated, count_always_insecure),
-                (_, _, c) => format!("({} total, {} outdated, {} insecure, {} possibly insecure)", count_total, count_outdated, count_always_insecure, c),
+                (0, 0, 0) => format!("({count_total} total, all up-to-date)"),
+                (0, 0, c) => format!("({count_total} total, {c} possibly insecure)"),
+                (_, 0, 0) => format!("({count_total} total, {count_outdated} outdated)"),
+                (0, _, 0) => format!("({count_total} total, {count_always_insecure} insecure)"),
+                (0, _, c) => format!("({count_total} total, {count_always_insecure} insecure, {c} possibly insecure)"),
+                (_, 0, c) => format!("({count_total} total, {count_outdated} outdated, {c} possibly insecure)"),
+                (_, _, 0) => format!("({count_total} total, {count_outdated} outdated, {count_always_insecure} insecure)"),
+                (_, _, c) => format!("({count_total} total, {count_outdated} outdated, {count_always_insecure} insecure, {c} possibly insecure)"),
             })
         }
 
@@ -385,7 +385,7 @@ fn render_success(
     .unwrap();
 
     html! {
-        section class=(format!("hero {}", hero_class)) {
+        section class=(format!("hero {hero_class}")) {
             div class="hero-head" { (super::render_navbar()) }
             div class="hero-body" {
                 div class="container" {
@@ -406,9 +406,9 @@ fn render_success(
                 div class="container" {
                     pre class="is-size-7" {
                         @if extra_config.path.is_some() {
-                            (format!("[![dependency status]({}/status.svg?{opt})]({}?{opt})", status_base_url, status_base_url, opt = options))
+                            (format!("[![dependency status]({status_base_url}/status.svg?{options})]({status_base_url}?{options})"))
                         } @else {
-                            (format!("[![dependency status]({}/status.svg)]({})", status_base_url, status_base_url))
+                            (format!("[![dependency status]({status_base_url}/status.svg)]({status_base_url})"))
                         }
                     }
                 }

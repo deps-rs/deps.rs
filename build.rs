@@ -26,7 +26,7 @@ fn main() {
 
     let hash_path = Path::new(&out_dir).join("style.css.sha1");
     let digest = Sha1::digest(style.as_bytes());
-    fs::write(hash_path, format!("{:x}", digest)).unwrap();
+    fs::write(hash_path, format!("{digest:x}")).unwrap();
 
     // hash and copy the JS file
     let js_blob = fs::read("./assets/links.js").unwrap();
@@ -35,5 +35,5 @@ fn main() {
 
     let js_hash_path = Path::new(&out_dir).join("links.js.sha1");
     let js_digest = Sha1::digest(&js_blob);
-    fs::write(js_hash_path, format!("{:x}", js_digest)).unwrap();
+    fs::write(js_hash_path, format!("{js_digest:x}")).unwrap();
 }
