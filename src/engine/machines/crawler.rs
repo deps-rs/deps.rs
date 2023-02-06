@@ -5,7 +5,7 @@ use indexmap::IndexMap;
 use relative_path::RelativePathBuf;
 
 use crate::models::crates::{CrateDep, CrateDeps, CrateManifest, CrateName};
-use crate::parsers::manifest::parse_manifest_toml;
+use crate::parsers::manifest::{parse_manifest_toml, parse_lock};
 
 pub struct ManifestCrawlerOutput {
     pub crates: IndexMap<CrateName, CrateDeps>,
@@ -104,6 +104,48 @@ impl ManifestCrawler {
                 self.register_interest(base_path, path, output);
             }
         }
+    }
+
+    pub fn process_lock(
+        &mut self,
+        path: RelativePathBuf,
+        raw_manifest: String
+    ) -> Result<(), Error> {
+        let manifest = parse_lock(&raw_manifest)?;
+        self.manifests.insert(path, manifest.clone());
+
+        let packages_in_lock = match manifest {
+            CrateManifest::Package(_, crate_deps) => crate_deps,
+            _ => unreachable!()
+        };
+
+        for (crate_name, mut crate_deps) in self.leaf_crates.clone().into_iter() {
+            for (crate_name, crate_dep) in crate_deps.main.clone() {
+                if crate_dep.is_external() {
+                    if let Some(cp) = packages_in_lock.unknown.get(&crate_name) {
+                        crate_deps.main.insert(crate_name, cp.clone());
+                    }
+                }
+            }
+            for (crate_name, crate_dep) in crate_deps.dev.clone() {
+                if crate_dep.is_external() {
+                    if let Some(cp) = packages_in_lock.unknown.get(&crate_name) {
+                        crate_deps.dev.insert(crate_name, cp.clone());
+                    }
+                }
+            }
+            for (crate_name, crate_dep) in crate_deps.build.clone() {
+                if crate_dep.is_external() {    
+                    if let Some(cp) = packages_in_lock.unknown.get(&crate_name) {
+                        crate_deps.build.insert(crate_name, cp.clone());
+                    }
+                }
+            }
+
+            self.leaf_crates.insert(crate_name, crate_deps);
+        }
+
+        Ok(())
     }
 
     pub fn finalize(self) -> ManifestCrawlerOutput {

@@ -1,4 +1,7 @@
+use std::str::FromStr;
+
 use anyhow::{anyhow, Error};
+use cargo_lock::{Lockfile, Package};
 use indexmap::IndexMap;
 use relative_path::RelativePathBuf;
 use semver::VersionReq;
@@ -83,6 +86,15 @@ fn convert_dependency(
     }
 }
 
+fn convert_package(
+    cargo_package: Package,
+) -> Option<Result<(CrateName, CrateDep), Error>> {
+    let package_name = cargo_package.name.as_str().parse::<CrateName>().unwrap();
+    let version_req = VersionReq::parse(&cargo_package.version.to_string()).unwrap(); 
+    
+    Some(Ok((package_name, CrateDep::External(version_req))))
+}
+
 pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, Error> {
     let cargo_toml = toml::de::from_str::<CargoToml>(input)?;
 
@@ -112,6 +124,7 @@ pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, Error> {
             main: dependencies,
             dev: dev_dependencies,
             build: build_dependencies,
+            unknown: IndexMap::new()
         };
 
         package_part = Some((crate_name, deps));
@@ -131,6 +144,25 @@ pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, Error> {
         }),
         (None, None) => Err(anyhow!("neither workspace nor package found in manifest")),
     }
+}
+
+
+pub fn parse_lock(input: &str) -> Result<CrateManifest, Error> {
+    let lockfile = Lockfile::from_str(input).unwrap();
+    let crate_name = CrateName::from_str("unused").unwrap();
+
+    let unknown_dependencies = lockfile.packages.into_iter()
+        .filter_map(convert_package)
+        .collect::<Result<IndexMap<_, _>, _>>()?;
+
+    let deps = CrateDeps {
+        main: IndexMap::new(),
+        dev: IndexMap::new(),
+        build: IndexMap::new(),
+        unknown: unknown_dependencies
+    };
+
+    Ok(CrateManifest::Package(crate_name, deps))  
 }
 
 #[cfg(test)]

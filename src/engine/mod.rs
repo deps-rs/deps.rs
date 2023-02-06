@@ -180,15 +180,13 @@ impl Engine {
             entry_point.push(inner_path);
         }
 
-        let engine = self.clone();
-
         let manifest_output = crawl_manifest(self.clone(), repo_path.clone(), entry_point).await?;
 
         let futures = manifest_output
             .crates
             .into_iter()
             .map(|(crate_name, deps)| async {
-                let analyzed_deps = analyze_dependencies(engine.clone(), deps).await?;
+                let analyzed_deps = analyze_dependencies(self.clone(), deps).await?;
                 Ok::<_, Error>((crate_name, analyzed_deps))
             })
             .collect::<Vec<_>>();
@@ -272,6 +270,17 @@ impl Engine {
             .buffer_unordered(25);
 
         Box::pin(s)
+    }
+
+    async fn retrieve_lock_at_path(
+        &self, 
+        repo_path: &RepoPath,
+        path: &RelativePathBuf
+    ) -> Result<String, Error> {
+        let lock_path = path.join(RelativePath::new("Cargo.lock"));
+
+        let mut service = self.retrieve_file_at_path.clone();
+        service.call((repo_path.clone(), lock_path)).await
     }
 
     async fn retrieve_manifest_at_path(

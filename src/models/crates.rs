@@ -83,6 +83,7 @@ pub struct CrateDeps {
     pub main: IndexMap<CrateName, CrateDep>,
     pub dev: IndexMap<CrateName, CrateDep>,
     pub build: IndexMap<CrateName, CrateDep>,
+    pub unknown: IndexMap<CrateName, CrateDep>
 }
 
 #[derive(Debug)]
