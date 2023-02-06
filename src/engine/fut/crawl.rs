@@ -56,13 +56,13 @@ pub async fn crawl_manifest(
     let engine3 = engine.clone();
     let repo_path3 = repo_path.clone();
     let entry_point3 = entry_point.clone();
-    
+
     let contents = engine3
         .retrieve_lock_at_path(&repo_path3, &entry_point3)
         .await;
     if contents.is_ok() {
         _ = crawler.process_lock(entry_point3, contents.unwrap());
     }
-   
+
     Ok(crawler.finalize())
 }

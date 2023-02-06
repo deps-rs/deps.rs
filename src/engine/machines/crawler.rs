@@ -5,7 +5,7 @@ use indexmap::IndexMap;
 use relative_path::RelativePathBuf;
 
 use crate::models::crates::{CrateDep, CrateDeps, CrateManifest, CrateName};
-use crate::parsers::manifest::{parse_manifest_toml, parse_lock};
+use crate::parsers::manifest::{parse_lock, parse_manifest_toml};
 
 pub struct ManifestCrawlerOutput {
     pub crates: IndexMap<CrateName, CrateDeps>,
@@ -109,14 +109,14 @@ impl ManifestCrawler {
     pub fn process_lock(
         &mut self,
         path: RelativePathBuf,
-        raw_manifest: String
+        raw_manifest: String,
     ) -> Result<(), Error> {
         let manifest = parse_lock(&raw_manifest)?;
         self.manifests.insert(path, manifest.clone());
 
         let packages_in_lock = match manifest {
             CrateManifest::Package(_, crate_deps) => crate_deps,
-            _ => unreachable!()
+            _ => unreachable!(),
         };
 
         for (crate_name, mut crate_deps) in self.leaf_crates.clone().into_iter() {
@@ -135,7 +135,7 @@ impl ManifestCrawler {
                 }
             }
             for (crate_name, crate_dep) in crate_deps.build.clone() {
-                if crate_dep.is_external() {    
+                if crate_dep.is_external() {
                     if let Some(cp) = packages_in_lock.unknown.get(&crate_name) {
                         crate_deps.build.insert(crate_name, cp.clone());
                     }

@@ -273,9 +273,9 @@ impl Engine {
     }
 
     async fn retrieve_lock_at_path(
-        &self, 
+        &self,
         repo_path: &RepoPath,
-        path: &RelativePathBuf
+        path: &RelativePathBuf,
     ) -> Result<String, Error> {
         let lock_path = path.join(RelativePath::new("Cargo.lock"));
 
