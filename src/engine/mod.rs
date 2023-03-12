@@ -93,6 +93,7 @@ impl Engine {
 pub struct AnalyzeDependenciesOutcome {
     pub crates: Vec<(CrateName, AnalyzedDependencies)>,
     pub duration: Duration,
+    pub lockfile_available: bool,
 }
 
 impl AnalyzeDependenciesOutcome {
@@ -202,7 +203,11 @@ impl Engine {
         //     .with_tag("repo_name", repo_path.name.as_ref())
         //     .send()?;
 
-        Ok(AnalyzeDependenciesOutcome { crates, duration })
+        Ok(AnalyzeDependenciesOutcome { 
+            crates,
+            duration, 
+            lockfile_available: manifest_output.lockfile_available 
+        })
     }
 
     pub async fn analyze_crate_dependencies(
@@ -235,7 +240,7 @@ impl Engine {
                 let crates = vec![(crate_path.name, analyzed_deps)];
                 let duration = start.elapsed();
 
-                Ok(AnalyzeDependenciesOutcome { crates, duration })
+                Ok(AnalyzeDependenciesOutcome { crates, duration, lockfile_available: false })
             }
         }
     }

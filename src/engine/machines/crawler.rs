@@ -9,6 +9,7 @@ use crate::parsers::manifest::{parse_lock, parse_manifest_toml};
 
 pub struct ManifestCrawlerOutput {
     pub crates: IndexMap<CrateName, CrateDeps>,
+    pub lockfile_available: bool,
 }
 
 pub struct ManifestCrawlerStepOutput {
@@ -18,6 +19,7 @@ pub struct ManifestCrawlerStepOutput {
 pub struct ManifestCrawler {
     manifests: HashMap<RelativePathBuf, CrateManifest>,
     leaf_crates: IndexMap<CrateName, CrateDeps>,
+    lockfile_available: bool,
 }
 
 impl ManifestCrawler {
@@ -25,6 +27,7 @@ impl ManifestCrawler {
         ManifestCrawler {
             manifests: HashMap::new(),
             leaf_crates: IndexMap::new(),
+            lockfile_available: false
         }
     }
 
@@ -145,12 +148,15 @@ impl ManifestCrawler {
             self.leaf_crates.insert(crate_name, crate_deps);
         }
 
+        self.lockfile_available = true;
+
         Ok(())
     }
 
     pub fn finalize(self) -> ManifestCrawlerOutput {
         ManifestCrawlerOutput {
             crates: self.leaf_crates,
+            lockfile_available: self.lockfile_available
         }
     }
 }

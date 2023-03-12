@@ -135,6 +135,14 @@ fn get_site_icon(site: &RepoSite) -> (FaType, &'static str) {
     }
 }
 
+fn render_lock() -> Markup {
+    html! {
+        " based on the "
+        code { "Cargo.lock" }
+        " file present in the repository"
+    }
+}
+
 fn render_title(subject_path: &SubjectPath) -> Markup {
     match *subject_path {
         SubjectPath::Repo(ref repo_path) => {
@@ -219,13 +227,28 @@ fn render_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
             let (c, kind, dep) = components[0];
             html! {
                 div class="notification is-warning" {
-                    p { "This project contains " b { (c) " " (kind) " " (dep) } "." }
+                    p { 
+                        "This project contains " 
+                        b { (c) " " (kind) " " (dep) }
+                        @if outcome.lockfile_available {
+                            ","
+                            (render_lock())
+                        }
+                        "." 
+                    }
                 }
             }
         }
         _ => html! {
             div class="notification is-warning" {
-                p { "This project contains:" }
+                p { 
+                    "This project contains"
+                    @if outcome.lockfile_available {
+                        ","
+                        (render_lock())
+                    }                
+                    ":" 
+                }
                 ul {
                     @for (c, kind, dep) in components {
                         li { b { (c) " " (kind) " " (dep) } }
@@ -420,14 +443,23 @@ fn render_success(
                     div class="notification is-warning" {
                         p { "This project contains "
                             b { "known security vulnerabilities" }
+                            @if analysis_outcome.lockfile_available {
+                                ","
+                                (render_lock())
+                            }
                             ". Find detailed information at the "
                             a href="#vulnerabilities" { "bottom"} "."
                         }
                     }
                 } @else if analysis_outcome.any_insecure() {
                     div class="notification is-warning" {
-                        p { "This project might be open to "
+                        p {
+                            "This project might be open to "
                             b { "known security vulnerabilities" }
+                            @if analysis_outcome.lockfile_available {
+                                ","
+                                (render_lock())
+                            }
                             ", which can be prevented by tightening "
                             "the version range of affected dependencies. "
                             "Find detailed information at the "
@@ -437,6 +469,7 @@ fn render_success(
                 } @else {
                     (render_dependency_box(&analysis_outcome))
                 }
+
                 @for (crate_name, deps) in &analysis_outcome.crates {
                     (dependency_tables(crate_name, deps))
                 }
