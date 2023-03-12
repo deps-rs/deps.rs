@@ -86,11 +86,11 @@ fn convert_dependency(
     }
 }
 
-fn convert_package(cargo_package: Package) -> Option<Result<(CrateName, CrateDep), Error>> {
+fn convert_package(cargo_package: Package) -> Result<(CrateName, CrateDep), Error> {
     let package_name = cargo_package.name.as_str().parse::<CrateName>().unwrap();
     let version_req = VersionReq::parse(&cargo_package.version.to_string()).unwrap();
 
-    Some(Ok((package_name, CrateDep::External(version_req))))
+    Ok((package_name, CrateDep::External(version_req)))
 }
 
 pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, Error> {
@@ -122,7 +122,7 @@ pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, Error> {
             main: dependencies,
             dev: dev_dependencies,
             build: build_dependencies,
-            unknown: IndexMap::new(),
+            lockfile: IndexMap::new(),
         };
 
         package_part = Some((crate_name, deps));
@@ -146,19 +146,20 @@ pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, Error> {
 
 pub fn parse_lock(input: &str) -> Result<CrateManifest, Error> {
     let lockfile = Lockfile::from_str(input).unwrap();
+    // the crate name is not recoverable from the lock file, so we set a placeholder here
     let crate_name = CrateName::from_str("unused").unwrap();
 
-    let unknown_dependencies = lockfile
+    let lockfile_dependencies = lockfile
         .packages
         .into_iter()
-        .filter_map(convert_package)
+        .map(convert_package)
         .collect::<Result<IndexMap<_, _>, _>>()?;
 
     let deps = CrateDeps {
         main: IndexMap::new(),
         dev: IndexMap::new(),
         build: IndexMap::new(),
-        unknown: unknown_dependencies,
+        lockfile: lockfile_dependencies,
     };
 
     Ok(CrateManifest::Package(crate_name, deps))

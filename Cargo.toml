@@ -15,7 +15,7 @@ badge = { path = "./libs/badge" }
 
 anyhow = "1"
 cadence = "0.29"
-cargo-lock = { version = "8.0.3", features = ["dependency-tree"] }
+cargo-lock = "8.0"
 crates-index = "0.19"
 derive_more = "0.99"
 font-awesome-as-a-crate = "0.3"

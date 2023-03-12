@@ -122,21 +122,21 @@ impl ManifestCrawler {
         for (crate_name, mut crate_deps) in self.leaf_crates.clone().into_iter() {
             for (crate_name, crate_dep) in crate_deps.main.clone() {
                 if crate_dep.is_external() {
-                    if let Some(cp) = packages_in_lock.unknown.get(&crate_name) {
+                    if let Some(cp) = packages_in_lock.lockfile.get(&crate_name) {
                         crate_deps.main.insert(crate_name, cp.clone());
                     }
                 }
             }
             for (crate_name, crate_dep) in crate_deps.dev.clone() {
                 if crate_dep.is_external() {
-                    if let Some(cp) = packages_in_lock.unknown.get(&crate_name) {
+                    if let Some(cp) = packages_in_lock.lockfile.get(&crate_name) {
                         crate_deps.dev.insert(crate_name, cp.clone());
                     }
                 }
             }
             for (crate_name, crate_dep) in crate_deps.build.clone() {
                 if crate_dep.is_external() {
-                    if let Some(cp) = packages_in_lock.unknown.get(&crate_name) {
+                    if let Some(cp) = packages_in_lock.lockfile.get(&crate_name) {
                         crate_deps.build.insert(crate_name, cp.clone());
                     }
                 }
