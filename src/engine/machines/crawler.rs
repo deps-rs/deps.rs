@@ -27,7 +27,7 @@ impl ManifestCrawler {
         ManifestCrawler {
             manifests: HashMap::new(),
             leaf_crates: IndexMap::new(),
-            lockfile_available: false
+            lockfile_available: false,
         }
     }
 
@@ -156,7 +156,7 @@ impl ManifestCrawler {
     pub fn finalize(self) -> ManifestCrawlerOutput {
         ManifestCrawlerOutput {
             crates: self.leaf_crates,
-            lockfile_available: self.lockfile_available
+            lockfile_available: self.lockfile_available,
         }
     }
 }

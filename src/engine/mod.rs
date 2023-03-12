@@ -203,10 +203,10 @@ impl Engine {
         //     .with_tag("repo_name", repo_path.name.as_ref())
         //     .send()?;
 
-        Ok(AnalyzeDependenciesOutcome { 
+        Ok(AnalyzeDependenciesOutcome {
             crates,
-            duration, 
-            lockfile_available: manifest_output.lockfile_available 
+            duration,
+            lockfile_available: manifest_output.lockfile_available,
         })
     }
 
@@ -240,7 +240,11 @@ impl Engine {
                 let crates = vec![(crate_path.name, analyzed_deps)];
                 let duration = start.elapsed();
 
-                Ok(AnalyzeDependenciesOutcome { crates, duration, lockfile_available: false })
+                Ok(AnalyzeDependenciesOutcome {
+                    crates,
+                    duration,
+                    lockfile_available: false,
+                })
             }
         }
     }

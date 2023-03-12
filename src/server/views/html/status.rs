@@ -227,27 +227,27 @@ fn render_dependency_box(outcome: &AnalyzeDependenciesOutcome) -> Markup {
             let (c, kind, dep) = components[0];
             html! {
                 div class="notification is-warning" {
-                    p { 
-                        "This project contains " 
+                    p {
+                        "This project contains "
                         b { (c) " " (kind) " " (dep) }
                         @if outcome.lockfile_available {
                             ","
                             (render_lock())
                         }
-                        "." 
+                        "."
                     }
                 }
             }
         }
         _ => html! {
             div class="notification is-warning" {
-                p { 
+                p {
                     "This project contains"
                     @if outcome.lockfile_available {
                         ","
                         (render_lock())
-                    }                
-                    ":" 
+                    }
+                    ":"
                 }
                 ul {
                     @for (c, kind, dep) in components {

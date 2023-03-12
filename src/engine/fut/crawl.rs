@@ -53,9 +53,7 @@ pub async fn crawl_manifest(
     }
 
     // cargo lock
-    let contents = engine
-        .retrieve_lock_at_path(&repo_path, &entry_point)
-        .await;
+    let contents = engine.retrieve_lock_at_path(&repo_path, &entry_point).await;
     if contents.is_ok() {
         _ = crawler.process_lock(entry_point, contents.unwrap());
     }
