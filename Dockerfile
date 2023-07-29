@@ -1,9 +1,9 @@
-FROM rust:bullseye as build
+FROM rust:bookworm as build
 
 COPY . /src
 RUN cargo install --path /src
 
-FROM debian:bullseye
+FROM debian:bookworm
 
 LABEL org.opencontainers.image.source https://github.com/deps-rs/deps.rs
 
