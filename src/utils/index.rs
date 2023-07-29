@@ -5,21 +5,21 @@ use std::time::Duration;
 use crate::models::crates::CrateName;
 use anyhow::Result;
 use crates_index::Crate;
-use crates_index::Index;
+use crates_index::GitIndex;
 use slog::{error, Logger};
 use tokio::task::spawn_blocking;
 use tokio::time::{self, MissedTickBehavior};
 
 #[derive(Clone)]
 pub struct ManagedIndex {
-    index: Arc<Mutex<Index>>,
+    index: Arc<Mutex<GitIndex>>,
     logger: Logger,
 }
 
 impl ManagedIndex {
     pub fn new(logger: Logger) -> Self {
         // the index path is configurable through the `CARGO_HOME` env variable
-        let index = Arc::new(Mutex::new(Index::new_cargo_default().unwrap()));
+        let index = Arc::new(Mutex::new(GitIndex::new_cargo_default().unwrap()));
         Self { index, logger }
     }
 
