@@ -1,7 +1,7 @@
 FROM rust:bookworm as build
 
 COPY . /src
-RUN cargo install --path /src
+RUN cargo install --path /src --locked
 
 FROM debian:bookworm
 
