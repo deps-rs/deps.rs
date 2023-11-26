@@ -1,5 +1,3 @@
-extern crate sass_rs as sass;
-
 use std::env;
 use std::fs;
 use std::path::Path;
@@ -7,12 +5,11 @@ use std::path::Path;
 use sha1::{Digest, Sha1};
 
 fn build_style() -> String {
-    let options = sass::Options {
-        output_style: sass::OutputStyle::Compressed,
-        ..Default::default()
-    };
-
-    sass::compile_file("./assets/styles/main.sass", options).expect("failed to compile style sheet")
+    grass::from_path(
+        "assets/styles/main.sass",
+        &grass::Options::default().style(grass::OutputStyle::Compressed),
+    )
+    .expect("failed to compile style sheet")
 }
 
 fn main() {
