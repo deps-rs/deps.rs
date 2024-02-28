@@ -49,10 +49,11 @@ impl fmt::Display for RepoPath {
     }
 }
 
+#[allow(clippy::similar_names)]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum RepoSite {
     Github,
-    Gitlab,
+    Gitlab(Option<GiteaDomain>),
     Bitbucket,
     Sourcehut,
     Codeberg,
@@ -63,7 +64,8 @@ impl RepoSite {
     pub fn to_base_uri(&self) -> &str {
         match self {
             RepoSite::Github => "https://github.com",
-            RepoSite::Gitlab => "https://gitlab.com",
+            RepoSite::Gitlab(None) => "https://gitlab.com",
+            RepoSite::Gitlab(Some(domain)) => domain.as_ref(),
             RepoSite::Bitbucket => "https://bitbucket.org",
             RepoSite::Sourcehut => "https://git.sr.ht",
             RepoSite::Codeberg => "https://codeberg.org",
@@ -74,7 +76,8 @@ impl RepoSite {
     pub fn to_usercontent_base_uri(&self) -> &str {
         match self {
             RepoSite::Github => "https://raw.githubusercontent.com",
-            RepoSite::Gitlab => "https://gitlab.com",
+            RepoSite::Gitlab(None) => "https://gitlab.com",
+            RepoSite::Gitlab(Some(domain)) => domain.as_ref(),
             RepoSite::Bitbucket => "https://bitbucket.org",
             RepoSite::Sourcehut => "https://git.sr.ht",
             RepoSite::Codeberg => "https://codeberg.org",
@@ -85,7 +88,7 @@ impl RepoSite {
     pub fn to_usercontent_repo_suffix(&self) -> &'static str {
         match self {
             RepoSite::Github => "HEAD",
-            RepoSite::Gitlab | RepoSite::Bitbucket => "raw/HEAD",
+            RepoSite::Gitlab(_) | RepoSite::Bitbucket => "raw/HEAD",
             RepoSite::Sourcehut => "blob/HEAD",
             RepoSite::Codeberg | RepoSite::Gitea(_) => "raw",
         }
@@ -99,12 +102,13 @@ impl FromStr for RepoSite {
         if let Some((site, domain)) = input.split_once('/') {
             match site {
                 "gitea" => Ok(RepoSite::Gitea(domain.parse()?)),
+                "gitlab" => Ok(RepoSite::Gitlab(Some(domain.parse()?))),
                 _ => Err(anyhow!("unknown repo site identifier")),
             }
         } else {
             match input {
                 "github" => Ok(RepoSite::Github),
-                "gitlab" => Ok(RepoSite::Gitlab),
+                "gitlab" => Ok(RepoSite::Gitlab(None)),
                 "bitbucket" => Ok(RepoSite::Bitbucket),
                 "sourcehut" => Ok(RepoSite::Sourcehut),
                 "codeberg" => Ok(RepoSite::Codeberg),
@@ -118,7 +122,8 @@ impl fmt::Display for RepoSite {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             RepoSite::Github => write!(f, "github"),
-            RepoSite::Gitlab => write!(f, "gitlab"),
+            RepoSite::Gitlab(None) => write!(f, "gitlab"),
+            RepoSite::Gitlab(Some(s)) => write!(f, "gitlab/{s}"),
             RepoSite::Bitbucket => write!(f, "bitbucket"),
             RepoSite::Sourcehut => write!(f, "sourcehut"),
             RepoSite::Codeberg => write!(f, "codeberg"),
@@ -265,6 +270,14 @@ mod tests {
             let out = repo.to_usercontent_file_url(RelativePath::new(input));
 
             let exp = format!("https://example.com/git/deps-rs/deps.rs/raw/{expected}");
+            assert_eq!(out.to_string(), exp);
+        }
+
+        for (input, expected) in &paths {
+            let repo = RepoPath::from_parts("gitlab/gitlab.com", "deps-rs", "deps.rs").unwrap();
+            let out = repo.to_usercontent_file_url(RelativePath::new(input));
+
+            let exp = format!("https://gitlab.com/deps-rs/deps.rs/raw/HEAD/{expected}");
             assert_eq!(out.to_string(), exp);
         }
     }
