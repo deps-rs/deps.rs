@@ -6,6 +6,7 @@ use relative_path::RelativePath;
 #[derive(Clone, Debug)]
 pub struct Repository {
     pub path: RepoPath,
+    #[allow(unused)] // TODO
     pub description: String,
 }
 
