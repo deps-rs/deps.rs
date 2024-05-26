@@ -3,7 +3,6 @@ use std::{fmt, sync::Arc, time::Duration};
 use derive_more::{Display, Error, From};
 use hyper::service::Service;
 use lru_time_cache::LruCache;
-use slog::{debug, Logger};
 use tokio::sync::Mutex;
 
 #[derive(Debug, Clone, Display, From, Error)]
@@ -18,7 +17,6 @@ where
 {
     inner: S,
     cache: Arc<Mutex<LruCache<Req, S::Response>>>,
-    logger: Logger,
 }
 
 impl<S, Req> fmt::Debug for Cache<S, Req>
@@ -38,13 +36,12 @@ where
     S::Response: Clone,
     Req: Clone + Eq + Ord + fmt::Debug,
 {
-    pub fn new(service: S, ttl: Duration, capacity: usize, logger: Logger) -> Cache<S, Req> {
+    pub fn new(service: S, ttl: Duration, capacity: usize) -> Cache<S, Req> {
         let cache = LruCache::with_expiry_duration_and_capacity(ttl, capacity);
 
         Cache {
             inner: service,
             cache: Arc::new(Mutex::new(cache)),
-            logger,
         }
     }
 
@@ -53,19 +50,19 @@ where
             let mut cache = self.cache.lock().await;
 
             if let Some(cached_response) = cache.get(&req) {
-                debug!(
-                    self.logger, "cache hit";
-                    "svc" => format!("{:?}", self.inner),
-                    "req" => format!("{:?}", &req)
+                tracing::debug!(
+                    svc = ?self.inner,
+                    req = ?req,
+                    cache = "hit",
                 );
                 return Ok(cached_response.clone());
             }
         }
 
-        debug!(
-            self.logger, "cache miss";
-            "svc" => format!("{:?}", self.inner),
-            "req" => format!("{:?}", &req)
+        tracing::debug!(
+            svc = ?self.inner,
+            req = ?req,
+            cache = "miss",
         );
 
         let mut service = self.inner.clone();

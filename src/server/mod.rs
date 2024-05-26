@@ -10,7 +10,6 @@ use once_cell::sync::Lazy;
 use route_recognizer::{Params, Router};
 use semver::VersionReq;
 use serde::Deserialize;
-use slog::{error, info, o, Logger};
 
 mod assets;
 mod views;
@@ -18,10 +17,14 @@ mod views;
 use self::assets::{
     STATIC_LINKS_JS_ETAG, STATIC_LINKS_JS_PATH, STATIC_STYLE_CSS_ETAG, STATIC_STYLE_CSS_PATH,
 };
-use crate::engine::{AnalyzeDependenciesOutcome, Engine};
-use crate::models::crates::{CrateName, CratePath};
-use crate::models::repo::RepoPath;
-use crate::models::SubjectPath;
+use crate::{
+    engine::{AnalyzeDependenciesOutcome, Engine},
+    models::{
+        crates::{CrateName, CratePath},
+        repo::RepoPath,
+        SubjectPath,
+    },
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum StatusFormat {
@@ -47,13 +50,12 @@ enum Route {
 
 #[derive(Clone)]
 pub struct App {
-    logger: Logger,
     engine: Engine,
     router: Arc<Router<Route>>,
 }
 
 impl App {
-    pub fn new(logger: Logger, engine: Engine) -> App {
+    pub fn new(engine: Engine) -> App {
         let mut router = Router::new();
 
         router.add("/", Route::Index);
@@ -83,15 +85,12 @@ impl App {
         );
 
         App {
-            logger,
             engine,
             router: Arc::new(router),
         }
     }
 
     pub async fn handle(&self, req: Request<Body>) -> Result<Response<Body>, HyperError> {
-        let logger = self.logger.new(o!("path" => req.uri().path().to_owned()));
-        let logger2 = logger.clone();
         let start = Instant::now();
 
         // allows `/path/` to also match `/path`
@@ -99,28 +98,25 @@ impl App {
 
         let res = if let Ok(route_match) = self.router.recognize(normalized_path) {
             match (req.method(), route_match.handler()) {
-                (&Method::GET, Route::Index) => {
-                    self.index(req, route_match.params().clone(), logger).await
-                }
+                (&Method::GET, Route::Index) => self.index(req, route_match.params().clone()).await,
 
                 (&Method::GET, Route::RepoStatus(format)) => {
-                    self.repo_status(req, route_match.params().clone(), logger, *format)
+                    self.repo_status(req, route_match.params().clone(), *format)
                         .await
                 }
 
                 (&Method::GET, Route::CrateStatus(format)) => {
-                    self.crate_status(req, route_match.params().clone(), logger, *format)
+                    self.crate_status(req, route_match.params().clone(), *format)
                         .await
                 }
 
                 (&Method::GET, Route::LatestCrateBadge) => {
-                    self.crate_status(req, route_match.params().clone(), logger, StatusFormat::Svg)
+                    self.crate_status(req, route_match.params().clone(), StatusFormat::Svg)
                         .await
                 }
 
                 (&Method::GET, Route::CrateRedirect) => {
-                    self.crate_redirect(req, route_match.params().clone(), logger)
-                        .await
+                    self.crate_redirect(req, route_match.params().clone()).await
                 }
 
                 (&Method::GET, Route::Static(file)) => Ok(App::static_file(*file)),
@@ -135,12 +131,11 @@ impl App {
         let diff = end - start;
 
         match &res {
-            Ok(res) => info!(
-                logger2, "";
-                "status" => res.status().to_string(),
-                "time" => format!("{}ms", diff.as_millis())
+            Ok(res) => tracing::info!(
+                status = %res.status(),
+                time = %format_args!("{}ms", diff.as_millis()),
             ),
-            Err(err) => error!(logger2, ""; "error" => err.to_string()),
+            Err(err) => tracing::error!(%err),
         };
 
         res
@@ -152,7 +147,6 @@ impl App {
         &self,
         _req: Request<Body>,
         _params: Params,
-        logger: Logger,
     ) -> Result<Response<Body>, HyperError> {
         let engine = self.engine.clone();
 
@@ -161,7 +155,7 @@ impl App {
 
         match popular {
             Err(err) => {
-                error!(logger, "error: {}", err);
+                tracing::error!(%err);
                 let mut response =
                     views::html::error::render("Could not retrieve popular items", "");
                 *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
@@ -177,7 +171,6 @@ impl App {
         &self,
         req: Request<Body>,
         params: Params,
-        logger: Logger,
         format: StatusFormat,
     ) -> Result<Response<Body>, HyperError> {
         let server = self.clone();
@@ -192,7 +185,7 @@ impl App {
 
         match repo_path_result {
             Err(err) => {
-                error!(logger, "error: {}", err);
+                tracing::error!(%err);
                 let mut response = views::html::error::render(
                     "Could not parse repository path",
                     "Please make sure to provide a valid repository path.",
@@ -209,7 +202,7 @@ impl App {
 
                 match analyze_result {
                     Err(err) => {
-                        error!(logger, "error: {}", err);
+                        tracing::error!(%err);
                         let response = App::status_format_analysis(
                             None,
                             format,
@@ -236,7 +229,6 @@ impl App {
         &self,
         _req: Request<Body>,
         params: Params,
-        logger: Logger,
     ) -> Result<Response<Body>, HyperError> {
         let engine = self.engine.clone();
 
@@ -245,7 +237,7 @@ impl App {
 
         match crate_name_result {
             Err(err) => {
-                error!(logger, "error: {}", err);
+                tracing::error!(%err);
                 let mut response = views::html::error::render(
                     "Could not parse crate name",
                     "Please make sure to provide a valid crate name.",
@@ -261,7 +253,7 @@ impl App {
 
                 match release_result {
                     Err(err) => {
-                        error!(logger, "error: {}", err);
+                        tracing::error!(%err);
                         let mut response = views::html::error::render(
                             "Could not fetch crate information",
                             "Please make sure to provide a valid crate name.",
@@ -302,7 +294,6 @@ impl App {
         &self,
         req: Request<Body>,
         params: Params,
-        logger: Logger,
         format: StatusFormat,
     ) -> Result<Response<Body>, HyperError> {
         let server = self.clone();
@@ -332,7 +323,7 @@ impl App {
                     Ok(Some(latest_rel)) => latest_rel.version.to_string(),
                     Ok(None) => return Ok(not_found()),
                     Err(err) => {
-                        error!(logger, "error: {}", err);
+                        tracing::error!(%err);
                         let mut response = views::html::error::render(
                             "Could not fetch crate information",
                             "Please make sure to provide a valid crate name.",
@@ -349,7 +340,7 @@ impl App {
 
         match crate_path_result {
             Err(err) => {
-                error!(logger, "error: {}", err);
+                tracing::error!(%err);
                 let mut response = views::html::error::render(
                     "Could not parse crate path",
                     "Please make sure to provide a valid crate name and version.",
@@ -365,7 +356,7 @@ impl App {
 
                 match analyze_result {
                     Err(err) => {
-                        error!(logger, "error: {}", err);
+                        tracing::error!(%err);
                         let response = App::status_format_analysis(
                             None,
                             format,

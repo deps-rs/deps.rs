@@ -1,15 +1,13 @@
 use std::time::Duration;
 
-use hyper::header::CONTENT_TYPE;
-use hyper::{Body, Response};
+use hyper::{header::CONTENT_TYPE, Body, Response};
 use maud::{html, Markup, Render, DOCTYPE};
 
 pub mod error;
 pub mod index;
 pub mod status;
 
-use crate::server::assets::STATIC_STYLE_CSS_PATH;
-use crate::server::SELF_BASE_URL;
+use crate::server::{assets::STATIC_STYLE_CSS_PATH, SELF_BASE_URL};
 
 fn render_html<B: Render>(title: &str, body: B) -> Response<Body> {
     let rendered = html! {

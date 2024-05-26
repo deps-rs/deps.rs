@@ -1,10 +1,10 @@
 use hyper::{Body, Response};
 use maud::{html, Markup};
 
-use crate::models::crates::CratePath;
-use crate::models::repo::Repository;
-
-use crate::server::assets::STATIC_LINKS_JS_PATH;
+use crate::{
+    models::{crates::CratePath, repo::Repository},
+    server::assets::STATIC_LINKS_JS_PATH,
+};
 
 fn link_forms() -> Markup {
     html! {

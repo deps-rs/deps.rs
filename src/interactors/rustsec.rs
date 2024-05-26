@@ -1,4 +1,8 @@
-use std::{fmt, sync::Arc, task::Context, task::Poll};
+use std::{
+    fmt,
+    sync::Arc,
+    task::{Context, Poll},
+};
 
 use anyhow::Error;
 use futures_util::FutureExt as _;

@@ -235,8 +235,8 @@ mod tests {
     #[test]
     #[ignore]
     fn test_to_svg() {
-        use std::fs::File;
-        use std::io::Write;
+        use std::{fs::File, io::Write as _};
+
         let mut file = File::create("test.svg").unwrap();
         let options = BadgeOptions {
             subject: "latest".to_owned(),

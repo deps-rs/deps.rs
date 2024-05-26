@@ -6,12 +6,15 @@ use pulldown_cmark::{html, Parser};
 use rustsec::advisory::Advisory;
 use semver::Version;
 
-use crate::engine::AnalyzeDependenciesOutcome;
-use crate::models::crates::{AnalyzedDependencies, AnalyzedDependency, CrateName};
-use crate::models::repo::RepoSite;
-use crate::models::SubjectPath;
-use crate::server::views::badge;
-use crate::server::ExtraConfig;
+use crate::{
+    engine::AnalyzeDependenciesOutcome,
+    models::{
+        crates::{AnalyzedDependencies, AnalyzedDependency, CrateName},
+        repo::RepoSite,
+        SubjectPath,
+    },
+    server::{views::badge, ExtraConfig},
+};
 
 fn get_crates_url(name: impl AsRef<str>) -> String {
     format!("https://crates.io/crates/{}", name.as_ref())

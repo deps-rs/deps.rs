@@ -4,7 +4,6 @@ use std::{
 };
 
 use anyhow::Error;
-
 use futures_util::FutureExt as _;
 use hyper::service::Service;
 use serde::Deserialize;
