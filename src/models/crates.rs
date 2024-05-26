@@ -24,6 +24,12 @@ impl CratePath {
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CrateName(String);
 
+impl CrateName {
+    pub(crate) fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 impl From<CrateName> for String {
     fn from(crate_name: CrateName) -> String {
         crate_name.0

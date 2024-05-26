@@ -9,7 +9,6 @@ use futures_util::FutureExt as _;
 use hyper::service::Service;
 use semver::{Version, VersionReq};
 use serde::Deserialize;
-use tokio::task::spawn_blocking;
 
 use crate::{
     models::crates::{CrateDep, CrateDeps, CrateName, CratePath, CrateRelease},
@@ -68,10 +67,10 @@ impl QueryCrate {
         index: ManagedIndex,
         crate_name: CrateName,
     ) -> anyhow::Result<QueryCrateResponse> {
-        let crate_name2 = crate_name.clone();
-        let krate = spawn_blocking(move || index.crate_(crate_name2))
+        let krate = index
+            .crate_(&crate_name)
             .await?
-            .ok_or_else(|| anyhow!("crate '{}' not found", crate_name.as_ref()))?;
+            .ok_or_else(|| anyhow!("crate '{}' not found", crate_name.as_str()))?;
 
         convert_pkgs(krate)
     }

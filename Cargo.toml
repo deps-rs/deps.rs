@@ -16,13 +16,15 @@ badge = { path = "./libs/badge" }
 
 anyhow = "1"
 cadence = "1"
-crates-index = { version = "2", default-features = false, features = ["git"] }
+crates-index = "2"
 derive_more = "0.99"
 dotenvy = "0.15"
+error_reporter = "1"
 font-awesome-as-a-crate = "0.3"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
+http = "1"
+http-body-util = "0.1"
 hyper = { version = "0.14.10", features = ["full"] }
-error_reporter = "1"
 indexmap = { version = "2", features = ["serde"] }
 lru_time_cache = "0.11"
 maud = "0.26"
@@ -30,7 +32,7 @@ once_cell = "1"
 parking_lot = "0.12"
 pulldown-cmark = "0.11"
 relative-path = { version = "1", features = ["serde"] }
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "http2", "rustls-tls", "gzip"] }
 route-recognizer = "0.3"
 rustsec = "0.29"
 semver = { version = "1.0", features = ["serde"] }
@@ -41,9 +43,9 @@ toml = "0.8"
 tracing = "0.1.30"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-[target.'cfg(any())'.dependencies]
-gix = { version = "0.63", default-features = false, features = ["blocking-http-transport-reqwest-rust-tls"] }
-
 [build-dependencies]
 grass = { version = "0.13", default-features = false }
 sha-1 = "0.10"
+
+[dev-dependencies]
+static_assertions = "1"
