@@ -1,11 +1,12 @@
 use std::{env, sync::Arc, time::Instant};
 
+use actix_http::{
+    body::MessageBody,
+    header::{CACHE_CONTROL, CONTENT_TYPE, ETAG, LOCATION},
+    Method, Request, Response, StatusCode,
+};
 use badge::BadgeStyle;
 use futures_util::future;
-use hyper::{
-    header::{CACHE_CONTROL, CONTENT_TYPE, ETAG, LOCATION},
-    Body, Error as HyperError, Method, Request, Response, StatusCode,
-};
 use once_cell::sync::Lazy;
 use route_recognizer::{Params, Router};
 use semver::VersionReq;
@@ -90,7 +91,10 @@ impl App {
         }
     }
 
-    pub async fn handle(&self, req: Request<Body>) -> Result<Response<Body>, HyperError> {
+    pub async fn handle(
+        &self,
+        req: Request,
+    ) -> Result<Response<impl MessageBody>, actix_http::Error> {
         let start = Instant::now();
 
         // allows `/path/` to also match `/path`
@@ -98,33 +102,39 @@ impl App {
 
         let res = if let Ok(route_match) = self.router.recognize(normalized_path) {
             match (req.method(), route_match.handler()) {
-                (&Method::GET, Route::Index) => self.index(req, route_match.params().clone()).await,
+                (&Method::GET, Route::Index) => self
+                    .index(req, route_match.params().clone())
+                    .await
+                    .map(Response::map_into_boxed_body),
 
-                (&Method::GET, Route::RepoStatus(format)) => {
-                    self.repo_status(req, route_match.params().clone(), *format)
-                        .await
+                (&Method::GET, Route::RepoStatus(format)) => self
+                    .repo_status(req, route_match.params().clone(), *format)
+                    .await
+                    .map(Response::map_into_boxed_body),
+
+                (&Method::GET, Route::CrateStatus(format)) => self
+                    .crate_status(req, route_match.params().clone(), *format)
+                    .await
+                    .map(Response::map_into_boxed_body),
+
+                (&Method::GET, Route::LatestCrateBadge) => self
+                    .crate_status(req, route_match.params().clone(), StatusFormat::Svg)
+                    .await
+                    .map(Response::map_into_boxed_body),
+
+                (&Method::GET, Route::CrateRedirect) => self
+                    .crate_redirect(req, route_match.params().clone())
+                    .await
+                    .map(Response::map_into_boxed_body),
+
+                (&Method::GET, Route::Static(file)) => {
+                    Ok(App::static_file(*file).map_into_boxed_body())
                 }
 
-                (&Method::GET, Route::CrateStatus(format)) => {
-                    self.crate_status(req, route_match.params().clone(), *format)
-                        .await
-                }
-
-                (&Method::GET, Route::LatestCrateBadge) => {
-                    self.crate_status(req, route_match.params().clone(), StatusFormat::Svg)
-                        .await
-                }
-
-                (&Method::GET, Route::CrateRedirect) => {
-                    self.crate_redirect(req, route_match.params().clone()).await
-                }
-
-                (&Method::GET, Route::Static(file)) => Ok(App::static_file(*file)),
-
-                _ => Ok(not_found()),
+                _ => Ok(not_found().map_into_boxed_body()),
             }
         } else {
-            Ok(not_found())
+            Ok(not_found().map_into_boxed_body())
         };
 
         let end = Instant::now();
@@ -145,9 +155,9 @@ impl App {
 impl App {
     async fn index(
         &self,
-        _req: Request<Body>,
+        _req: Request,
         _params: Params,
-    ) -> Result<Response<Body>, HyperError> {
+    ) -> Result<Response<impl MessageBody>, actix_http::Error> {
         let engine = self.engine.clone();
 
         let popular =
@@ -159,20 +169,21 @@ impl App {
                 let mut response =
                     views::html::error::render("Could not retrieve popular items", "");
                 *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-                Ok(response)
+
+                Ok(response.map_into_boxed_body())
             }
             Ok((popular_repos, popular_crates)) => {
-                Ok(views::html::index::render(popular_repos, popular_crates))
+                Ok(views::html::index::render(popular_repos, popular_crates).map_into_boxed_body())
             }
         }
     }
 
     async fn repo_status(
         &self,
-        req: Request<Body>,
+        req: Request,
         params: Params,
         format: StatusFormat,
-    ) -> Result<Response<Body>, HyperError> {
+    ) -> Result<Response<impl MessageBody>, actix_http::Error> {
         let server = self.clone();
 
         let site = params.find("site").expect("route param 'site' not found");
@@ -191,7 +202,8 @@ impl App {
                     "Please make sure to provide a valid repository path.",
                 );
                 *response.status_mut() = StatusCode::BAD_REQUEST;
-                Ok(response)
+
+                Ok(response.map_into_boxed_body())
             }
 
             Ok(repo_path) => {
@@ -209,7 +221,8 @@ impl App {
                             SubjectPath::Repo(repo_path),
                             extra_knobs,
                         );
-                        Ok(response)
+
+                        Ok(response.map_into_boxed_body())
                     }
                     Ok(analysis_outcome) => {
                         let response = App::status_format_analysis(
@@ -218,7 +231,8 @@ impl App {
                             SubjectPath::Repo(repo_path),
                             extra_knobs,
                         );
-                        Ok(response)
+
+                        Ok(response.map_into_boxed_body())
                     }
                 }
             }
@@ -227,9 +241,9 @@ impl App {
 
     async fn crate_redirect(
         &self,
-        _req: Request<Body>,
+        _req: Request,
         params: Params,
-    ) -> Result<Response<Body>, HyperError> {
+    ) -> Result<Response<impl MessageBody>, actix_http::Error> {
         let engine = self.engine.clone();
 
         let name = params.find("name").expect("route param 'name' not found");
@@ -243,7 +257,8 @@ impl App {
                     "Please make sure to provide a valid crate name.",
                 );
                 *response.status_mut() = StatusCode::BAD_REQUEST;
-                Ok(response)
+
+                Ok(response.map_into_boxed_body())
             }
 
             Ok(crate_name) => {
@@ -259,7 +274,8 @@ impl App {
                             "Please make sure to provide a valid crate name.",
                         );
                         *response.status_mut() = StatusCode::NOT_FOUND;
-                        Ok(response)
+
+                        Ok(response.map_into_boxed_body())
                     }
                     Ok(None) => {
                         let mut response = views::html::error::render(
@@ -267,7 +283,8 @@ impl App {
                             "Please make sure to provide a valid crate name.",
                         );
                         *response.status_mut() = StatusCode::NOT_FOUND;
-                        Ok(response)
+
+                        Ok(response.map_into_boxed_body())
                     }
                     Ok(Some(release)) => {
                         let redirect_url = format!(
@@ -277,13 +294,11 @@ impl App {
                             release.version
                         );
 
-                        let res = Response::builder()
-                            .status(StatusCode::TEMPORARY_REDIRECT)
-                            .header(LOCATION, redirect_url)
-                            .body(Body::empty())
-                            .unwrap();
+                        let res = Response::build(StatusCode::TEMPORARY_REDIRECT)
+                            .insert_header((LOCATION, redirect_url))
+                            .finish();
 
-                        Ok(res)
+                        Ok(res.map_into_boxed_body())
                     }
                 }
             }
@@ -292,10 +307,10 @@ impl App {
 
     async fn crate_status(
         &self,
-        req: Request<Body>,
+        req: Request,
         params: Params,
         format: StatusFormat,
-    ) -> Result<Response<Body>, HyperError> {
+    ) -> Result<Response<impl MessageBody>, actix_http::Error> {
         let server = self.clone();
 
         let name = params.find("name").expect("route param 'name' not found");
@@ -311,7 +326,8 @@ impl App {
                             "Please make sure to provide a valid crate name and version.",
                         );
                         *response.status_mut() = StatusCode::BAD_REQUEST;
-                        return Ok(response);
+
+                        return Ok(response.map_into_boxed_body());
                     }
                 };
 
@@ -321,7 +337,7 @@ impl App {
                     .await
                 {
                     Ok(Some(latest_rel)) => latest_rel.version.to_string(),
-                    Ok(None) => return Ok(not_found()),
+                    Ok(None) => return Ok(not_found().map_into_boxed_body()),
                     Err(err) => {
                         tracing::error!(%err);
                         let mut response = views::html::error::render(
@@ -329,7 +345,8 @@ impl App {
                             "Please make sure to provide a valid crate name.",
                         );
                         *response.status_mut() = StatusCode::NOT_FOUND;
-                        return Ok(response);
+
+                        return Ok(response.map_into_boxed_body());
                     }
                 }
             }
@@ -346,8 +363,10 @@ impl App {
                     "Please make sure to provide a valid crate name and version.",
                 );
                 *response.status_mut() = StatusCode::BAD_REQUEST;
-                Ok(response)
+
+                Ok(response.map_into_boxed_body())
             }
+
             Ok(crate_path) => {
                 let analyze_result = server
                     .engine
@@ -363,7 +382,8 @@ impl App {
                             SubjectPath::Crate(crate_path),
                             badge_knobs,
                         );
-                        Ok(response)
+
+                        Ok(response.map_into_boxed_body())
                     }
                     Ok(analysis_outcome) => {
                         let response = App::status_format_analysis(
@@ -373,7 +393,7 @@ impl App {
                             badge_knobs,
                         );
 
-                        Ok(response)
+                        Ok(response.map_into_boxed_body())
                     }
                 }
             }
@@ -385,38 +405,41 @@ impl App {
         format: StatusFormat,
         subject_path: SubjectPath,
         badge_knobs: ExtraConfig,
-    ) -> Response<Body> {
+    ) -> Response<impl MessageBody> {
         match format {
-            StatusFormat::Svg => views::badge::response(analysis_outcome.as_ref(), badge_knobs),
+            StatusFormat::Svg => {
+                views::badge::response(analysis_outcome.as_ref(), badge_knobs).map_into_boxed_body()
+            }
+
             StatusFormat::Html => {
                 views::html::status::render(analysis_outcome, subject_path, badge_knobs)
+                    .map_into_boxed_body()
             }
         }
     }
 
-    fn static_file(file: StaticFile) -> Response<Body> {
+    fn static_file(file: StaticFile) -> Response<impl MessageBody> {
         match file {
-            StaticFile::StyleCss => Response::builder()
-                .header(CONTENT_TYPE, "text/css; charset=utf-8")
-                .header(ETAG, STATIC_STYLE_CSS_ETAG)
-                .header(CACHE_CONTROL, "public, max-age=365000000, immutable")
-                .body(Body::from(assets::STATIC_STYLE_CSS))
-                .unwrap(),
-            StaticFile::FaviconPng => Response::builder()
-                .header(CONTENT_TYPE, "image/svg+xml")
-                .body(Body::from(assets::STATIC_FAVICON))
-                .unwrap(),
-            StaticFile::LinksJs => Response::builder()
-                .header(CONTENT_TYPE, "text/javascript; charset=utf-8")
-                .header(ETAG, STATIC_LINKS_JS_ETAG)
-                .header(CACHE_CONTROL, "public, max-age=365000000, immutable")
-                .body(Body::from(assets::STATIC_LINKS_JS))
-                .unwrap(),
+            StaticFile::StyleCss => Response::build(StatusCode::OK)
+                .insert_header((CONTENT_TYPE, "text/css; charset=utf-8"))
+                .insert_header((ETAG, STATIC_STYLE_CSS_ETAG))
+                .insert_header((CACHE_CONTROL, "public, max-age=365000000, immutable"))
+                .body(assets::STATIC_STYLE_CSS),
+
+            StaticFile::FaviconPng => Response::build(StatusCode::OK)
+                .insert_header((CONTENT_TYPE, "image/svg+xml"))
+                .body(assets::STATIC_FAVICON),
+
+            StaticFile::LinksJs => Response::build(StatusCode::OK)
+                .insert_header((CONTENT_TYPE, "text/javascript; charset=utf-8"))
+                .insert_header((ETAG, STATIC_LINKS_JS_ETAG))
+                .insert_header((CACHE_CONTROL, "public, max-age=365000000, immutable"))
+                .body(assets::STATIC_LINKS_JS),
         }
     }
 }
 
-fn not_found() -> Response<Body> {
+fn not_found() -> Response<impl MessageBody> {
     views::html::error::render_404()
 }
 

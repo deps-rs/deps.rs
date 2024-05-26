@@ -1,8 +1,10 @@
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use anyhow::Result;
 use crates_index::{Crate, GitIndex};
-use parking_lot::Mutex;
 use tokio::{
     task::spawn_blocking,
     time::{self, MissedTickBehavior},
@@ -24,7 +26,7 @@ impl ManagedIndex {
     }
 
     pub fn crate_(&self, crate_name: CrateName) -> Option<Crate> {
-        self.index.lock().crate_(crate_name.as_ref())
+        self.index.lock().unwrap().crate_(crate_name.as_ref())
     }
 
     pub async fn refresh_at_interval(&self, update_interval: Duration) {
@@ -45,7 +47,7 @@ impl ManagedIndex {
     async fn refresh(&self) -> Result<(), crates_index::Error> {
         let index = Arc::clone(&self.index);
 
-        spawn_blocking(move || index.lock().update())
+        spawn_blocking(move || index.lock().unwrap().update())
             .await
             .expect("blocking index update task should never panic")?;
 

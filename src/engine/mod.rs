@@ -5,6 +5,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use actix_service::Service;
 use anyhow::{anyhow, Error};
 use cadence::{MetricSink, NopMetricSink, StatsdClient};
 use futures_util::{
@@ -12,7 +13,6 @@ use futures_util::{
     stream::{self, BoxStream},
     StreamExt as _,
 };
-use hyper::service::Service;
 use once_cell::sync::Lazy;
 use relative_path::{RelativePath, RelativePathBuf};
 use rustsec::database::Database;
@@ -277,7 +277,7 @@ impl Engine {
     ) -> Result<String, Error> {
         let manifest_path = path.join(RelativePath::new("Cargo.toml"));
 
-        let mut service = self.retrieve_file_at_path.clone();
+        let service = self.retrieve_file_at_path.clone();
         service.call((repo_path.clone(), manifest_path)).await
     }
 

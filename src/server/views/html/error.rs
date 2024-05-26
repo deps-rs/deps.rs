@@ -1,12 +1,13 @@
-use hyper::{
+use actix_http::{
+    body::MessageBody,
     header::{CACHE_CONTROL, CONTENT_TYPE},
-    Body, Response, StatusCode,
+    Response, StatusCode,
 };
 use maud::html;
 
 use crate::server::assets::STATIC_STYLE_CSS_PATH;
 
-pub fn render(title: &str, descr: &str) -> Response<Body> {
+pub fn render(title: &str, descr: &str) -> Response<impl MessageBody> {
     super::render_html(
         title,
         html! {
@@ -26,7 +27,7 @@ pub fn render(title: &str, descr: &str) -> Response<Body> {
     )
 }
 
-pub fn render_404() -> Response<Body> {
+pub fn render_404() -> Response<impl MessageBody> {
     let rendered = html! {
         html {
             head {
@@ -55,10 +56,8 @@ pub fn render_404() -> Response<Body> {
         }
     };
 
-    Response::builder()
-        .status(StatusCode::NOT_FOUND)
-        .header(CONTENT_TYPE, "text/html; charset=utf-8")
-        .header(CACHE_CONTROL, "public, max-age=300, immutable")
-        .body(Body::from(rendered.0))
-        .unwrap()
+    Response::build(StatusCode::NOT_FOUND)
+        .insert_header((CONTENT_TYPE, "text/html; charset=utf-8"))
+        .insert_header((CACHE_CONTROL, "public, max-age=300, immutable"))
+        .body(rendered.0)
 }

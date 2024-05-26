@@ -4,17 +4,14 @@
 use std::{
     env,
     future::Future,
-    net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket},
+    net::{Ipv4Addr, UdpSocket},
     pin::Pin,
     time::Duration,
 };
 
+use actix_http::{HttpService, Request};
+use actix_server::Server;
 use cadence::{QueuingMetricSink, UdpMetricSink};
-use hyper::{
-    server::conn::AddrStream,
-    service::{make_service_fn, service_fn},
-    Server,
-};
 use reqwest::redirect::Policy as RedirectPolicy;
 use tracing::Instrument as _;
 
@@ -59,7 +56,7 @@ fn init_tracing_subscriber() {
         .init();
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     dotenvy::dotenv().ok();
     init_tracing_subscriber();
@@ -77,8 +74,6 @@ async fn main() {
         .parse()
         .expect("could not read port");
 
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
-
     let index = ManagedIndex::new();
 
     {
@@ -92,25 +87,29 @@ async fn main() {
     let mut engine = Engine::new(client.clone(), index);
     engine.set_metrics(metrics);
 
-    let make_svc = make_service_fn(move |_socket: &AddrStream| {
-        let engine = engine.clone();
+    let server = Server::build()
+        .bind("deps-rs", (Ipv4Addr::UNSPECIFIED, port), move || {
+            let engine = engine.clone();
 
-        async move {
-            let server = App::new(engine.clone());
-            Ok::<_, hyper::Error>(service_fn(move |req| {
-                let server = server.clone();
-                async move {
-                    let path = req.uri().path().to_owned();
+            let app = App::new(engine.clone());
 
-                    server
-                        .handle(req)
-                        .instrument(tracing::info_span!("@", %path))
-                        .await
-                }
-            }))
-        }
-    });
-    let server = Server::bind(&addr).serve(make_svc);
+            HttpService::build()
+                .client_disconnect_timeout(Duration::from_secs(5))
+                .client_request_timeout(Duration::from_secs(5))
+                .finish(move |req: Request| {
+                    let app = app.clone();
+                    let path = req.path().to_owned();
+
+                    async move {
+                        app.handle(req)
+                            .instrument(tracing::info_span!("@", %path))
+                            .await
+                    }
+                })
+                .tcp_auto_h2c()
+        })
+        .unwrap()
+        .run();
 
     tracing::info!("Server running on port {port}");
 

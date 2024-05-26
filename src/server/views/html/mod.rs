@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use hyper::{header::CONTENT_TYPE, Body, Response};
+use actix_http::{body::MessageBody, header::CONTENT_TYPE, Response, StatusCode};
 use maud::{html, Markup, Render, DOCTYPE};
 
 pub mod error;
@@ -9,7 +9,7 @@ pub mod status;
 
 use crate::server::{assets::STATIC_STYLE_CSS_PATH, SELF_BASE_URL};
 
-fn render_html<B: Render>(title: &str, body: B) -> Response<Body> {
+fn render_html<B: Render>(title: &str, body: B) -> Response<impl MessageBody> {
     let rendered = html! {
         (DOCTYPE)
         html {
@@ -26,10 +26,9 @@ fn render_html<B: Render>(title: &str, body: B) -> Response<Body> {
         }
     };
 
-    Response::builder()
-        .header(CONTENT_TYPE, "text/html; charset=utf-8")
-        .body(Body::from(rendered.0))
-        .unwrap()
+    Response::build(StatusCode::OK)
+        .insert_header((CONTENT_TYPE, "text/html; charset=utf-8"))
+        .body(rendered.0)
 }
 
 fn render_navbar() -> Markup {
