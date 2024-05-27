@@ -6,10 +6,10 @@ use std::{
 use anyhow::{anyhow, Error};
 use crates_index::{Crate, DependencyKind};
 use futures_util::FutureExt as _;
-use hyper::service::Service;
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 use tokio::task::spawn_blocking;
+use tower::Service;
 
 use crate::{
     models::crates::{CrateDep, CrateDeps, CrateName, CratePath, CrateRelease},

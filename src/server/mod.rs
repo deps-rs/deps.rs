@@ -1,11 +1,16 @@
 use std::{env, sync::Arc, time::Instant};
 
+use axum::{
+    body::Body,
+    extract::Request,
+    http::{
+        header::{CACHE_CONTROL, CONTENT_TYPE, ETAG, LOCATION},
+        Method, StatusCode,
+    },
+    response::Response,
+};
 use badge::BadgeStyle;
 use futures_util::future;
-use hyper::{
-    header::{CACHE_CONTROL, CONTENT_TYPE, ETAG, LOCATION},
-    Body, Error as HyperError, Method, Request, Response, StatusCode,
-};
 use once_cell::sync::Lazy;
 use route_recognizer::{Params, Router};
 use semver::VersionReq;
@@ -90,7 +95,7 @@ impl App {
         }
     }
 
-    pub async fn handle(&self, req: Request<Body>) -> Result<Response<Body>, HyperError> {
+    pub async fn handle(&self, req: Request<Body>) -> Result<Response<Body>, axum::Error> {
         let start = Instant::now();
 
         // allows `/path/` to also match `/path`
@@ -147,7 +152,7 @@ impl App {
         &self,
         _req: Request<Body>,
         _params: Params,
-    ) -> Result<Response<Body>, HyperError> {
+    ) -> Result<Response<Body>, axum::Error> {
         let engine = self.engine.clone();
 
         let popular =
@@ -172,7 +177,7 @@ impl App {
         req: Request<Body>,
         params: Params,
         format: StatusFormat,
-    ) -> Result<Response<Body>, HyperError> {
+    ) -> Result<Response<Body>, axum::Error> {
         let server = self.clone();
 
         let site = params.find("site").expect("route param 'site' not found");
@@ -229,7 +234,7 @@ impl App {
         &self,
         _req: Request<Body>,
         params: Params,
-    ) -> Result<Response<Body>, HyperError> {
+    ) -> Result<Response<Body>, axum::Error> {
         let engine = self.engine.clone();
 
         let name = params.find("name").expect("route param 'name' not found");
@@ -295,7 +300,7 @@ impl App {
         req: Request<Body>,
         params: Params,
         format: StatusFormat,
-    ) -> Result<Response<Body>, HyperError> {
+    ) -> Result<Response<Body>, axum::Error> {
         let server = self.clone();
 
         let name = params.find("name").expect("route param 'name' not found");

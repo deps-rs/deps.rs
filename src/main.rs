@@ -9,12 +9,8 @@ use std::{
     time::Duration,
 };
 
+use axum::{extract::Request, Router};
 use cadence::{QueuingMetricSink, UdpMetricSink};
-use hyper::{
-    server::conn::AddrStream,
-    service::{make_service_fn, service_fn},
-    Server,
-};
 use reqwest::redirect::Policy as RedirectPolicy;
 use tracing::Instrument as _;
 
@@ -92,25 +88,20 @@ async fn main() {
     let mut engine = Engine::new(client.clone(), index);
     engine.set_metrics(metrics);
 
-    let make_svc = make_service_fn(move |_socket: &AddrStream| {
-        let engine = engine.clone();
+    let app = App::new(engine.clone());
 
-        async move {
-            let server = App::new(engine.clone());
-            Ok::<_, hyper::Error>(service_fn(move |req| {
-                let server = server.clone();
-                async move {
-                    let path = req.uri().path().to_owned();
+    let lst = tokio::net::TcpListener::bind(addr).await.unwrap();
 
-                    server
-                        .handle(req)
-                        .instrument(tracing::info_span!("@", %path))
-                        .await
-                }
-            }))
-        }
+    let router = Router::new().fallback(|req: Request| async move {
+        let path = req.uri().path().to_owned();
+
+        app.handle(req)
+            .instrument(tracing::info_span!("@", %path))
+            .await
+            .unwrap()
     });
-    let server = Server::bind(&addr).serve(make_svc);
+
+    let server = axum::serve(lst, router);
 
     tracing::info!("Server running on port {port}");
 

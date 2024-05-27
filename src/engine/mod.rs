@@ -12,11 +12,11 @@ use futures_util::{
     stream::{self, BoxStream},
     StreamExt as _,
 };
-use hyper::service::Service;
 use once_cell::sync::Lazy;
 use relative_path::{RelativePath, RelativePathBuf};
 use rustsec::database::Database;
 use semver::VersionReq;
+use tower::Service;
 
 use crate::{
     interactors::{

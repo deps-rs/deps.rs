@@ -5,8 +5,8 @@ use std::{
 
 use anyhow::{anyhow, Error};
 use futures_util::FutureExt as _;
-use hyper::service::Service;
 use relative_path::RelativePathBuf;
+use tower::Service;
 
 use crate::{models::repo::RepoPath, BoxFuture};
 
