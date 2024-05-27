@@ -15,13 +15,13 @@ edition = "2021"
 badge = { path = "./libs/badge" }
 
 anyhow = "1"
+axum = "0.7"
 cadence = "1"
 crates-index = { version = "2", default-features = false, features = ["git"] }
 derive_more = "0.99"
 dotenvy = "0.15"
 font-awesome-as-a-crate = "0.3"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
-hyper = { version = "0.14.10", features = ["full"] }
 error_reporter = "1"
 indexmap = { version = "2", features = ["serde"] }
 lru_time_cache = "0.11"
@@ -38,6 +38,7 @@ serde = { version = "1", features = ["derive"] }
 serde_urlencoded = "0.7"
 tokio = { version = "1.24.2", features = ["rt-multi-thread", "macros", "sync", "time"] }
 toml = "0.8"
+tower = "0.4"
 tracing = "0.1.30"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 

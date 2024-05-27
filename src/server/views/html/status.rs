@@ -1,5 +1,5 @@
+use axum::{body::Body, response::Response};
 use font_awesome_as_a_crate::{svg as fa, Type as FaType};
-use hyper::{Body, Response};
 use indexmap::IndexMap;
 use maud::{html, Markup, PreEscaped};
 use pulldown_cmark::{html, Parser};

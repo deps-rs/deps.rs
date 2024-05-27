@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use hyper::{header::CONTENT_TYPE, Body, Response};
+use axum::{body::Body, http::header::CONTENT_TYPE, response::Response};
 use maud::{html, Markup, Render, DOCTYPE};
 
 pub mod error;

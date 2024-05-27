@@ -1,6 +1,10 @@
-use hyper::{
-    header::{CACHE_CONTROL, CONTENT_TYPE},
-    Body, Response, StatusCode,
+use axum::{
+    body::Body,
+    http::{
+        header::{CACHE_CONTROL, CONTENT_TYPE},
+        StatusCode,
+    },
+    response::Response,
 };
 use maud::html;
 

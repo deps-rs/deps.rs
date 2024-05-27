@@ -1,9 +1,9 @@
 use std::{fmt, sync::Arc, time::Duration};
 
 use derive_more::{Display, Error, From};
-use hyper::service::Service;
 use lru_time_cache::LruCache;
 use tokio::sync::Mutex;
+use tower::Service;
 
 #[derive(Debug, Clone, Display, From, Error)]
 pub struct CacheError<E> {

@@ -6,8 +6,8 @@ use std::{
 
 use anyhow::Error;
 use futures_util::FutureExt as _;
-use hyper::service::Service;
 use rustsec::database::Database;
+use tower::Service;
 
 use crate::BoxFuture;
 
