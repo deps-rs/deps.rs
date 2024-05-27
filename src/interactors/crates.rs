@@ -1,19 +1,16 @@
-use std::{
-    fmt, str,
-    task::{Context, Poll},
-};
+use std::{fmt, str};
 
+use actix_web::dev::Service;
 use anyhow::{anyhow, Error};
 use crates_index::{Crate, DependencyKind};
-use futures_util::FutureExt as _;
-use hyper::service::Service;
+use futures_util::{future::LocalBoxFuture, FutureExt as _};
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 use tokio::task::spawn_blocking;
 
 use crate::{
     models::crates::{CrateDep, CrateDeps, CrateName, CratePath, CrateRelease},
-    BoxFuture, ManagedIndex,
+    ManagedIndex,
 };
 
 const CRATES_API_BASE_URI: &str = "https://crates.io/api/v1";
@@ -86,13 +83,11 @@ impl fmt::Debug for QueryCrate {
 impl Service<CrateName> for QueryCrate {
     type Response = QueryCrateResponse;
     type Error = Error;
-    type Future = BoxFuture<Result<Self::Response, Self::Error>>;
+    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
-    }
+    actix_web::dev::always_ready!();
 
-    fn call(&mut self, crate_name: CrateName) -> Self::Future {
+    fn call(&self, crate_name: CrateName) -> Self::Future {
         let index = self.index.clone();
         Self::query(index, crate_name).boxed()
     }
@@ -150,13 +145,11 @@ impl fmt::Debug for GetPopularCrates {
 impl Service<()> for GetPopularCrates {
     type Response = Vec<CratePath>;
     type Error = Error;
-    type Future = BoxFuture<Result<Self::Response, Self::Error>>;
+    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
-    }
+    actix_web::dev::always_ready!();
 
-    fn call(&mut self, _req: ()) -> Self::Future {
+    fn call(&self, _req: ()) -> Self::Future {
         let client = self.client.clone();
         Self::query(client).boxed()
     }

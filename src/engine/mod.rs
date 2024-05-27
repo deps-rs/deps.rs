@@ -5,14 +5,14 @@ use std::{
     time::{Duration, Instant},
 };
 
+use actix_web::dev::Service;
 use anyhow::{anyhow, Error};
 use cadence::{MetricSink, NopMetricSink, StatsdClient};
 use futures_util::{
     future::try_join_all,
-    stream::{self, BoxStream},
+    stream::{self, LocalBoxStream},
     StreamExt as _,
 };
-use hyper::service::Service;
 use once_cell::sync::Lazy;
 use relative_path::{RelativePath, RelativePathBuf};
 use rustsec::database::Database;
@@ -38,7 +38,7 @@ mod machines;
 
 use self::fut::{analyze_dependencies, crawl_manifest};
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 pub struct Engine {
     metrics: Arc<StatsdClient>,
     query_crate: Cache<QueryCrate, CrateName>,
@@ -255,7 +255,10 @@ impl Engine {
         Ok(latest)
     }
 
-    fn fetch_releases<'a, I>(&'a self, names: I) -> BoxStream<'a, anyhow::Result<Vec<CrateRelease>>>
+    fn fetch_releases<'a, I>(
+        &'a self,
+        names: I,
+    ) -> LocalBoxStream<'a, anyhow::Result<Vec<CrateRelease>>>
     where
         I: IntoIterator<Item = CrateName>,
         <I as IntoIterator>::IntoIter: Send + 'a,
@@ -277,7 +280,7 @@ impl Engine {
     ) -> Result<String, Error> {
         let manifest_path = path.join(RelativePath::new("Cargo.toml"));
 
-        let mut service = self.retrieve_file_at_path.clone();
+        let service = self.retrieve_file_at_path.clone();
         service.call((repo_path.clone(), manifest_path)).await
     }
 

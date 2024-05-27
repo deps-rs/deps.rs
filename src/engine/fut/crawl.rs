@@ -1,5 +1,7 @@
 use anyhow::Error;
-use futures_util::{future::BoxFuture, stream::FuturesOrdered, FutureExt as _, StreamExt as _};
+use futures_util::{
+    future::LocalBoxFuture, stream::FuturesOrdered, FutureExt as _, StreamExt as _,
+};
 use relative_path::RelativePathBuf;
 
 use crate::{
@@ -16,8 +18,9 @@ pub async fn crawl_manifest(
     entry_point: RelativePathBuf,
 ) -> anyhow::Result<ManifestCrawlerOutput> {
     let mut crawler = ManifestCrawler::new();
-    let mut futures: FuturesOrdered<BoxFuture<'static, Result<(RelativePathBuf, String), Error>>> =
-        FuturesOrdered::new();
+    let mut futures: FuturesOrdered<
+        LocalBoxFuture<'static, Result<(RelativePathBuf, String), Error>>,
+    > = FuturesOrdered::new();
 
     let engine2 = engine.clone();
     let repo_path2 = repo_path.clone();
@@ -28,7 +31,7 @@ pub async fn crawl_manifest(
             .await?;
         Ok((entry_point, contents))
     }
-    .boxed();
+    .boxed_local();
 
     futures.push_back(fut);
 
@@ -47,7 +50,7 @@ pub async fn crawl_manifest(
                 let contents = engine.retrieve_manifest_at_path(&repo_path, &path).await?;
                 Ok((path, contents))
             }
-            .boxed();
+            .boxed_local();
 
             futures.push_back(fut);
         }

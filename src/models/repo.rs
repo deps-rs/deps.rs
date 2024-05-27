@@ -100,7 +100,7 @@ impl FromStr for RepoSite {
         if let Some((site, domain)) = input.split_once('/') {
             match site {
                 "gitea" => Ok(RepoSite::Gitea(domain.parse()?)),
-                _ => Err(anyhow!("unknown repo site identifier")),
+                site => Err(anyhow!("unknown repo site identifier: {site}")),
             }
         } else {
             match input {
@@ -109,7 +109,7 @@ impl FromStr for RepoSite {
                 "bitbucket" => Ok(RepoSite::Bitbucket),
                 "sourcehut" => Ok(RepoSite::Sourcehut),
                 "codeberg" => Ok(RepoSite::Codeberg),
-                _ => Err(anyhow!("unknown repo site identifier")),
+                site => Err(anyhow!("unknown repo site identifier: {site}")),
             }
         }
     }
