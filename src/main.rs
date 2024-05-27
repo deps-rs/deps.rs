@@ -9,10 +9,9 @@ use std::{
     time::Duration,
 };
 
-use axum::{extract::Request, Router};
 use cadence::{QueuingMetricSink, UdpMetricSink};
 use reqwest::redirect::Policy as RedirectPolicy;
-use tracing::Instrument as _;
+use tokio::net::TcpListener;
 
 mod engine;
 mod interactors;
@@ -90,18 +89,8 @@ async fn main() {
 
     let app = App::new(engine.clone());
 
-    let lst = tokio::net::TcpListener::bind(addr).await.unwrap();
-
-    let router = Router::new().fallback(|req: Request| async move {
-        let path = req.uri().path().to_owned();
-
-        app.handle(req)
-            .instrument(tracing::info_span!("@", %path))
-            .await
-            .unwrap()
-    });
-
-    let server = axum::serve(lst, router);
+    let lst = TcpListener::bind(addr).await.unwrap();
+    let server = axum::serve(lst, App::router().with_state(app));
 
     tracing::info!("Server running on port {port}");
 

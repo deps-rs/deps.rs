@@ -9,6 +9,8 @@ pub const STATIC_STYLE_CSS_ETAG: &str = concat!(
     include_str!(concat!(env!("OUT_DIR"), "/style.css.sha1")),
     "\""
 );
+
+pub const STATIC_FAVICON_PATH: &str = "/static/logo.svg";
 pub static STATIC_FAVICON: &[u8] = include_bytes!("../../assets/logo.svg");
 
 pub static STATIC_LINKS_JS: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/links.js"));
