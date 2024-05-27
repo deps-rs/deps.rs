@@ -1,4 +1,4 @@
-use hyper::{Body, Response};
+use axum::{body::Body, response::Response};
 use maud::{html, Markup};
 
 use crate::{
