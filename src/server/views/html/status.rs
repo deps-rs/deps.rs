@@ -1,5 +1,5 @@
+use actix_http::{body::MessageBody, Response};
 use font_awesome_as_a_crate::{svg as fa, Type as FaType};
-use hyper::{Body, Response};
 use indexmap::IndexMap;
 use maud::{html, Markup, PreEscaped};
 use pulldown_cmark::{html, Parser};
@@ -457,7 +457,7 @@ pub fn render(
     analysis_outcome: Option<AnalyzeDependenciesOutcome>,
     subject_path: SubjectPath,
     extra_config: ExtraConfig,
-) -> Response<Body> {
+) -> Response<impl MessageBody> {
     let title = match subject_path {
         SubjectPath::Repo(ref repo_path) => {
             format!("{} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref())

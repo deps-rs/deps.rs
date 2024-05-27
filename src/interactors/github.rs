@@ -1,11 +1,8 @@
-use std::{
-    fmt,
-    task::{Context, Poll},
-};
+use std::fmt;
 
+use actix_service::Service;
 use anyhow::Error;
 use futures_util::FutureExt as _;
-use hyper::service::Service;
 use serde::Deserialize;
 
 use crate::{
@@ -74,11 +71,9 @@ impl Service<()> for GetPopularRepos {
     type Error = Error;
     type Future = BoxFuture<Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
-    }
+    actix_service::always_ready!();
 
-    fn call(&mut self, _req: ()) -> Self::Future {
+    fn call(&self, _req: ()) -> Self::Future {
         let client = self.client.clone();
         Self::query(client).boxed()
     }

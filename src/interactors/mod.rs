@@ -1,11 +1,8 @@
-use std::{
-    fmt,
-    task::{Context, Poll},
-};
+use std::fmt;
 
+use actix_service::Service;
 use anyhow::{anyhow, Error};
 use futures_util::FutureExt as _;
-use hyper::service::Service;
 use relative_path::RelativePathBuf;
 
 use crate::{models::repo::RepoPath, BoxFuture};
@@ -45,11 +42,9 @@ impl Service<(RepoPath, RelativePathBuf)> for RetrieveFileAtPath {
     type Error = Error;
     type Future = BoxFuture<Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
-    }
+    actix_service::always_ready!();
 
-    fn call(&mut self, (repo_path, path): (RepoPath, RelativePathBuf)) -> Self::Future {
+    fn call(&self, (repo_path, path): (RepoPath, RelativePathBuf)) -> Self::Future {
         let client = self.client.clone();
         Self::query(client, repo_path, path).boxed()
     }
@@ -57,6 +52,6 @@ impl Service<(RepoPath, RelativePathBuf)> for RetrieveFileAtPath {
 
 impl fmt::Debug for RetrieveFileAtPath {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("RetrieveFileAtPath")
+        f.debug_struct("RetrieveFileAtPath").finish_non_exhaustive()
     }
 }

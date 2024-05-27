@@ -1,5 +1,5 @@
+use actix_http::{body::MessageBody, header::CONTENT_TYPE, Response, StatusCode};
 use badge::{Badge, BadgeOptions};
-use hyper::{header::CONTENT_TYPE, Body, Response};
 
 use crate::{engine::AnalyzeDependenciesOutcome, server::ExtraConfig};
 
@@ -73,11 +73,10 @@ pub fn badge(
 pub fn response(
     analysis_outcome: Option<&AnalyzeDependenciesOutcome>,
     badge_knobs: ExtraConfig,
-) -> Response<Body> {
+) -> Response<impl MessageBody> {
     let badge = badge(analysis_outcome, badge_knobs).to_svg();
 
-    Response::builder()
-        .header(CONTENT_TYPE, "image/svg+xml; charset=utf-8")
-        .body(Body::from(badge))
-        .unwrap()
+    Response::build(StatusCode::OK)
+        .insert_header((CONTENT_TYPE, "image/svg+xml; charset=utf-8"))
+        .body(badge)
 }

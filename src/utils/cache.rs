@@ -1,7 +1,7 @@
 use std::{fmt, sync::Arc, time::Duration};
 
+use actix_service::Service;
 use derive_more::{Display, Error, From};
-use hyper::service::Service;
 use lru_time_cache::LruCache;
 use tokio::sync::Mutex;
 
@@ -26,7 +26,7 @@ where
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("Cache")
             .field("inner", &self.inner)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -65,7 +65,7 @@ where
             cache = "miss",
         );
 
-        let mut service = self.inner.clone();
+        let service = self.inner.clone();
         let fresh = service.call(req.clone()).await?;
 
         {
