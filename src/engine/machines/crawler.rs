@@ -4,8 +4,10 @@ use anyhow::Error;
 use indexmap::IndexMap;
 use relative_path::RelativePathBuf;
 
-use crate::models::crates::{CrateDep, CrateDeps, CrateManifest, CrateName};
-use crate::parsers::manifest::parse_manifest_toml;
+use crate::{
+    models::crates::{CrateDep, CrateDeps, CrateManifest, CrateName},
+    parsers::manifest::parse_manifest_toml,
+};
 
 pub struct ManifestCrawlerOutput {
     pub crates: IndexMap<CrateName, CrateDeps>,
@@ -118,9 +120,8 @@ mod tests {
     use relative_path::RelativePath;
     use semver::VersionReq;
 
-    use crate::models::crates::CrateDep;
-
     use super::*;
+    use crate::models::crates::CrateDep;
 
     #[test]
     fn simple_package_manifest() {

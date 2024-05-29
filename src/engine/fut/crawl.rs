@@ -2,11 +2,12 @@ use anyhow::Error;
 use futures_util::{future::BoxFuture, stream::FuturesOrdered, FutureExt as _, StreamExt as _};
 use relative_path::RelativePathBuf;
 
-use crate::models::repo::RepoPath;
-
-use crate::engine::{
-    machines::crawler::{ManifestCrawler, ManifestCrawlerOutput},
-    Engine,
+use crate::{
+    engine::{
+        machines::crawler::{ManifestCrawler, ManifestCrawlerOutput},
+        Engine,
+    },
+    models::repo::RepoPath,
 };
 
 pub async fn crawl_manifest(

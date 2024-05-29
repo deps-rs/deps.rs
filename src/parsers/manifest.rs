@@ -135,9 +135,8 @@ pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, Error> {
 
 #[cfg(test)]
 mod tests {
-    use crate::models::crates::CrateManifest;
-
     use super::*;
+    use crate::models::crates::CrateManifest;
 
     #[test]
     fn parse_workspace_without_members_declaration() {

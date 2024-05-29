@@ -1,9 +1,7 @@
 use badge::{Badge, BadgeOptions};
-use hyper::header::CONTENT_TYPE;
-use hyper::{Body, Response};
+use hyper::{header::CONTENT_TYPE, Body, Response};
 
-use crate::engine::AnalyzeDependenciesOutcome;
-use crate::server::ExtraConfig;
+use crate::{engine::AnalyzeDependenciesOutcome, server::ExtraConfig};
 
 pub fn badge(
     analysis_outcome: Option<&AnalyzeDependenciesOutcome>,

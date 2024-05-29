@@ -101,9 +101,8 @@ impl DependencyAnalyzer {
 
 #[cfg(test)]
 mod tests {
-    use crate::models::crates::{CrateDep, CrateDeps, CrateRelease};
-
     use super::*;
+    use crate::models::crates::{CrateDep, CrateDeps, CrateRelease};
 
     #[test]
     fn tracks_latest_without_matching() {

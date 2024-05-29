@@ -15,9 +15,8 @@ use hyper::{
     service::{make_service_fn, service_fn},
     Server,
 };
-
 use reqwest::redirect::Policy as RedirectPolicy;
-use slog::{error, info, o, Drain, Logger};
+use tracing::Instrument as _;
 
 mod engine;
 mod interactors;
@@ -26,9 +25,7 @@ mod parsers;
 mod server;
 mod utils;
 
-use self::engine::Engine;
-use self::server::App;
-use self::utils::index::ManagedIndex;
+use self::{engine::Engine, server::App, utils::index::ManagedIndex};
 
 /// Future crate's BoxFuture without the explicit lifetime parameter.
 pub type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
@@ -43,18 +40,29 @@ fn init_metrics() -> QueuingMetricSink {
     QueuingMetricSink::from(sink)
 }
 
-fn init_root_logger() -> Logger {
-    let decorator = slog_term::TermDecorator::new().build();
-    let drain = slog_term::FullFormat::new(decorator).build().fuse();
-    let drain = slog_async::Async::new(drain).build().fuse();
+fn init_tracing_subscriber() {
+    use tracing::level_filters::LevelFilter;
+    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-    Logger::root(drain, o!())
+    let stdout_logger = match env::var("RUST_LOG_TIME").as_deref() {
+        Ok("false") => fmt::layer().without_time().boxed(),
+        _ => fmt::layer().boxed(),
+    };
+
+    tracing_subscriber::registry()
+        .with(
+            EnvFilter::builder()
+                .with_default_directive(LevelFilter::INFO.into())
+                .from_env_lossy(),
+        )
+        .with(stdout_logger)
+        .init();
 }
 
 #[tokio::main]
 async fn main() {
-    let logger = init_root_logger();
-
+    dotenvy::dotenv().ok();
+    init_tracing_subscriber();
     let metrics = init_metrics();
 
     let client = reqwest::Client::builder()
@@ -71,7 +79,7 @@ async fn main() {
 
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
 
-    let index = ManagedIndex::new(logger.clone());
+    let index = ManagedIndex::new();
 
     {
         let index = index.clone();
@@ -81,27 +89,32 @@ async fn main() {
         });
     }
 
-    let mut engine = Engine::new(client.clone(), index, logger.new(o!()));
+    let mut engine = Engine::new(client.clone(), index);
     engine.set_metrics(metrics);
 
-    let svc_logger = logger.new(o!());
     let make_svc = make_service_fn(move |_socket: &AddrStream| {
         let engine = engine.clone();
-        let logger = svc_logger.clone();
 
         async move {
-            let server = App::new(logger.clone(), engine.clone());
+            let server = App::new(engine.clone());
             Ok::<_, hyper::Error>(service_fn(move |req| {
                 let server = server.clone();
-                async move { server.handle(req).await }
+                async move {
+                    let path = req.uri().path().to_owned();
+
+                    server
+                        .handle(req)
+                        .instrument(tracing::info_span!("@", %path))
+                        .await
+                }
             }))
         }
     });
     let server = Server::bind(&addr).serve(make_svc);
 
-    info!(logger, "Server running on port {}", port);
+    tracing::info!("Server running on port {port}");
 
-    if let Err(e) = server.await {
-        error!(logger, "server error: {}", e);
+    if let Err(err) = server.await {
+        tracing::error!("server error: {err}");
     }
 }

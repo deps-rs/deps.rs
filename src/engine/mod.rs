@@ -7,7 +7,6 @@ use std::{
 
 use anyhow::{anyhow, Error};
 use cadence::{MetricSink, NopMetricSink, StatsdClient};
-
 use futures_util::{
     future::try_join_all,
     stream::{self, BoxStream},
@@ -18,16 +17,21 @@ use once_cell::sync::Lazy;
 use relative_path::{RelativePath, RelativePathBuf};
 use rustsec::database::Database;
 use semver::VersionReq;
-use slog::Logger;
 
-use crate::interactors::crates::{GetPopularCrates, QueryCrate};
-use crate::interactors::github::GetPopularRepos;
-use crate::interactors::rustsec::FetchAdvisoryDatabase;
-use crate::interactors::RetrieveFileAtPath;
-use crate::models::crates::{AnalyzedDependencies, CrateName, CratePath, CrateRelease};
-use crate::models::repo::{RepoPath, Repository};
-use crate::utils::cache::Cache;
-use crate::ManagedIndex;
+use crate::{
+    interactors::{
+        crates::{GetPopularCrates, QueryCrate},
+        github::GetPopularRepos,
+        rustsec::FetchAdvisoryDatabase,
+        RetrieveFileAtPath,
+    },
+    models::{
+        crates::{AnalyzedDependencies, CrateName, CratePath, CrateRelease},
+        repo::{RepoPath, Repository},
+    },
+    utils::cache::Cache,
+    ManagedIndex,
+};
 
 mod fut;
 mod machines;
@@ -45,33 +49,25 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn new(client: reqwest::Client, index: ManagedIndex, logger: Logger) -> Engine {
+    pub fn new(client: reqwest::Client, index: ManagedIndex) -> Engine {
         let metrics = Arc::new(StatsdClient::from_sink("engine", NopMetricSink));
 
-        let query_crate = Cache::new(
-            QueryCrate::new(index),
-            Duration::from_secs(10),
-            500,
-            logger.clone(),
-        );
+        let query_crate = Cache::new(QueryCrate::new(index), Duration::from_secs(10), 500);
         let get_popular_crates = Cache::new(
             GetPopularCrates::new(client.clone()),
             Duration::from_secs(15 * 60),
             1,
-            logger.clone(),
         );
         let get_popular_repos = Cache::new(
             GetPopularRepos::new(client.clone()),
             Duration::from_secs(5 * 60),
             1,
-            logger.clone(),
         );
         let retrieve_file_at_path = RetrieveFileAtPath::new(client.clone());
         let fetch_advisory_db = Cache::new(
             FetchAdvisoryDatabase::new(client),
             Duration::from_secs(30 * 60),
             1,
-            logger,
         );
 
         Engine {

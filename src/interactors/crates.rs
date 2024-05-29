@@ -1,4 +1,7 @@
-use std::{fmt, str, task::Context, task::Poll};
+use std::{
+    fmt, str,
+    task::{Context, Poll},
+};
 
 use anyhow::{anyhow, Error};
 use crates_index::{Crate, DependencyKind};
@@ -6,7 +9,6 @@ use futures_util::FutureExt as _;
 use hyper::service::Service;
 use semver::{Version, VersionReq};
 use serde::Deserialize;
-
 use tokio::task::spawn_blocking;
 
 use crate::{

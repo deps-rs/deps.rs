@@ -1,32 +1,30 @@
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
+
+use anyhow::Result;
+use crates_index::{Crate, GitIndex};
+use parking_lot::Mutex;
+use tokio::{
+    task::spawn_blocking,
+    time::{self, MissedTickBehavior},
+};
 
 use crate::models::crates::CrateName;
-use anyhow::Result;
-use crates_index::Crate;
-use crates_index::GitIndex;
-use slog::{error, Logger};
-use tokio::task::spawn_blocking;
-use tokio::time::{self, MissedTickBehavior};
 
 #[derive(Clone)]
 pub struct ManagedIndex {
     index: Arc<Mutex<GitIndex>>,
-    logger: Logger,
 }
 
 impl ManagedIndex {
-    pub fn new(logger: Logger) -> Self {
+    pub fn new() -> Self {
         // the index path is configurable through the `CARGO_HOME` env variable
         let index = Arc::new(Mutex::new(GitIndex::new_cargo_default().unwrap()));
-        Self { index, logger }
+
+        Self { index }
     }
 
     pub fn crate_(&self, crate_name: CrateName) -> Option<Crate> {
-        let index = self.index.lock().unwrap();
-
-        index.crate_(crate_name.as_ref())
+        self.index.lock().crate_(crate_name.as_ref())
     }
 
     pub async fn refresh_at_interval(&self, update_interval: Duration) {
@@ -34,25 +32,23 @@ impl ManagedIndex {
         update_interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
 
         loop {
-            if let Err(e) = self.refresh().await {
-                error!(
-                    self.logger,
-                    "failed refreshing the crates.io-index, the operation will be retried: {}", e
+            if let Err(err) = self.refresh().await {
+                tracing::error!(
+                    "failed refreshing the crates.io-index, the operation will be retried: {}",
+                    error_reporter::Report::new(err),
                 );
             }
             update_interval.tick().await;
         }
     }
 
-    async fn refresh(&self) -> Result<()> {
+    async fn refresh(&self) -> Result<(), crates_index::Error> {
         let index = Arc::clone(&self.index);
 
-        spawn_blocking(move || {
-            let mut index = index.lock().unwrap();
+        spawn_blocking(move || index.lock().update())
+            .await
+            .expect("blocking index update task should never panic")?;
 
-            index.update()
-        })
-        .await??;
         Ok(())
     }
 }

@@ -1,5 +1,4 @@
 mod analyze;
 mod crawl;
 
-pub use self::analyze::analyze_dependencies;
-pub use self::crawl::crawl_manifest;
+pub use self::{analyze::analyze_dependencies, crawl::crawl_manifest};
