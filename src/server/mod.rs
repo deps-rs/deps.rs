@@ -430,6 +430,8 @@ pub struct ExtraConfig {
     style: BadgeStyle,
     /// Whether the inscription _"dependencies"_ should be abbreviated as _"deps"_ in the badge.
     compact: bool,
+    /// Custom text on the left (it's the same concept as `label` in shields.io).
+    subject: Option<String>,
     /// Path in which the crate resides within the repository
     path: Option<String>,
 }
@@ -440,6 +442,7 @@ impl ExtraConfig {
         struct ExtraConfigPartial {
             style: Option<BadgeStyle>,
             compact: Option<bool>,
+            subject: Option<String>,
             path: Option<String>,
         }
 
@@ -450,6 +453,7 @@ impl ExtraConfig {
         Self {
             style: extra_config.style.unwrap_or_default(),
             compact: extra_config.compact.unwrap_or_default(),
+            subject: extra_config.subject,
             path: extra_config.path,
         }
     }
