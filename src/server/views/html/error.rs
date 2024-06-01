@@ -1,14 +1,12 @@
-use hyper::{
-    header::{CACHE_CONTROL, CONTENT_TYPE},
-    Body, Response, StatusCode,
-};
-use maud::html;
+use maud::{html, Markup};
 
 use crate::server::assets::STATIC_STYLE_CSS_PATH;
 
-pub fn render(title: &str, descr: &str) -> Response<Body> {
+pub fn render(title: impl Into<String>, desc: &str) -> Markup {
+    let title = title.into();
+
     super::render_html(
-        title,
+        title.clone(),
         html! {
             section class="hero is-light" {
                 div class="hero-head" { (super::render_navbar()) }
@@ -17,7 +15,7 @@ pub fn render(title: &str, descr: &str) -> Response<Body> {
                 div class="container" {
                     div class="notification is-danger" {
                         p class="title is-3" { (title) }
-                        p { (descr) }
+                        p { (desc) }
                     }
                 }
             }
@@ -26,8 +24,8 @@ pub fn render(title: &str, descr: &str) -> Response<Body> {
     )
 }
 
-pub fn render_404() -> Response<Body> {
-    let rendered = html! {
+pub fn render_404() -> Markup {
+    html! {
         html {
             head {
                 meta charset="utf-8";
@@ -53,12 +51,5 @@ pub fn render_404() -> Response<Body> {
                 (super::render_footer(None))
             }
         }
-    };
-
-    Response::builder()
-        .status(StatusCode::NOT_FOUND)
-        .header(CONTENT_TYPE, "text/html; charset=utf-8")
-        .header(CACHE_CONTROL, "public, max-age=300, immutable")
-        .body(Body::from(rendered.0))
-        .unwrap()
+    }
 }

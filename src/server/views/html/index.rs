@@ -1,4 +1,3 @@
-use hyper::{Body, Response};
 use maud::{html, Markup};
 
 use crate::{
@@ -161,7 +160,7 @@ fn popular_table(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>)
     }
 }
 
-pub fn render(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>) -> Response<Body> {
+pub fn render(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>) -> Markup {
     super::render_html(
         "Keep your dependencies up-to-date",
         html! {
