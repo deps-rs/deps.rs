@@ -472,7 +472,9 @@ impl ExtraConfig {
                 .and_then(|qp| qp.opt())
                 .unwrap_or_default()
                 .0,
-            subject: extra_config.subject,
+            subject: extra_config
+                .subject
+                .filter(|t| t.len() <= 100 && !t.is_empty()),
             path: extra_config.path,
         }
     }
