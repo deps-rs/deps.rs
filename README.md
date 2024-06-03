@@ -19,10 +19,15 @@ To analyze the state of your dependencies you can use the following URLs:
 
 On the analysis page, you will also find the markdown code to include a fancy badge in your project README so visitors (and you) can see at a glance if your dependencies are still up to date!
 
-Badges have a few style options, specified with query parameters, that match the styles from `shields.io`:
-- `?style=flat` (default)
-- `?style=flat-square`
-- `?style=for-the-badge`
+Badges have a few options, specified with query parameters:
+- `style`: which matches the styles from `shields.io`:
+  - `?style=flat` (default)
+  - `?style=flat-square`
+  - `?style=for-the-badge`
+- `subject`: customize the text on the left (which is the same concept as `label` in `shields.io`, and [URL-Encoding](https://developer.mozilla.org/en-US/docs/Glossary/percent-encoding) is needed for spaces or special characters!). e.g.:
+  - `?subject=yourdeps`
+  - `?subject=git%20deps`
+  - `?subject=deps%3Acore`
 
 ## Contributing
 

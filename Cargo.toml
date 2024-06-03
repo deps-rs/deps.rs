@@ -19,6 +19,7 @@ cadence = "1"
 crates-index = { version = "2", default-features = false, features = ["git"] }
 derive_more = "0.99"
 dotenvy = "0.15"
+either = "1.12.0"
 font-awesome-as-a-crate = "0.3"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 hyper = { version = "0.14.10", features = ["full"] }
@@ -36,6 +37,7 @@ rustsec = "0.29"
 semver = { version = "1.0", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_urlencoded = "0.7"
+serde_with = "3.8.1"
 tokio = { version = "1.24.2", features = ["rt-multi-thread", "macros", "sync", "time"] }
 toml = "0.8"
 tracing = "0.1.30"
