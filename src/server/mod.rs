@@ -24,6 +24,7 @@ use crate::{
         repo::RepoPath,
         SubjectPath,
     },
+    utils::common::{UntaggedEither, WrappedBool},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -438,10 +439,21 @@ pub struct ExtraConfig {
 
 impl ExtraConfig {
     fn from_query_string(qs: Option<&str>) -> Self {
+        /// This wrapper can make the deserialization process infallible.
+        #[derive(Debug, Clone, Deserialize)]
+        #[serde(transparent)]
+        struct QueryParam<T>(UntaggedEither<T, String>);
+
+        impl<T> QueryParam<T> {
+            fn opt(self) -> Option<T> {
+                self.0.into_either().left()
+            }
+        }
+
         #[derive(Debug, Clone, Default, Deserialize)]
         struct ExtraConfigPartial {
-            style: Option<BadgeStyle>,
-            compact: Option<bool>,
+            style: Option<QueryParam<BadgeStyle>>,
+            compact: Option<QueryParam<WrappedBool>>,
             subject: Option<String>,
             path: Option<String>,
         }
@@ -451,8 +463,15 @@ impl ExtraConfig {
             .unwrap_or_default();
 
         Self {
-            style: extra_config.style.unwrap_or_default(),
-            compact: extra_config.compact.unwrap_or_default(),
+            style: extra_config
+                .style
+                .and_then(|qp| qp.opt())
+                .unwrap_or_default(),
+            compact: extra_config
+                .compact
+                .and_then(|qp| qp.opt())
+                .unwrap_or_default()
+                .0,
             subject: extra_config.subject,
             path: extra_config.path,
         }
