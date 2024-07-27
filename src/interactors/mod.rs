@@ -1,14 +1,11 @@
-use std::{
-    fmt,
-    task::{Context, Poll},
-};
+use std::fmt;
 
+use actix_web::dev::Service;
 use anyhow::{anyhow, Error};
-use futures_util::FutureExt as _;
-use hyper::service::Service;
+use futures_util::{future::LocalBoxFuture, FutureExt as _};
 use relative_path::RelativePathBuf;
 
-use crate::{models::repo::RepoPath, BoxFuture};
+use crate::models::repo::RepoPath;
 
 pub mod crates;
 pub mod github;
@@ -43,13 +40,11 @@ impl RetrieveFileAtPath {
 impl Service<(RepoPath, RelativePathBuf)> for RetrieveFileAtPath {
     type Response = String;
     type Error = Error;
-    type Future = BoxFuture<Result<Self::Response, Self::Error>>;
+    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
-    }
+    actix_web::dev::always_ready!();
 
-    fn call(&mut self, (repo_path, path): (RepoPath, RelativePathBuf)) -> Self::Future {
+    fn call(&self, (repo_path, path): (RepoPath, RelativePathBuf)) -> Self::Future {
         let client = self.client.clone();
         Self::query(client, repo_path, path).boxed()
     }

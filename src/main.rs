@@ -3,20 +3,14 @@
 
 use std::{
     env,
-    future::Future,
-    net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket},
-    pin::Pin,
+    net::{Ipv4Addr, UdpSocket},
     time::Duration,
 };
 
+use actix_web::{middleware::Logger, web};
+use actix_web_lab::{extract::ThinData, middleware::NormalizePath};
 use cadence::{QueuingMetricSink, UdpMetricSink};
-use hyper::{
-    server::conn::AddrStream,
-    service::{make_service_fn, service_fn},
-    Server,
-};
 use reqwest::redirect::Policy as RedirectPolicy;
-use tracing::Instrument as _;
 
 mod engine;
 mod interactors;
@@ -25,10 +19,7 @@ mod parsers;
 mod server;
 mod utils;
 
-use self::{engine::Engine, server::App, utils::index::ManagedIndex};
-
-/// Future crate's BoxFuture without the explicit lifetime parameter.
-pub type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
+use self::{engine::Engine, utils::index::ManagedIndex};
 
 const DEPS_RS_UA: &str = "deps.rs";
 
@@ -59,7 +50,7 @@ fn init_tracing_subscriber() {
         .init();
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     dotenvy::dotenv().ok();
     init_tracing_subscriber();
@@ -77,8 +68,6 @@ async fn main() {
         .parse()
         .expect("could not read port");
 
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
-
     let index = ManagedIndex::new();
 
     {
@@ -92,25 +81,24 @@ async fn main() {
     let mut engine = Engine::new(client.clone(), index);
     engine.set_metrics(metrics);
 
-    let make_svc = make_service_fn(move |_socket: &AddrStream| {
-        let engine = engine.clone();
-
-        async move {
-            let server = App::new(engine.clone());
-            Ok::<_, hyper::Error>(service_fn(move |req| {
-                let server = server.clone();
-                async move {
-                    let path = req.uri().path().to_owned();
-
-                    server
-                        .handle(req)
-                        .instrument(tracing::info_span!("@", %path))
-                        .await
-                }
-            }))
-        }
-    });
-    let server = Server::bind(&addr).serve(make_svc);
+    let server = actix_web::HttpServer::new(move || {
+        actix_web::App::new()
+            .app_data(ThinData(engine.clone()))
+            .service(server::index)
+            .service(server::crate_redirect)
+            .service(server::crate_latest_status_svg)
+            .service(server::crate_status_svg)
+            .service(server::crate_status_html)
+            .service(server::repo_status_svg)
+            .service(server::repo_status_html)
+            .configure(server::static_files)
+            .default_service(web::to(server::not_found))
+            .wrap(NormalizePath::trim())
+            .wrap(Logger::default())
+    })
+    .bind_auto_h2c((Ipv4Addr::UNSPECIFIED, port))
+    .unwrap()
+    .run();
 
     tracing::info!("Server running on port {port}");
 
