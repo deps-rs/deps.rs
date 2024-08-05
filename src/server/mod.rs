@@ -10,6 +10,7 @@ use once_cell::sync::Lazy;
 use route_recognizer::{Params, Router};
 use semver::VersionReq;
 use serde::Deserialize;
+use unicode_ellipsis::truncate_str;
 
 mod assets;
 mod views;
@@ -475,7 +476,8 @@ impl ExtraConfig {
                 .0,
             subject: extra_config
                 .subject
-                .filter(|t| t.len() <= MAX_WIDTH && !t.is_empty()),
+                .filter(|t| !t.is_empty())
+                .map(|t| truncate_str(&t, MAX_WIDTH).into()),
             path: extra_config.path,
         }
     }
