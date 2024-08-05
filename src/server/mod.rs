@@ -458,6 +458,7 @@ impl ExtraConfig {
             path: Option<String>,
         }
 
+        const MAX_WIDTH: usize = 100;
         let extra_config = qs
             .and_then(|qs| serde_urlencoded::from_str::<ExtraConfigPartial>(qs).ok())
             .unwrap_or_default();
@@ -474,7 +475,7 @@ impl ExtraConfig {
                 .0,
             subject: extra_config
                 .subject
-                .filter(|t| t.len() <= 100 && !t.is_empty()),
+                .filter(|t| t.len() <= MAX_WIDTH && !t.is_empty()),
             path: extra_config.path,
         }
     }
