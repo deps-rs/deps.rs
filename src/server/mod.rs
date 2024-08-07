@@ -10,6 +10,7 @@ use once_cell::sync::Lazy;
 use route_recognizer::{Params, Router};
 use semver::VersionReq;
 use serde::Deserialize;
+use unicode_ellipsis::truncate_str;
 
 mod assets;
 mod views;
@@ -24,6 +25,7 @@ use crate::{
         repo::RepoPath,
         SubjectPath,
     },
+    utils::common::{UntaggedEither, WrappedBool},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -430,26 +432,52 @@ pub struct ExtraConfig {
     style: BadgeStyle,
     /// Whether the inscription _"dependencies"_ should be abbreviated as _"deps"_ in the badge.
     compact: bool,
+    /// Custom text on the left (it's the same concept as `label` in shields.io).
+    subject: Option<String>,
     /// Path in which the crate resides within the repository
     path: Option<String>,
 }
 
 impl ExtraConfig {
     fn from_query_string(qs: Option<&str>) -> Self {
+        /// This wrapper can make the deserialization process infallible.
+        #[derive(Debug, Clone, Deserialize)]
+        #[serde(transparent)]
+        struct QueryParam<T>(UntaggedEither<T, String>);
+
+        impl<T> QueryParam<T> {
+            fn opt(self) -> Option<T> {
+                self.0.into_either().left()
+            }
+        }
+
         #[derive(Debug, Clone, Default, Deserialize)]
         struct ExtraConfigPartial {
-            style: Option<BadgeStyle>,
-            compact: Option<bool>,
+            style: Option<QueryParam<BadgeStyle>>,
+            compact: Option<QueryParam<WrappedBool>>,
+            subject: Option<String>,
             path: Option<String>,
         }
 
+        const MAX_WIDTH: usize = 100;
         let extra_config = qs
             .and_then(|qs| serde_urlencoded::from_str::<ExtraConfigPartial>(qs).ok())
             .unwrap_or_default();
 
         Self {
-            style: extra_config.style.unwrap_or_default(),
-            compact: extra_config.compact.unwrap_or_default(),
+            style: extra_config
+                .style
+                .and_then(|qp| qp.opt())
+                .unwrap_or_default(),
+            compact: extra_config
+                .compact
+                .and_then(|qp| qp.opt())
+                .unwrap_or_default()
+                .0,
+            subject: extra_config
+                .subject
+                .filter(|t| !t.is_empty())
+                .map(|t| truncate_str(&t, MAX_WIDTH).into()),
             path: extra_config.path,
         }
     }
