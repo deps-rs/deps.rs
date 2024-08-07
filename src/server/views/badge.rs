@@ -7,13 +7,7 @@ pub fn badge(
     analysis_outcome: Option<&AnalyzeDependenciesOutcome>,
     badge_knobs: ExtraConfig,
 ) -> Badge {
-    let subject = if let Some(subject) = badge_knobs.subject {
-        subject
-    } else if badge_knobs.compact {
-        "deps".into()
-    } else {
-        "dependencies".into()
-    };
+    let subject = badge_knobs.subject().to_owned();
 
     let opts = match analysis_outcome {
         Some(outcome) => {

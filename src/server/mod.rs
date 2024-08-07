@@ -10,7 +10,6 @@ use once_cell::sync::Lazy;
 use route_recognizer::{Params, Router};
 use semver::VersionReq;
 use serde::Deserialize;
-use unicode_ellipsis::truncate_str;
 
 mod assets;
 mod views;
@@ -25,8 +24,10 @@ use crate::{
         repo::RepoPath,
         SubjectPath,
     },
-    utils::common::{UntaggedEither, WrappedBool},
+    utils::common::{safe_truncate, UntaggedEither, WrappedBool},
 };
+
+const MAX_SUBJECT_WIDTH: usize = 100;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum StatusFormat {
@@ -430,10 +431,13 @@ static SELF_BASE_URL: Lazy<String> =
 pub struct ExtraConfig {
     /// Badge style to show
     style: BadgeStyle,
+
     /// Whether the inscription _"dependencies"_ should be abbreviated as _"deps"_ in the badge.
     compact: bool,
+
     /// Custom text on the left (it's the same concept as `label` in shields.io).
     subject: Option<String>,
+
     /// Path in which the crate resides within the repository
     path: Option<String>,
 }
@@ -447,7 +451,7 @@ impl ExtraConfig {
 
         impl<T> QueryParam<T> {
             fn opt(self) -> Option<T> {
-                self.0.into_either().left()
+                either::Either::from(self.0).left()
             }
         }
 
@@ -459,7 +463,6 @@ impl ExtraConfig {
             path: Option<String>,
         }
 
-        const MAX_WIDTH: usize = 100;
         let extra_config = qs
             .and_then(|qs| serde_urlencoded::from_str::<ExtraConfigPartial>(qs).ok())
             .unwrap_or_default();
@@ -477,8 +480,21 @@ impl ExtraConfig {
             subject: extra_config
                 .subject
                 .filter(|t| !t.is_empty())
-                .map(|t| truncate_str(&t, MAX_WIDTH).into()),
+                .map(|subject| safe_truncate(&subject, MAX_SUBJECT_WIDTH).to_owned()),
             path: extra_config.path,
+        }
+    }
+
+    /// Returns subject for badge.
+    ///
+    /// Returns `subject` if set, or "dependencies" / "deps" depending on value of `compact`.
+    pub(crate) fn subject(&self) -> &str {
+        if let Some(subject) = &self.subject {
+            subject
+        } else if self.compact {
+            "deps"
+        } else {
+            "dependencies"
         }
     }
 }
