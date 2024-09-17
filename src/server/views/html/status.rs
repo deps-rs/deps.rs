@@ -128,7 +128,7 @@ fn dependency_table(title: &str, deps: &IndexMap<CrateName, AnalyzedDependency>)
 fn get_site_icon(site: &RepoSite) -> (FaType, &'static str) {
     match *site {
         RepoSite::Github => (FaType::Brands, "github"),
-        RepoSite::Gitlab => (FaType::Brands, "gitlab"),
+        RepoSite::Gitlab(_) => (FaType::Brands, "gitlab"),
         RepoSite::Bitbucket => (FaType::Brands, "bitbucket"),
         // FIXME: There is no brands/{sourcehut, codeberg, gitea} icon, so just use an
         // icon which looks close enough.
