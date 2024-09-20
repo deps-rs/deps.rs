@@ -1,5 +1,6 @@
+use actix_web::Responder;
+use actix_web_lab::respond::Html;
 use font_awesome_as_a_crate::{svg as fa, Type as FaType};
-use hyper::{Body, Response};
 use indexmap::IndexMap;
 use maud::{html, Markup, PreEscaped};
 use pulldown_cmark::{html, Parser};
@@ -13,8 +14,10 @@ use crate::{
         repo::RepoSite,
         SubjectPath,
     },
-    server::{views::badge, ExtraConfig},
+    server::{error::ServerError, views::badge, ExtraConfig},
 };
+
+use super::render_html;
 
 fn get_crates_url(name: impl AsRef<str>) -> String {
     format!("https://crates.io/crates/{}", name.as_ref())
@@ -453,11 +456,11 @@ fn render_success(
     }
 }
 
-pub fn render(
+pub fn response(
     analysis_outcome: Option<AnalyzeDependenciesOutcome>,
     subject_path: SubjectPath,
     extra_config: ExtraConfig,
-) -> Response<Body> {
+) -> actix_web::Result<impl Responder> {
     let title = match subject_path {
         SubjectPath::Repo(ref repo_path) => {
             format!("{} / {}", repo_path.qual.as_ref(), repo_path.name.as_ref())
@@ -468,8 +471,12 @@ pub fn render(
     };
 
     if let Some(outcome) = analysis_outcome {
-        super::render_html(&title, render_success(outcome, subject_path, extra_config))
+        Ok(Html::new(render_html(
+            &title,
+            render_success(outcome, subject_path, extra_config),
+        )))
     } else {
-        super::render_html(&title, render_failure(subject_path))
+        let html = render_html(&title, render_failure(subject_path));
+        Err(ServerError::AnalysisFailed(html).into())
     }
 }

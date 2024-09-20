@@ -1,15 +1,9 @@
-use std::{
-    fmt,
-    sync::Arc,
-    task::{Context, Poll},
-};
+use std::{fmt, sync::Arc};
 
+use actix_web::dev::Service;
 use anyhow::Error;
-use futures_util::FutureExt as _;
-use hyper::service::Service;
+use futures_util::{future::LocalBoxFuture, FutureExt as _};
 use rustsec::database::Database;
-
-use crate::BoxFuture;
 
 #[derive(Clone)]
 pub struct FetchAdvisoryDatabase {
@@ -30,20 +24,19 @@ impl FetchAdvisoryDatabase {
 impl Service<()> for FetchAdvisoryDatabase {
     type Response = Arc<Database>;
     type Error = Error;
-    type Future = BoxFuture<Result<Self::Response, Self::Error>>;
+    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
-    }
+    actix_web::dev::always_ready!();
 
-    fn call(&mut self, _req: ()) -> Self::Future {
+    fn call(&self, _req: ()) -> Self::Future {
         let client = self.client.clone();
-        Self::fetch(client).boxed()
+        Self::fetch(client).boxed_local()
     }
 }
 
 impl fmt::Debug for FetchAdvisoryDatabase {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("FetchAdvisoryDatabase")
+        f.debug_struct("FetchAdvisoryDatabase")
+            .finish_non_exhaustive()
     }
 }

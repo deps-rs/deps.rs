@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use hyper::{header::CONTENT_TYPE, Body, Response};
 use maud::{html, Markup, Render, DOCTYPE};
 
 pub mod error;
@@ -9,8 +8,10 @@ pub mod status;
 
 use crate::server::{assets::STATIC_STYLE_CSS_PATH, SELF_BASE_URL};
 
-fn render_html<B: Render>(title: &str, body: B) -> Response<Body> {
-    let rendered = html! {
+fn render_html<B: Render>(title: impl Into<String>, body: B) -> Markup {
+    let title = title.into();
+
+    html! {
         (DOCTYPE)
         html {
             head {
@@ -24,12 +25,7 @@ fn render_html<B: Render>(title: &str, body: B) -> Response<Body> {
             }
             body { (body) }
         }
-    };
-
-    Response::builder()
-        .header(CONTENT_TYPE, "text/html; charset=utf-8")
-        .body(Body::from(rendered.0))
-        .unwrap()
+    }
 }
 
 fn render_navbar() -> Markup {
