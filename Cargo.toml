@@ -15,7 +15,7 @@ edition = "2021"
 badge = { path = "./libs/badge" }
 
 actix-web = "4"
-actix-web-lab = "0.20"
+actix-web-lab = "0.23"
 anyhow = "1"
 cadence = "1"
 crates-index = { version = "3", default-features = false, features = ["git"] }
@@ -34,7 +34,7 @@ parking_lot = "0.12"
 pulldown-cmark = "0.12"
 relative-path = { version = "1", features = ["serde"] }
 reqwest = { version = "0.12", features = ["json"] }
-rustsec = "0.29"
+rustsec = "0.30"
 semver = { version = "1", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_urlencoded = "0.7"

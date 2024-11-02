@@ -6,13 +6,12 @@ use actix_web::{
         header::{ContentType, ETag, EntityTag},
         Uri,
     },
-    web::{Redirect, ServiceConfig},
+    web::{Html, Redirect, ServiceConfig, ThinData},
     Either, HttpResponse, Resource, Responder,
 };
 use actix_web_lab::{
-    extract::{Path, ThinData},
+    extract::Path,
     header::{CacheControl, CacheDirective},
-    respond::Html,
 };
 use assets::STATIC_FAVICON_PATH;
 use badge::BadgeStyle;
