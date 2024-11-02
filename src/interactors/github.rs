@@ -1,17 +1,11 @@
-use std::{
-    fmt,
-    task::{Context, Poll},
-};
+use std::fmt;
 
+use actix_web::dev::Service;
 use anyhow::Error;
-use futures_util::FutureExt as _;
-use hyper::service::Service;
+use futures_util::{future::LocalBoxFuture, FutureExt as _};
 use serde::Deserialize;
 
-use crate::{
-    models::repo::{RepoPath, Repository},
-    BoxFuture,
-};
+use crate::models::repo::{RepoPath, Repository};
 
 const GITHUB_API_BASE_URI: &str = "https://api.github.com";
 
@@ -72,13 +66,11 @@ impl fmt::Debug for GetPopularRepos {
 impl Service<()> for GetPopularRepos {
     type Response = Vec<Repository>;
     type Error = Error;
-    type Future = BoxFuture<Result<Self::Response, Self::Error>>;
+    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
-    }
+    actix_web::dev::always_ready!();
 
-    fn call(&mut self, _req: ()) -> Self::Future {
+    fn call(&self, _req: ()) -> Self::Future {
         let client = self.client.clone();
         Self::query(client).boxed()
     }
