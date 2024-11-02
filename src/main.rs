@@ -7,8 +7,11 @@ use std::{
     time::Duration,
 };
 
-use actix_web::{middleware::Logger, web};
-use actix_web_lab::{extract::ThinData, middleware::NormalizePath};
+use actix_web::{
+    middleware::Logger,
+    web::{self, ThinData},
+};
+use actix_web_lab::middleware::NormalizePath;
 use cadence::{QueuingMetricSink, UdpMetricSink};
 use reqwest::redirect::Policy as RedirectPolicy;
 

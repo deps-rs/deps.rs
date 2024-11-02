@@ -1,5 +1,4 @@
-use actix_web::Responder;
-use actix_web_lab::respond::Html;
+use actix_web::{web::Html, Responder};
 use font_awesome_as_a_crate::{svg as fa, Type as FaType};
 use indexmap::IndexMap;
 use maud::{html, Markup, PreEscaped};
@@ -7,6 +6,7 @@ use pulldown_cmark::{html, Parser};
 use rustsec::advisory::Advisory;
 use semver::Version;
 
+use super::render_html;
 use crate::{
     engine::AnalyzeDependenciesOutcome,
     models::{
@@ -16,8 +16,6 @@ use crate::{
     },
     server::{error::ServerError, views::badge, ExtraConfig},
 };
-
-use super::render_html;
 
 fn get_crates_url(name: impl AsRef<str>) -> String {
     format!("https://crates.io/crates/{}", name.as_ref())

@@ -1,10 +1,11 @@
-use either::Either;
-use serde::{Deserialize, Serialize};
-use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::{
     fmt::{self, Debug, Display, Formatter},
     str::FromStr,
 };
+
+use either::Either;
+use serde::{Deserialize, Serialize};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 /// An `untagged` version of `Either`.
 ///
