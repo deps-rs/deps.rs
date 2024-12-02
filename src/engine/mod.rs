@@ -1,13 +1,11 @@
 use std::{
     collections::HashSet,
-    panic::RefUnwindSafe,
     sync::{Arc, LazyLock},
     time::{Duration, Instant},
 };
 
 use actix_web::dev::Service;
 use anyhow::{anyhow, Error};
-use cadence::{MetricSink, NopMetricSink, StatsdClient};
 use futures_util::{
     future::try_join_all,
     stream::{self, LocalBoxStream},
@@ -39,7 +37,6 @@ use self::fut::{analyze_dependencies, crawl_manifest};
 
 #[derive(Debug, Clone)]
 pub struct Engine {
-    metrics: Arc<StatsdClient>,
     query_crate: Cache<QueryCrate, CrateName>,
     get_popular_crates: Cache<GetPopularCrates, ()>,
     get_popular_repos: Cache<GetPopularRepos, ()>,
@@ -49,8 +46,6 @@ pub struct Engine {
 
 impl Engine {
     pub fn new(client: reqwest::Client, index: ManagedIndex) -> Engine {
-        let metrics = Arc::new(StatsdClient::from_sink("engine", NopMetricSink));
-
         let query_crate = Cache::new(QueryCrate::new(index), Duration::from_secs(10), 500);
         let get_popular_crates = Cache::new(
             GetPopularCrates::new(client.clone()),
@@ -70,17 +65,12 @@ impl Engine {
         );
 
         Engine {
-            metrics,
             query_crate,
             get_popular_crates,
             get_popular_repos,
             retrieve_file_at_path,
             fetch_advisory_db,
         }
-    }
-
-    pub fn set_metrics<M: MetricSink + Send + Sync + RefUnwindSafe + 'static>(&mut self, sink: M) {
-        self.metrics = Arc::new(StatsdClient::from_sink("engine", sink));
     }
 }
 
