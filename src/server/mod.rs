@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, sync::LazyLock};
 
 use actix_web::{
     get,
@@ -16,7 +16,6 @@ use actix_web_lab::{
 use assets::STATIC_FAVICON_PATH;
 use badge::BadgeStyle;
 use futures_util::future;
-use once_cell::sync::Lazy;
 use semver::VersionReq;
 use serde::Deserialize;
 
@@ -304,8 +303,8 @@ pub(crate) async fn not_found() -> impl Responder {
     Html::new(views::html::error::render_404().0)
 }
 
-static SELF_BASE_URL: Lazy<String> =
-    Lazy::new(|| env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string()));
+static SELF_BASE_URL: LazyLock<String> =
+    LazyLock::new(|| env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string()));
 
 /// Configuration options supplied through Get Parameters
 #[derive(Debug, Clone, Default)]

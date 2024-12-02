@@ -13,7 +13,6 @@ path = "badge.rs"
 
 [dependencies]
 base64 = "0.22"
-once_cell = "1"
 rusttype = "0.9"
 serde = { version = "1", features = ["derive"] }
 

@@ -1,7 +1,7 @@
 use std::{
     collections::HashSet,
     panic::RefUnwindSafe,
-    sync::Arc,
+    sync::{Arc, LazyLock},
     time::{Duration, Instant},
 };
 
@@ -13,7 +13,6 @@ use futures_util::{
     stream::{self, LocalBoxStream},
     StreamExt as _,
 };
-use once_cell::sync::Lazy;
 use relative_path::{RelativePath, RelativePathBuf};
 use rustsec::database::Database;
 use semver::VersionReq;
@@ -296,7 +295,7 @@ async fn resolve_crate_with_engine(
     Ok(crate_res.releases)
 }
 
-static POPULAR_REPO_BLOCK_LIST: Lazy<HashSet<RepoPath>> = Lazy::new(|| {
+static POPULAR_REPO_BLOCK_LIST: LazyLock<HashSet<RepoPath>> = LazyLock::new(|| {
     vec![
         RepoPath::from_parts("github", "rust-lang", "rust"),
         RepoPath::from_parts("github", "xi-editor", "xi-editor"),
