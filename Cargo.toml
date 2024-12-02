@@ -17,7 +17,6 @@ badge = { path = "./libs/badge" }
 actix-web = "4"
 actix-web-lab = "0.23"
 anyhow = "1"
-cadence = "1"
 crates-index = { version = "3", default-features = false, features = ["git"] }
 derive_more = { version = "1", features = ["display", "error", "from"] }
 dotenvy = "0.15"
