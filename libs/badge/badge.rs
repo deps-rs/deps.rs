@@ -1,7 +1,8 @@
 //! Simple badge generator
 
+use std::sync::LazyLock;
+
 use base64::display::Base64Display;
-use once_cell::sync::Lazy;
 use rusttype::{point, Font, Point, PositionedGlyph, Scale};
 use serde::Deserialize;
 
@@ -63,7 +64,7 @@ struct BadgeStaticData {
     offset: Point<f32>,
 }
 
-static DATA: Lazy<BadgeStaticData> = Lazy::new(|| {
+static DATA: LazyLock<BadgeStaticData> = LazyLock::new(|| {
     let font = Font::try_from_bytes(FONT_DATA).expect("failed to parse font collection");
 
     let v_metrics = font.v_metrics(SCALE);
