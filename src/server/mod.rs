@@ -4,7 +4,7 @@ use actix_web::{
     get,
     http::{
         header::{ContentType, ETag, EntityTag},
-        Uri,
+        StatusCode, Uri,
     },
     web::{Html, Redirect, ServiceConfig, ThinData},
     Either, HttpResponse, Resource, Responder,
@@ -300,7 +300,10 @@ pub(crate) fn static_files(cfg: &mut ServiceConfig) {
 }
 
 pub(crate) async fn not_found() -> impl Responder {
-    Html::new(views::html::error::render_404().0)
+    (
+        Html::new(views::html::error::render_404().0),
+        StatusCode::NOT_FOUND,
+    )
 }
 
 static SELF_BASE_URL: LazyLock<String> =
