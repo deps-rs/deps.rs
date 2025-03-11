@@ -17,7 +17,7 @@ badge = { path = "./libs/badge" }
 actix-web = "4"
 actix-web-lab = "0.23"
 anyhow = "1"
-crates-index = { version = "3", default-features = false, features = ["git"] }
+crates-index = { version = "3", default-features = false, features = ["git", "git-https"] }
 derive_more = { version = "1", features = ["display", "error", "from"] }
 dotenvy = "0.15"
 either = "1.12"
@@ -41,9 +41,6 @@ tokio = { version = "1.24.2", features = ["rt", "macros", "sync", "time"] }
 toml = "0.8"
 tracing = "0.1.30"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-
-[target.'cfg(any())'.dependencies]
-gix = { version = "0.63", default-features = false, features = ["blocking-http-transport-reqwest-rust-tls"] }
 
 [build-dependencies]
 grass = { version = "0.13", default-features = false }
