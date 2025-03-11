@@ -15,10 +15,10 @@ edition = "2021"
 badge = { path = "./libs/badge" }
 
 actix-web = "4"
-actix-web-lab = "0.23"
+actix-web-lab = "0.24"
 anyhow = "1"
 crates-index = { version = "3", default-features = false, features = ["git"] }
-derive_more = { version = "1", features = ["display", "error", "from"] }
+derive_more = { version = "2", features = ["display", "error", "from"] }
 dotenvy = "0.15"
 either = "1.12"
 font-awesome-as-a-crate = "0.3"
@@ -26,10 +26,10 @@ futures-util = { version = "0.3", default-features = false, features = ["std"] }
 error_reporter = "1"
 indexmap = { version = "2", features = ["serde"] }
 lru_time_cache = "0.11"
-maud = "0.26"
+maud = "0.27"
 mime = "0.3"
 parking_lot = "0.12"
-pulldown-cmark = "0.12"
+pulldown-cmark = "0.13"
 relative-path = { version = "1", features = ["serde"] }
 reqwest = { version = "0.12", features = ["json"] }
 rustsec = "0.30"
@@ -42,9 +42,9 @@ toml = "0.8"
 tracing = "0.1.30"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-[target.'cfg(any())'.dependencies]
-gix = { version = "0.63", default-features = false, features = ["blocking-http-transport-reqwest-rust-tls"] }
-
 [build-dependencies]
 grass = { version = "0.13", default-features = false }
 sha-1 = "0.10"
+
+[patch.crates-io]
+crates-index = { git = "https://github.com/frewsxcv/rust-crates-index.git" }
