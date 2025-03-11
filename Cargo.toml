@@ -18,7 +18,7 @@ actix-web = "4"
 actix-web-lab = "0.24"
 anyhow = "1"
 crates-index = { version = "3", default-features = false, features = ["git", "git-https"] }
-derive_more = { version = "1", features = ["display", "error", "from"] }
+derive_more = { version = "2", features = ["display", "error", "from"] }
 dotenvy = "0.15"
 either = "1.12"
 font-awesome-as-a-crate = "0.3"
