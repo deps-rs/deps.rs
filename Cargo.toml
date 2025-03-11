@@ -15,7 +15,7 @@ edition = "2021"
 badge = { path = "./libs/badge" }
 
 actix-web = "4"
-actix-web-lab = "0.23"
+actix-web-lab = "0.24"
 anyhow = "1"
 crates-index = { version = "3", default-features = false, features = ["git", "git-https"] }
 derive_more = { version = "1", features = ["display", "error", "from"] }
