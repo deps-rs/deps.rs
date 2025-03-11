@@ -17,7 +17,7 @@ badge = { path = "./libs/badge" }
 actix-web = "4"
 actix-web-lab = "0.24"
 anyhow = "1"
-crates-index = { version = "3", default-features = false, features = ["git", "git-https"] }
+crates-index = { version = "3", default-features = false, features = ["git"] }
 derive_more = { version = "2", features = ["display", "error", "from"] }
 dotenvy = "0.15"
 either = "1.12"
@@ -45,3 +45,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 [build-dependencies]
 grass = { version = "0.13", default-features = false }
 sha-1 = "0.10"
+
+[patch.crates-io]
+crates-index = { git = "https://github.com/frewsxcv/rust-crates-index.git" }
