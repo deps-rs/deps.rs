@@ -45,6 +45,3 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 [build-dependencies]
 grass = { version = "0.13", default-features = false }
 sha-1 = "0.10"
-
-[patch.crates-io]
-crates-index = { git = "https://github.com/frewsxcv/rust-crates-index.git" }
