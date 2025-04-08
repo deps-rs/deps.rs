@@ -37,7 +37,7 @@ semver = { version = "1", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_urlencoded = "0.7"
 serde_with = "3"
-tokio = { version = "1.24.2", features = ["rt", "macros", "sync", "time"] }
+tokio = { version = "1.44.2", features = ["rt", "macros", "sync", "time"] }
 toml = "0.8"
 tracing = "0.1.30"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
