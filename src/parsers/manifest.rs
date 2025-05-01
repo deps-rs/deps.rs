@@ -32,6 +32,18 @@ struct CargoTomlWorkspace {
     members: Vec<RelativePathBuf>,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct CargoTomlTargetDependencies {
+    #[serde(default)]
+    dependencies: Option<IndexMap<String, CargoTomlDependency>>,
+    #[serde(rename = "dev-dependencies")]
+    #[serde(default)]
+    dev_dependencies: Option<IndexMap<String, CargoTomlDependency>>,
+    #[serde(rename = "build-dependencies")]
+    #[serde(default)]
+    build_dependencies: Option<IndexMap<String, CargoTomlDependency>>,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct CargoToml {
     #[serde(default)]
@@ -46,6 +58,39 @@ struct CargoToml {
     #[serde(rename = "build-dependencies")]
     #[serde(default)]
     build_dependencies: IndexMap<String, CargoTomlDependency>,
+    #[serde(default)]
+    target: IndexMap<String, CargoTomlTargetDependencies>,
+}
+
+fn extract_target_dependencies(
+    target: IndexMap<String, CargoTomlTargetDependencies>,
+) -> (
+    IndexMap<String, CargoTomlDependency>,
+    IndexMap<String, CargoTomlDependency>,
+    IndexMap<String, CargoTomlDependency>,
+) {
+    let (mut deps, mut dev_deps, mut build_deps) =
+        (IndexMap::new(), IndexMap::new(), IndexMap::new());
+
+    for (_target_name, target_deps) in target {
+        if let Some(d) = target_deps.dependencies {
+            for (name, dep) in d {
+                deps.insert(name, dep);
+            }
+        }
+        if let Some(d) = target_deps.dev_dependencies {
+            for (name, dep) in d {
+                dev_deps.insert(name, dep);
+            }
+        }
+        if let Some(d) = target_deps.build_dependencies {
+            for (name, dep) in d {
+                build_deps.insert(name, dep);
+            }
+        }
+    }
+
+    (deps, dev_deps, build_deps)
 }
 
 fn convert_dependency(
@@ -84,13 +129,20 @@ fn convert_dependency(
 }
 
 pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, Error> {
-    let cargo_toml = toml::de::from_str::<CargoToml>(input)?;
+    let mut cargo_toml = toml::de::from_str::<CargoToml>(input)?;
 
     let mut package_part = None;
     let mut workspace_part = None;
 
     if let Some(package) = cargo_toml.package {
         let crate_name = package.name.parse::<CrateName>()?;
+
+        let (platform_deps, platform_dev_deps, platform_build_deps) =
+            extract_target_dependencies(cargo_toml.target);
+
+        cargo_toml.dependencies.extend(platform_deps);
+        cargo_toml.dev_dependencies.extend(platform_dev_deps);
+        cargo_toml.build_dependencies.extend(platform_build_deps);
 
         let dependencies = cargo_toml
             .dependencies
@@ -190,5 +242,47 @@ symbolic-common_crate = { version = "2.0.6", package = "symbolic-common" }
             }
             _ => panic!("expected package manifest"),
         }
+    }
+}
+
+#[test]
+fn parse_manifest_with_target_dependencies() {
+    let toml = r#"[package]
+name = "platform-specific"
+
+[dependencies]
+serde = "1.0"
+
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.28", features = ["sched"] }
+
+[target.'cfg(windows)'.dev-dependencies]
+winapi = "0.3"
+
+[target.'cfg(any(target_os = "android", target_os = "dragonfly", target_os = "freebsd", target_os = "linux"))'.build-dependencies]
+cc = "1.0"
+"#;
+
+    let manifest = parse_manifest_toml(toml).unwrap();
+
+    match manifest {
+        CrateManifest::Package(name, deps) => {
+            assert_eq!(name.as_ref(), "platform-specific");
+
+            assert_eq!(deps.main.len(), 2);
+            let serde_name: CrateName = "serde".parse().unwrap();
+            assert!(deps.main.get(&serde_name).is_some());
+            let nix_name: CrateName = "nix".parse().unwrap();
+            assert!(deps.main.get(&nix_name).is_some());
+
+            assert_eq!(deps.dev.len(), 1);
+            let winapi_name: CrateName = "winapi".parse().unwrap();
+            assert!(deps.dev.get(&winapi_name).is_some());
+
+            assert_eq!(deps.build.len(), 1);
+            let cc_name: CrateName = "cc".parse().unwrap();
+            assert!(deps.build.get(&cc_name).is_some());
+        }
+        _ => panic!("expected package manifest"),
     }
 }
