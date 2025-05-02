@@ -35,13 +35,13 @@ struct CargoTomlWorkspace {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CargoTomlTargetDependencies {
     #[serde(default)]
-    dependencies: Option<IndexMap<String, CargoTomlDependency>>,
+    dependencies: IndexMap<String, CargoTomlDependency>,
     #[serde(rename = "dev-dependencies")]
     #[serde(default)]
-    dev_dependencies: Option<IndexMap<String, CargoTomlDependency>>,
+    dev_dependencies: IndexMap<String, CargoTomlDependency>,
     #[serde(rename = "build-dependencies")]
     #[serde(default)]
-    build_dependencies: Option<IndexMap<String, CargoTomlDependency>>,
+    build_dependencies: IndexMap<String, CargoTomlDependency>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -62,35 +62,17 @@ struct CargoToml {
     target: IndexMap<String, CargoTomlTargetDependencies>,
 }
 
-fn extract_target_dependencies(
+fn extract_target_dependencies_into(
     target: IndexMap<String, CargoTomlTargetDependencies>,
-) -> (
-    IndexMap<String, CargoTomlDependency>,
-    IndexMap<String, CargoTomlDependency>,
-    IndexMap<String, CargoTomlDependency>,
+    deps: &mut IndexMap<String, CargoTomlDependency>,
+    dev_deps: &mut IndexMap<String, CargoTomlDependency>,
+    build_deps: &mut IndexMap<String, CargoTomlDependency>,
 ) {
-    let (mut deps, mut dev_deps, mut build_deps) =
-        (IndexMap::new(), IndexMap::new(), IndexMap::new());
-
-    for (_target_name, target_deps) in target {
-        if let Some(d) = target_deps.dependencies {
-            for (name, dep) in d {
-                deps.insert(name, dep);
-            }
-        }
-        if let Some(d) = target_deps.dev_dependencies {
-            for (name, dep) in d {
-                dev_deps.insert(name, dep);
-            }
-        }
-        if let Some(d) = target_deps.build_dependencies {
-            for (name, dep) in d {
-                build_deps.insert(name, dep);
-            }
-        }
+    for target_deps in target.into_values() {
+        deps.extend(target_deps.dependencies);
+        dev_deps.extend(target_deps.dev_dependencies);
+        build_deps.extend(target_deps.build_dependencies);
     }
-
-    (deps, dev_deps, build_deps)
 }
 
 fn convert_dependency(
@@ -137,12 +119,12 @@ pub fn parse_manifest_toml(input: &str) -> Result<CrateManifest, Error> {
     if let Some(package) = cargo_toml.package {
         let crate_name = package.name.parse::<CrateName>()?;
 
-        let (platform_deps, platform_dev_deps, platform_build_deps) =
-            extract_target_dependencies(cargo_toml.target);
-
-        cargo_toml.dependencies.extend(platform_deps);
-        cargo_toml.dev_dependencies.extend(platform_dev_deps);
-        cargo_toml.build_dependencies.extend(platform_build_deps);
+        extract_target_dependencies_into(
+            cargo_toml.target,
+            &mut cargo_toml.dependencies,
+            &mut cargo_toml.dev_dependencies,
+            &mut cargo_toml.build_dependencies,
+        );
 
         let dependencies = cargo_toml
             .dependencies
