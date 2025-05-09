@@ -238,6 +238,7 @@ impl Engine {
             .releases
             .iter()
             .filter(|release| req.matches(&release.version))
+            .filter(|release| !release.yanked)
             .max_by(|r1, r2| r1.version.cmp(&r2.version))
             .cloned();
 
