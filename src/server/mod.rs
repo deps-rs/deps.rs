@@ -45,6 +45,9 @@ const MAX_SUBJECT_WIDTH: usize = 100;
 enum StatusFormat {
     Html,
     Svg,
+    /// Renders the analysis status as a JSON object compatible with the shields.io endpoint badge.
+    /// See: https://shields.io/badges/endpoint-badge
+    ShieldJson,
 }
 
 #[get("/")]
@@ -69,6 +72,15 @@ pub(crate) async fn repo_status_svg(
     Path(params): Path<(String, String, String)>,
 ) -> actix_web::Result<impl Responder> {
     repo_status(engine, uri, params, StatusFormat::Svg).await
+}
+
+#[get("/repo/{site:.+?}/{qual}/{name}/shield.json")]
+pub(crate) async fn repo_status_shield_json(
+    ThinData(engine): ThinData<Engine>,
+    uri: Uri,
+    Path(params): Path<(String, String, String)>,
+) -> actix_web::Result<impl Responder> {
+    repo_status(engine, uri, params, StatusFormat::ShieldJson).await
 }
 
 #[get("/repo/{site:.+?}/{qual}/{name}")]
@@ -178,6 +190,15 @@ async fn crate_latest_status_svg(
     crate_status(engine, uri, (name, None), StatusFormat::Svg).await
 }
 
+#[get("/crate/{name}/latest/shield.json")]
+async fn crate_latest_status_shield_json(
+    ThinData(engine): ThinData<Engine>,
+    uri: Uri,
+    Path((name,)): Path<(String,)>,
+) -> actix_web::Result<impl Responder> {
+    crate_status(engine, uri, (name, None), StatusFormat::ShieldJson).await
+}
+
 #[get("/crate/{name}/{version}/status.svg")]
 async fn crate_status_svg(
     ThinData(engine): ThinData<Engine>,
@@ -185,6 +206,15 @@ async fn crate_status_svg(
     Path((name, version)): Path<(String, String)>,
 ) -> actix_web::Result<impl Responder> {
     crate_status(engine, uri, (name, Some(version)), StatusFormat::Svg).await
+}
+
+#[get("/crate/{name}/{version}/shield.json")]
+async fn crate_status_shield_json(
+    ThinData(engine): ThinData<Engine>,
+    uri: Uri,
+    Path((name, version)): Path<(String, String)>,
+) -> actix_web::Result<impl Responder> {
+    crate_status(engine, uri, (name, Some(version)), StatusFormat::ShieldJson).await
 }
 
 async fn crate_status(
@@ -262,6 +292,10 @@ fn status_format_analysis(
         StatusFormat::Html => Either::Right(views::html::status::response(
             analysis_outcome,
             subject_path,
+            badge_knobs,
+        )),
+        StatusFormat::ShieldJson => Either::Left(views::badge::shield_json_response(
+            analysis_outcome.as_ref(),
             badge_knobs,
         )),
     }
