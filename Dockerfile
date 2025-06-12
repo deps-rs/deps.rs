@@ -1,11 +1,11 @@
-FROM rust:bookworm as build
+FROM rust:bookworm AS build
 
 COPY . /src
 RUN cargo install --path /src --locked
 
 FROM debian:bookworm
 
-LABEL org.opencontainers.image.source https://github.com/deps-rs/deps.rs
+LABEL org.opencontainers.image.source=https://github.com/deps-rs/deps.rs
 
 RUN set -ex; \
     apt-get update; \
@@ -20,4 +20,4 @@ WORKDIR /home/deps
 USER deps
 
 EXPOSE 8080
-CMD /usr/local/bin/shiny-robots
+CMD ["/usr/local/bin/shiny-robots"]
