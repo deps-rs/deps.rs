@@ -33,7 +33,7 @@ parking_lot = "0.12"
 pulldown-cmark = "0.13"
 relative-path = { version = "2", features = ["serde"] }
 reqwest = { version = "0.12", features = ["json"] }
-rustsec = { git = "https://github.com/rustsec/rustsec.git" }
+rustsec = "0.30.4"
 semver = { version = "1", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_urlencoded = "0.7"
