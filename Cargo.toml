@@ -39,7 +39,7 @@ serde = { version = "1", features = ["derive"] }
 serde_urlencoded = "0.7"
 serde_with = "3"
 tokio = { version = "1.44.2", features = ["rt", "macros", "sync", "time"] }
-toml = "0.8"
+toml = { version = "0.9", default-features = false, features = ["parse", "serde", "preserve_order"] }
 tracing = "0.1.30"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
