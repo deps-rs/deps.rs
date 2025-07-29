@@ -1,9 +1,9 @@
-FROM rust:bookworm AS build
+FROM rust:slim-bookworm AS build
 
 COPY . /src
 RUN cargo install --path /src --locked
 
-FROM debian:bookworm
+FROM debian:bookworm-slim
 
 LABEL org.opencontainers.image.source=https://github.com/deps-rs/deps.rs
 
