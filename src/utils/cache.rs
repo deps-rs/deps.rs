@@ -1,14 +1,8 @@
 use std::{fmt, sync::Arc, time::Duration};
 
 use actix_web::dev::Service;
-use derive_more::{Display, Error, From};
 use lru_time_cache::LruCache;
 use tokio::sync::Mutex;
-
-#[derive(Debug, Clone, Display, From, Error)]
-pub struct CacheError<E> {
-    inner: E,
-}
 
 #[derive(Clone)]
 pub struct Cache<S, Req>
