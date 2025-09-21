@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: install Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1.4.3
+        uses: actions-rust-lang/setup-rust-toolchain@v1.15.0
 
       - name: check
         run: cargo check
@@ -29,17 +29,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: install Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1.4.3
+        uses: actions-rust-lang/setup-rust-toolchain@v1.15.0
         with: { components: rustfmt, clippy }
 
       - name: format
         run: cargo fmt --all -- --check
 
       - name: clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: -- -D warnings
+        run: cargo clippy -- -D warnings
