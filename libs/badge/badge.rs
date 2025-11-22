@@ -18,18 +18,13 @@ const SCALE: Scale = Scale {
 /// Default style is "flat".
 ///
 /// Matches style names from shields.io.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum BadgeStyle {
+    #[default]
     Flat,
     FlatSquare,
     ForTheBadge,
-}
-
-impl Default for BadgeStyle {
-    fn default() -> Self {
-        Self::Flat
-    }
 }
 
 #[derive(Debug, Clone)]
