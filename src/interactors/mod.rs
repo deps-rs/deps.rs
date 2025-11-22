@@ -1,8 +1,8 @@
 use std::fmt;
 
 use actix_web::dev::Service;
-use anyhow::{anyhow, Error};
-use futures_util::{future::LocalBoxFuture, FutureExt as _};
+use anyhow::{Error, anyhow};
+use futures_util::{FutureExt as _, future::LocalBoxFuture};
 use relative_path::RelativePathBuf;
 
 use crate::models::repo::RepoPath;

@@ -2,17 +2,13 @@ use anyhow::Error;
 use futures_util::StreamExt as _;
 
 use crate::{
+    Engine,
     engine::machines::analyzer::DependencyAnalyzer,
     models::crates::{AnalyzedDependencies, CrateDep, CrateDeps, CrateName},
-    Engine,
 };
 
 fn filter_external((name, dep): (CrateName, CrateDep)) -> Option<CrateName> {
-    if dep.is_external() {
-        Some(name)
-    } else {
-        None
-    }
+    if dep.is_external() { Some(name) } else { None }
 }
 
 pub async fn analyze_dependencies(

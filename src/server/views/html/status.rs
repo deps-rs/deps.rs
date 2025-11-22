@@ -1,8 +1,8 @@
-use actix_web::{web::Html, Responder};
-use font_awesome_as_a_crate::{svg as fa, Type as FaType};
+use actix_web::{Responder, web::Html};
+use font_awesome_as_a_crate::{Type as FaType, svg as fa};
 use indexmap::IndexMap;
-use maud::{html, Markup, PreEscaped};
-use pulldown_cmark::{html, Parser};
+use maud::{Markup, PreEscaped, html};
+use pulldown_cmark::{Parser, html};
 use rustsec::advisory::Advisory;
 use semver::Version;
 
@@ -10,11 +10,11 @@ use super::render_html;
 use crate::{
     engine::AnalyzeDependenciesOutcome,
     models::{
+        SubjectPath,
         crates::{AnalyzedDependencies, AnalyzedDependency, CrateName},
         repo::RepoSite,
-        SubjectPath,
     },
-    server::{error::ServerError, views::badge, ExtraConfig},
+    server::{ExtraConfig, error::ServerError, views::badge},
 };
 
 fn get_crates_url(name: impl AsRef<str>) -> String {

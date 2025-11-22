@@ -1,12 +1,12 @@
 use std::time::Duration;
 
-use maud::{html, Markup, Render, DOCTYPE};
+use maud::{DOCTYPE, Markup, Render, html};
 
 pub mod error;
 pub mod index;
 pub mod status;
 
-use crate::server::{assets::STATIC_STYLE_CSS_PATH, SELF_BASE_URL};
+use crate::server::{SELF_BASE_URL, assets::STATIC_STYLE_CSS_PATH};
 
 fn render_html<B: Render>(title: impl Into<String>, body: B) -> Markup {
     let title = title.into();

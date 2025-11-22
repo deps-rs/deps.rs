@@ -2,7 +2,7 @@ use std::fmt;
 
 use actix_web::dev::Service;
 use anyhow::Error;
-use futures_util::{future::LocalBoxFuture, FutureExt as _};
+use futures_util::{FutureExt as _, future::LocalBoxFuture};
 use serde::Deserialize;
 
 use crate::models::repo::{RepoPath, Repository};

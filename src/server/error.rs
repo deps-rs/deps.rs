@@ -1,6 +1,6 @@
 use actix_web::{
-    http::{header::ContentType, StatusCode},
     HttpResponse, ResponseError,
+    http::{StatusCode, header::ContentType},
 };
 use derive_more::Display;
 use maud::Markup;

@@ -1,16 +1,16 @@
 use std::{fmt, str};
 
 use actix_web::dev::Service;
-use anyhow::{anyhow, Error};
+use anyhow::{Error, anyhow};
 use crates_index::{Crate, DependencyKind};
-use futures_util::{future::LocalBoxFuture, FutureExt as _};
+use futures_util::{FutureExt as _, future::LocalBoxFuture};
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 use tokio::task::spawn_blocking;
 
 use crate::{
-    models::crates::{CrateDep, CrateDeps, CrateName, CratePath, CrateRelease},
     ManagedIndex,
+    models::crates::{CrateDep, CrateDeps, CrateName, CratePath, CrateRelease},
 };
 
 const CRATES_API_BASE_URI: &str = "https://crates.io/api/v1";

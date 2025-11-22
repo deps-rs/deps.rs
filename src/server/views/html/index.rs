@@ -1,4 +1,4 @@
-use maud::{html, Markup};
+use maud::{Markup, html};
 
 use crate::{
     models::{crates::CratePath, repo::Repository},

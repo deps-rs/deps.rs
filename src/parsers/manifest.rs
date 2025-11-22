@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Error};
+use anyhow::{Error, anyhow};
 use indexmap::IndexMap;
 use relative_path::RelativePathBuf;
 use semver::VersionReq;

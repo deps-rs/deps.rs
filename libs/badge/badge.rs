@@ -3,7 +3,7 @@
 use std::sync::LazyLock;
 
 use base64::display::Base64Display;
-use rusttype::{point, Font, Point, PositionedGlyph, Scale};
+use rusttype::{Font, Point, PositionedGlyph, Scale, point};
 use serde::Deserialize;
 
 const FONT_DATA: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/DejaVuSans.ttf"));

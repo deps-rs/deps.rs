@@ -1,6 +1,6 @@
 use std::{fmt, str::FromStr};
 
-use anyhow::{anyhow, ensure, Error};
+use anyhow::{Error, anyhow, ensure};
 use relative_path::RelativePath;
 
 #[derive(Clone, Debug)]

@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, str::FromStr};
 
-use anyhow::{anyhow, Error};
+use anyhow::{Error, anyhow};
 use indexmap::IndexMap;
 use relative_path::RelativePathBuf;
 use rustsec::Advisory;
@@ -149,7 +149,7 @@ impl AnalyzedDependencies {
             .main
             .iter()
             .filter_map(|(name, dep)| {
-                if let CrateDep::External(ref req) = dep {
+                if let CrateDep::External(req) = dep {
                     Some((name.clone(), AnalyzedDependency::new(req.clone())))
                 } else {
                     None
@@ -160,7 +160,7 @@ impl AnalyzedDependencies {
             .dev
             .iter()
             .filter_map(|(name, dep)| {
-                if let CrateDep::External(ref req) = dep {
+                if let CrateDep::External(req) = dep {
                     Some((name.clone(), AnalyzedDependency::new(req.clone())))
                 } else {
                     None
@@ -171,7 +171,7 @@ impl AnalyzedDependencies {
             .build
             .iter()
             .filter_map(|(name, dep)| {
-                if let CrateDep::External(ref req) = dep {
+                if let CrateDep::External(req) = dep {
                     Some((name.clone(), AnalyzedDependency::new(req.clone())))
                 } else {
                     None
