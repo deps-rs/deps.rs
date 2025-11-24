@@ -5,29 +5,29 @@ use std::{
 };
 
 use actix_web::dev::Service;
-use anyhow::{anyhow, Error};
+use anyhow::{Error, anyhow};
 use futures_util::{
+    StreamExt as _,
     future::try_join_all,
     stream::{self, LocalBoxStream},
-    StreamExt as _,
 };
 use relative_path::{RelativePath, RelativePathBuf};
 use rustsec::database::Database;
 use semver::VersionReq;
 
 use crate::{
+    ManagedIndex,
     interactors::{
+        RetrieveFileAtPath,
         crates::{GetPopularCrates, QueryCrate},
         github::GetPopularRepos,
         rustsec::FetchAdvisoryDatabase,
-        RetrieveFileAtPath,
     },
     models::{
         crates::{AnalyzedDependencies, CrateName, CratePath, CrateRelease},
         repo::{RepoPath, Repository},
     },
     utils::cache::Cache,
-    ManagedIndex,
 };
 
 mod fut;

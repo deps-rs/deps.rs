@@ -9,7 +9,7 @@ members = [
 name = "shiny-robots"
 version = "0.1.0"
 authors = ["Sam Rijs <srijs@airpost.net>"]
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 badge = { path = "./libs/badge" }

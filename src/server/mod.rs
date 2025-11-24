@@ -1,13 +1,12 @@
 use std::{env, sync::LazyLock};
 
 use actix_web::{
-    get,
+    Either, HttpResponse, Resource, Responder, get,
     http::{
-        header::{ContentType, ETag, EntityTag},
         StatusCode, Uri,
+        header::{ContentType, ETag, EntityTag},
     },
     web::{Html, Redirect, ServiceConfig, ThinData},
-    Either, HttpResponse, Resource, Responder,
 };
 use actix_web_lab::{
     extract::Path,
@@ -32,11 +31,11 @@ use self::{
 use crate::{
     engine::{AnalyzeDependenciesOutcome, Engine},
     models::{
+        SubjectPath,
         crates::{CrateName, CratePath},
         repo::RepoPath,
-        SubjectPath,
     },
-    utils::common::{safe_truncate, UntaggedEither, WrappedBool},
+    utils::common::{UntaggedEither, WrappedBool, safe_truncate},
 };
 
 const MAX_SUBJECT_WIDTH: usize = 100;

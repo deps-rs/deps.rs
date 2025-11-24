@@ -1,13 +1,13 @@
 use anyhow::Error;
 use futures_util::{
-    future::LocalBoxFuture, stream::FuturesOrdered, FutureExt as _, StreamExt as _,
+    FutureExt as _, StreamExt as _, future::LocalBoxFuture, stream::FuturesOrdered,
 };
 use relative_path::RelativePathBuf;
 
 use crate::{
     engine::{
-        machines::crawler::{ManifestCrawler, ManifestCrawlerOutput},
         Engine,
+        machines::crawler::{ManifestCrawler, ManifestCrawlerOutput},
     },
     models::repo::RepoPath,
 };

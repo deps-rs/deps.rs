@@ -23,7 +23,7 @@ const DEPS_RS_UA: &str = "deps.rs";
 
 fn init_tracing_subscriber() {
     use tracing::level_filters::LevelFilter;
-    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+    use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
     let stdout_logger = match env::var("RUST_LOG_TIME").as_deref() {
         Ok("false") => fmt::layer().without_time().boxed(),
