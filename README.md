@@ -19,6 +19,12 @@ To analyze the state of your dependencies you can use the following URLs:
 
 On the analysis page, you will also find the markdown code to include a fancy badge in your project README so visitors (and you) can see at a glance if your dependencies are still up to date!
 
+For crates on crates.io, badge URLs support both pinned versions and latest-release shortcuts:
+- latest crates.io release:
+  - `https://deps.rs/crate/<NAME>/latest/status.svg`
+- specific crates.io release:
+  - `https://deps.rs/crate/<NAME>/<VERSION>/status.svg`
+
 Badges have a few options, specified with query parameters:
 - `style`: which matches the styles from `shields.io`:
   - `?style=flat` (default)
