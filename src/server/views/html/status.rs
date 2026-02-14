@@ -379,6 +379,7 @@ fn render_success(
     subject_path: SubjectPath,
     extra_config: ExtraConfig,
     show_latest_badge_ui: bool,
+    prefer_latest_badge_tab: bool,
 ) -> Markup {
     let self_path = match subject_path {
         SubjectPath::Repo(ref repo_path) => format!(
@@ -422,7 +423,7 @@ fn render_success(
                 crate_path.name.as_ref()
             ),
             format!(
-                "{}/crate/{}",
+                "{}/crate/{}/latest",
                 &super::SELF_BASE_URL as &str,
                 crate_path.name.as_ref()
             ),
@@ -460,16 +461,30 @@ fn render_success(
                     @if show_badge_tabs {
                         div class="tabs is-toggle is-small" data-badge-tabs="" {
                             ul {
-                                li {
-                                    a href="#" data-badge-target="latest" { "Latest release" }
-                                }
-                                li class="is-active" {
-                                    a href="#" data-badge-target="pinned" { "Pinned version" }
+                                @if prefer_latest_badge_tab {
+                                    li class="is-active" {
+                                        a href="#" data-badge-target="latest" { "Latest release" }
+                                    }
+                                    li {
+                                        a href="#" data-badge-target="pinned" { "Pinned version" }
+                                    }
+                                } @else {
+                                    li {
+                                        a href="#" data-badge-target="latest" { "Latest release" }
+                                    }
+                                    li class="is-active" {
+                                        a href="#" data-badge-target="pinned" { "Pinned version" }
+                                    }
                                 }
                             }
                         }
-                        pre class="is-size-7" data-badge-panel="latest" hidden { (latest_badge_markdown) }
-                        pre class="is-size-7" data-badge-panel="pinned" { (pinned_badge_markdown) }
+                        @if prefer_latest_badge_tab {
+                            pre class="is-size-7" data-badge-panel="latest" { (latest_badge_markdown) }
+                            pre class="is-size-7" data-badge-panel="pinned" hidden { (pinned_badge_markdown) }
+                        } @else {
+                            pre class="is-size-7" data-badge-panel="latest" hidden { (latest_badge_markdown) }
+                            pre class="is-size-7" data-badge-panel="pinned" { (pinned_badge_markdown) }
+                        }
                     } @else {
                         pre class="is-size-7" { (pinned_badge_markdown) }
                     }
@@ -518,6 +533,7 @@ pub fn response(
     subject_path: SubjectPath,
     extra_config: ExtraConfig,
     show_latest_badge_ui: bool,
+    prefer_latest_badge_tab: bool,
 ) -> actix_web::Result<impl Responder> {
     let title = match subject_path {
         SubjectPath::Repo(ref repo_path) => {
@@ -531,7 +547,13 @@ pub fn response(
     if let Some(outcome) = analysis_outcome {
         Ok(Html::new(render_html(
             &title,
-            render_success(outcome, subject_path, extra_config, show_latest_badge_ui),
+            render_success(
+                outcome,
+                subject_path,
+                extra_config,
+                show_latest_badge_ui,
+                prefer_latest_badge_tab,
+            ),
         )))
     } else {
         let html = render_html(&title, render_failure(subject_path));

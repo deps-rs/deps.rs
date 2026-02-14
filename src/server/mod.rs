@@ -122,6 +122,7 @@ async fn repo_status(
                 SubjectPath::Repo(repo_path),
                 extra_knobs,
                 false,
+                false,
             );
 
             Ok(response)
@@ -133,6 +134,7 @@ async fn repo_status(
                 format,
                 SubjectPath::Repo(repo_path),
                 extra_knobs,
+                false,
                 false,
             );
 
@@ -184,6 +186,15 @@ async fn crate_status_html(
     Path((name, version)): Path<(String, String)>,
 ) -> actix_web::Result<impl Responder> {
     crate_status(engine, uri, (name, Some(version)), StatusFormat::Html).await
+}
+
+#[get("/crate/{name}/latest")]
+async fn crate_latest_status_html(
+    ThinData(engine): ThinData<Engine>,
+    uri: Uri,
+    Path((name,)): Path<(String,)>,
+) -> actix_web::Result<impl Responder> {
+    crate_status(engine, uri, (name, None), StatusFormat::Html).await
 }
 
 #[get("/crate/{name}/latest/status.svg")]
@@ -282,6 +293,7 @@ async fn crate_status(
                 SubjectPath::Crate(crate_path),
                 badge_knobs,
                 show_latest_badge_ui,
+                is_latest_crate_route,
             );
 
             Ok(response)
@@ -323,6 +335,7 @@ fn status_format_analysis(
     subject_path: SubjectPath,
     badge_knobs: ExtraConfig,
     show_latest_badge_ui: bool,
+    prefer_latest_badge_tab: bool,
 ) -> impl Responder {
     match format {
         StatusFormat::Svg => Either::Left(views::badge::response(
@@ -335,6 +348,7 @@ fn status_format_analysis(
             subject_path,
             badge_knobs,
             show_latest_badge_ui,
+            prefer_latest_badge_tab,
         )),
         StatusFormat::ShieldJson => Either::Left(views::badge::shield_json_response(
             analysis_outcome.as_ref(),

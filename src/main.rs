@@ -74,6 +74,7 @@ async fn main() {
             .app_data(ThinData(engine.clone()))
             .service(server::index)
             .service(server::crate_redirect)
+            .service(server::crate_latest_status_html)
             .service(server::crate_latest_status_svg)
             .service(server::crate_latest_status_shield_json)
             .service(server::crate_status_svg)
