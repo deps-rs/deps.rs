@@ -54,11 +54,15 @@ function activateBadgeTab(root, target) {
 
     tabs.forEach(function(tab) {
         let li = tab.closest("li");
+        let isActive = tab.dataset.badgeTarget === target;
+
         if (!li) {
             return;
         }
 
-        li.classList.toggle("is-active", tab.dataset.badgeTarget === target);
+        li.classList.toggle("is-active", isActive);
+        tab.setAttribute("aria-selected", isActive ? "true" : "false");
+        tab.tabIndex = isActive ? 0 : -1;
     });
 
     panels.forEach(function(panel) {
@@ -73,10 +77,46 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
-        container.querySelectorAll("[data-badge-target]").forEach(function(tab) {
-            tab.addEventListener("click", function(event) {
-                event.preventDefault();
+        let tabs = Array.from(container.querySelectorAll("[data-badge-target]"));
+        let activeTab =
+            tabs.find(function(tab) {
+                return tab.getAttribute("aria-selected") === "true";
+            }) || tabs[0];
+        if (activeTab) {
+            activateBadgeTab(root, activeTab.dataset.badgeTarget);
+        }
+
+        tabs.forEach(function(tab) {
+            tab.addEventListener("click", function() {
                 activateBadgeTab(root, tab.dataset.badgeTarget);
+            });
+
+            tab.addEventListener("keydown", function(event) {
+                let key = event.key;
+                if (key !== "ArrowRight" && key !== "ArrowLeft" && key !== "Home" && key !== "End") {
+                    return;
+                }
+
+                event.preventDefault();
+                let currentIndex = tabs.indexOf(tab);
+                let nextIndex = currentIndex;
+                if (key === "ArrowRight") {
+                    nextIndex = (currentIndex + 1) % tabs.length;
+                } else if (key === "ArrowLeft") {
+                    nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+                } else if (key === "Home") {
+                    nextIndex = 0;
+                } else if (key === "End") {
+                    nextIndex = tabs.length - 1;
+                }
+
+                let nextTab = tabs[nextIndex];
+                if (!nextTab) {
+                    return;
+                }
+
+                activateBadgeTab(root, nextTab.dataset.badgeTarget);
+                nextTab.focus();
             });
         });
     });

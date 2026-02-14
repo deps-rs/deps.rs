@@ -371,29 +371,74 @@ fn render_badge_markdown(
 }
 
 fn render_badge_tab(target: &str, label: &str, is_active: bool) -> Markup {
+    let tab_id = format!("badge-tab-{target}");
+    let panel_id = format!("badge-panel-{target}");
+    let aria_selected = if is_active { "true" } else { "false" };
+    let tab_index = if is_active { "0" } else { "-1" };
+
     if is_active {
         html! {
             li class="is-active" {
-                a href="#" data-badge-target=(target) { (label) }
+                button
+                    type="button"
+                    id=(tab_id)
+                    role="tab"
+                    aria-controls=(panel_id)
+                    aria-selected=(aria_selected)
+                    tabindex=(tab_index)
+                    data-badge-target=(target)
+                {
+                    (label)
+                }
             }
         }
     } else {
         html! {
             li {
-                a href="#" data-badge-target=(target) { (label) }
+                button
+                    type="button"
+                    id=(tab_id)
+                    role="tab"
+                    aria-controls=(panel_id)
+                    aria-selected=(aria_selected)
+                    tabindex=(tab_index)
+                    data-badge-target=(target)
+                {
+                    (label)
+                }
             }
         }
     }
 }
 
 fn render_badge_panel(target: &str, markdown: &str, hidden: bool) -> Markup {
+    let panel_id = format!("badge-panel-{target}");
+    let tab_id = format!("badge-tab-{target}");
+
     if hidden {
         html! {
-            pre class="is-size-7" data-badge-panel=(target) hidden { (markdown) }
+            pre
+                class="is-size-7"
+                id=(panel_id)
+                role="tabpanel"
+                aria-labelledby=(tab_id)
+                data-badge-panel=(target)
+                hidden
+            {
+                (markdown)
+            }
         }
     } else {
         html! {
-            pre class="is-size-7" data-badge-panel=(target) { (markdown) }
+            pre
+                class="is-size-7"
+                id=(panel_id)
+                role="tabpanel"
+                aria-labelledby=(tab_id)
+                data-badge-panel=(target)
+            {
+                (markdown)
+            }
         }
     }
 }
@@ -488,7 +533,7 @@ fn render_success(
                 div class="container" {
                     div data-badge-root="" {
                     @if show_badge_tabs {
-                        div class="tabs is-toggle is-small" data-badge-tabs="" {
+                        div class="tabs is-small" data-badge-tabs="" role="tablist" aria-label="Badge style variants" {
                             ul {
                                 (render_badge_tab("latest", "Latest release", active_badge_tab == "latest"))
                                 (render_badge_tab("pinned", "Pinned version", active_badge_tab == "pinned"))

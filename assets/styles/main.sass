@@ -41,3 +41,55 @@ $family-monospace: "Source Serif Pro", monospace
 
 @import "bulma/grid/columns"
 @import "bulma/layout/_all"
+
+// badge tab + markdown panel is treated as one quiet, connected surface
+[data-badge-root]
+  background: transparent
+  border: none
+  overflow: visible
+
+[data-badge-tabs].tabs
+  background: transparent
+  margin-bottom: 0
+  padding: 0
+  ul
+    border-bottom: none
+    gap: 0.375rem
+
+[data-badge-tabs] li
+  margin: 0
+
+[data-badge-tabs] [role="tab"]
+  align-items: center
+  appearance: none
+  background: transparent
+  border: 1px solid transparent
+  border-radius: $radius
+  color: $text-light
+  cursor: pointer
+  display: flex
+  font: inherit
+  font-size: 0.9em
+  justify-content: center
+  line-height: 1.1
+  padding: 0.35rem 0.7rem
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease
+  &:hover
+    background: $scheme-main-bis
+    color: $text
+  &:focus-visible
+    outline: 2px solid $link
+    outline-offset: 1px
+
+[data-badge-tabs] li.is-active [role="tab"]
+  background: $scheme-main
+  border-color: $border
+  color: $text-strong
+  font-weight: $weight-medium
+
+[data-badge-panel]
+  background: $scheme-main
+  border: 1px solid $border
+  border-radius: $radius
+  margin: 0.35rem 0 0
+  padding: 0.75rem 1rem 0.9rem
