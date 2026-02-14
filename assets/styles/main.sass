@@ -47,10 +47,13 @@ $family-monospace: "Source Serif Pro", monospace
   display: flex
   flex-direction: column
   position: relative
+  padding-top: 1.65rem // Reserve space for tabs to prevent height jumping
   // No background or border on the wrapper itself
 
   .tabs
-    align-self: flex-end
+    position: absolute
+    top: 0
+    right: 0
     border-bottom: none
     flex-shrink: 0
     margin-bottom: 0
