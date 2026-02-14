@@ -44,22 +44,24 @@ $family-monospace: "Source Serif Pro", monospace
 
 // badge tab + markdown panel is treated as one cohesive card
 .badge-card
-  background-color: $scheme-main
-  border: 1px solid $border
-  border-radius: $radius
+  background-color: transparent
+  border: none
+  border-radius: 0
   display: flex
   flex-direction: column
-  overflow: hidden
+  overflow: visible // Allow tabs to potentially overlap if needed, though here we stack
 
   .tabs
+    align-self: flex-end // Push to the right
     border-bottom: none
     flex-shrink: 0
-    margin-bottom: 0
-    padding: 0.5rem 0.75rem 0 // Minimal padding to sit above content
+    margin-bottom: 0.5rem // Space between tabs and panel
+    padding: 0
+    width: auto // Don't take full width
 
     ul
       border-bottom: none
-      justify-content: flex-end // Align to right to be less prominent
+      justify-content: flex-end
       gap: 0.25rem
 
     li
@@ -67,10 +69,10 @@ $family-monospace: "Source Serif Pro", monospace
 
       button
         align-items: center
-        background-color: transparent
-        border: none
+        background-color: rgba(255, 255, 255, 0.4) // Semi-translucent for readability on any background
+        border: 1px solid rgba(0, 0, 0, 0.05) // Very subtle border
         border-radius: $radius-rounded // Pill shape
-        color: $text-light
+        color: rgba(0, 0, 0, 0.7) // Darker text for contrast
         cursor: pointer
         display: flex
         font-size: 0.75rem // Smaller font
@@ -78,16 +80,18 @@ $family-monospace: "Source Serif Pro", monospace
         justify-content: center
         line-height: 1
         padding: 0.4rem 0.75rem
-        transition: background-color 0.2s, color 0.2s
+        transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s
 
         &:hover
-          background-color: $scheme-main-bis
-          color: $text
-
-        // Active state styling as a subtle pill
-        &[aria-selected="true"]
-          background-color: $scheme-main-ter
+          background-color: rgba(255, 255, 255, 0.6)
           color: $text-strong
+
+        // Active state styling as a prominent white pill
+        &[aria-selected="true"]
+          background-color: $scheme-main // White
+          color: $text-strong
+          border-color: transparent
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) // Lift it up
 
       // Focus styles for accessibility
       button:focus-visible
@@ -96,12 +100,14 @@ $family-monospace: "Source Serif Pro", monospace
 
   // The content panel
   .badge-panel
-    background-color: transparent
-    border: none
+    background-color: $scheme-main
+    border: 1px solid $border
+    border-radius: $radius
     margin: 0
-    padding: 0.75rem 1rem 1rem
+    padding: 1rem
     position: relative
     z-index: 1
+    width: 100% // Ensure full width for code block
 
     pre
       background-color: transparent

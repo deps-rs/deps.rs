@@ -536,24 +536,24 @@ fn render_success(
             div class="hero-footer" {
                 div class="container" {
                     div class="badge-card" data-badge-root="" {
-                    @if show_badge_tabs {
-                        div class="tabs is-small" data-badge-tabs="" role="tablist" aria-label="Badge style variants" {
-                            ul {
-                                (render_badge_tab("latest", "Latest release", active_badge_tab == "latest"))
-                                (render_badge_tab("pinned", "Pinned version", active_badge_tab == "pinned"))
+                        @if show_badge_tabs {
+                            div class="tabs is-small" data-badge-tabs="" role="tablist" aria-label="Badge style variants" {
+                                ul {
+                                    (render_badge_tab("latest", "Latest release", active_badge_tab == "latest"))
+                                    (render_badge_tab("pinned", "Pinned version", active_badge_tab == "pinned"))
+                                }
+                            }
+                            (render_badge_panel(
+                                "latest",
+                                &latest_badge_markdown,
+                                latest_panel_hidden,
+                            ))
+                            (render_badge_panel("pinned", &pinned_badge_markdown, pinned_panel_hidden))
+                        } @else {
+                            div class="badge-panel" {
+                                pre class="is-size-7" { (pinned_badge_markdown) }
                             }
                         }
-                        (render_badge_panel(
-                            "latest",
-                            &latest_badge_markdown,
-                            latest_panel_hidden,
-                        ))
-                        (render_badge_panel("pinned", &pinned_badge_markdown, pinned_panel_hidden))
-                    } @else {
-                        div class="badge-panel" {
-                            pre class="is-size-7" { (pinned_badge_markdown) }
-                        }
-                    }
                     }
                 }
             }
