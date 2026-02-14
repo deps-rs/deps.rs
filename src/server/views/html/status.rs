@@ -14,7 +14,9 @@ use crate::{
         crates::{AnalyzedDependencies, AnalyzedDependency, CrateName},
         repo::RepoSite,
     },
-    server::{ExtraConfig, assets::STATIC_LINKS_JS_PATH, error::ServerError, views::badge},
+    server::{
+        BadgeTabMode, ExtraConfig, assets::STATIC_LINKS_JS_PATH, error::ServerError, views::badge,
+    },
 };
 
 fn get_crates_url(name: impl AsRef<str>) -> String {
@@ -351,26 +353,48 @@ fn render_failure(subject_path: SubjectPath) -> Markup {
     }
 }
 
-fn render_badge_markdown(status_base_url: &str, options: &str, has_path: bool) -> String {
-    if has_path {
-        format!(
-            "[![dependency status]({status_base_url}/status.svg?{options})]({status_base_url}?{options})"
-        )
-    } else {
-        format!("[![dependency status]({status_base_url}/status.svg)]({status_base_url})")
-    }
-}
-
-fn render_badge_markdown_with_link(
+fn render_badge_markdown(
     status_base_url: &str,
-    link_base_url: &str,
+    link_base_url: Option<&str>,
     options: &str,
     has_path: bool,
 ) -> String {
+    let link_base_url = link_base_url.unwrap_or(status_base_url);
+
     if has_path {
-        format!("[![dependency status]({status_base_url}/status.svg?{options})]({link_base_url}?{options})")
+        format!(
+            "[![dependency status]({status_base_url}/status.svg?{options})]({link_base_url}?{options})"
+        )
     } else {
         format!("[![dependency status]({status_base_url}/status.svg)]({link_base_url})")
+    }
+}
+
+fn render_badge_tab(target: &str, label: &str, is_active: bool) -> Markup {
+    if is_active {
+        html! {
+            li class="is-active" {
+                a href="#" data-badge-target=(target) { (label) }
+            }
+        }
+    } else {
+        html! {
+            li {
+                a href="#" data-badge-target=(target) { (label) }
+            }
+        }
+    }
+}
+
+fn render_badge_panel(target: &str, markdown: &str, hidden: bool) -> Markup {
+    if hidden {
+        html! {
+            pre class="is-size-7" data-badge-panel=(target) hidden { (markdown) }
+        }
+    } else {
+        html! {
+            pre class="is-size-7" data-badge-panel=(target) { (markdown) }
+        }
     }
 }
 
@@ -378,8 +402,7 @@ fn render_success(
     analysis_outcome: AnalyzeDependenciesOutcome,
     subject_path: SubjectPath,
     extra_config: ExtraConfig,
-    show_latest_badge_ui: bool,
-    prefer_latest_badge_tab: bool,
+    badge_tab_mode: BadgeTabMode,
 ) -> Markup {
     let self_path = match subject_path {
         SubjectPath::Repo(ref repo_path) => format!(
@@ -414,29 +437,34 @@ fn render_success(
     )])
     .unwrap();
     let path_is_set = extra_config.path.is_some();
-    let pinned_badge_markdown = render_badge_markdown(&status_base_url, &options, path_is_set);
-    let latest_badge_urls = match &subject_path {
-        SubjectPath::Crate(crate_path) => Some((
-            format!(
+    let pinned_badge_markdown =
+        render_badge_markdown(&status_base_url, None, &options, path_is_set);
+    let latest_badge_markdown = match &subject_path {
+        SubjectPath::Crate(crate_path) => {
+            let latest_status_base_url = format!(
                 "{}/crate/{}/latest",
                 &super::SELF_BASE_URL as &str,
                 crate_path.name.as_ref()
-            ),
-            format!(
-                "{}/crate/{}/latest",
-                &super::SELF_BASE_URL as &str,
-                crate_path.name.as_ref()
-            ),
-        )),
-        SubjectPath::Repo(_) => None,
+            );
+
+            render_badge_markdown(
+                &latest_status_base_url,
+                Some(&latest_status_base_url),
+                &options,
+                path_is_set,
+            )
+        }
+        SubjectPath::Repo(_) => String::new(),
     };
-    let latest_badge_markdown = latest_badge_urls
-        .as_ref()
-        .map(|(status_url, link_url)| {
-            render_badge_markdown_with_link(status_url, link_url, &options, path_is_set)
-        })
-        .unwrap_or_default();
-    let show_badge_tabs = show_latest_badge_ui && latest_badge_urls.is_some();
+    let show_badge_tabs =
+        !matches!(&subject_path, SubjectPath::Repo(_)) && badge_tab_mode != BadgeTabMode::Hidden;
+    let active_badge_tab = if badge_tab_mode == BadgeTabMode::LatestDefault {
+        "latest"
+    } else {
+        "pinned"
+    };
+    let latest_panel_hidden = active_badge_tab != "latest";
+    let pinned_panel_hidden = active_badge_tab != "pinned";
 
     html! {
         section class=(format!("hero {hero_class}")) {
@@ -458,35 +486,23 @@ fn render_success(
             }
             div class="hero-footer" {
                 div class="container" {
+                    div data-badge-root="" {
                     @if show_badge_tabs {
                         div class="tabs is-toggle is-small" data-badge-tabs="" {
                             ul {
-                                @if prefer_latest_badge_tab {
-                                    li class="is-active" {
-                                        a href="#" data-badge-target="latest" { "Latest release" }
-                                    }
-                                    li {
-                                        a href="#" data-badge-target="pinned" { "Pinned version" }
-                                    }
-                                } @else {
-                                    li {
-                                        a href="#" data-badge-target="latest" { "Latest release" }
-                                    }
-                                    li class="is-active" {
-                                        a href="#" data-badge-target="pinned" { "Pinned version" }
-                                    }
-                                }
+                                (render_badge_tab("latest", "Latest release", active_badge_tab == "latest"))
+                                (render_badge_tab("pinned", "Pinned version", active_badge_tab == "pinned"))
                             }
                         }
-                        @if prefer_latest_badge_tab {
-                            pre class="is-size-7" data-badge-panel="latest" { (latest_badge_markdown) }
-                            pre class="is-size-7" data-badge-panel="pinned" hidden { (pinned_badge_markdown) }
-                        } @else {
-                            pre class="is-size-7" data-badge-panel="latest" hidden { (latest_badge_markdown) }
-                            pre class="is-size-7" data-badge-panel="pinned" { (pinned_badge_markdown) }
-                        }
+                        (render_badge_panel(
+                            "latest",
+                            &latest_badge_markdown,
+                            latest_panel_hidden,
+                        ))
+                        (render_badge_panel("pinned", &pinned_badge_markdown, pinned_panel_hidden))
                     } @else {
                         pre class="is-size-7" { (pinned_badge_markdown) }
+                    }
                     }
                 }
             }
@@ -532,8 +548,7 @@ pub fn response(
     analysis_outcome: Option<AnalyzeDependenciesOutcome>,
     subject_path: SubjectPath,
     extra_config: ExtraConfig,
-    show_latest_badge_ui: bool,
-    prefer_latest_badge_tab: bool,
+    badge_tab_mode: BadgeTabMode,
 ) -> actix_web::Result<impl Responder> {
     let title = match subject_path {
         SubjectPath::Repo(ref repo_path) => {
@@ -547,13 +562,7 @@ pub fn response(
     if let Some(outcome) = analysis_outcome {
         Ok(Html::new(render_html(
             &title,
-            render_success(
-                outcome,
-                subject_path,
-                extra_config,
-                show_latest_badge_ui,
-                prefer_latest_badge_tab,
-            ),
+            render_success(outcome, subject_path, extra_config, badge_tab_mode),
         )))
     } else {
         let html = render_html(&title, render_failure(subject_path));

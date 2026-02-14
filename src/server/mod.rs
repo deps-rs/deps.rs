@@ -49,6 +49,13 @@ enum StatusFormat {
     ShieldJson,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum BadgeTabMode {
+    Hidden,
+    PinnedDefault,
+    LatestDefault,
+}
+
 #[get("/")]
 pub(crate) async fn index(ThinData(engine): ThinData<Engine>) -> actix_web::Result<impl Responder> {
     let popular = future::try_join(engine.get_popular_repos(), engine.get_popular_crates()).await;
@@ -121,8 +128,7 @@ async fn repo_status(
                 format,
                 SubjectPath::Repo(repo_path),
                 extra_knobs,
-                false,
-                false,
+                BadgeTabMode::Hidden,
             );
 
             Ok(response)
@@ -134,8 +140,7 @@ async fn repo_status(
                 format,
                 SubjectPath::Repo(repo_path),
                 extra_knobs,
-                false,
-                false,
+                BadgeTabMode::Hidden,
             );
 
             Ok(response)
@@ -275,9 +280,8 @@ async fn crate_status(
         }
 
         Ok(crate_path) => {
-            let show_latest_badge_ui =
-                should_show_latest_badge_ui(&engine, format, &crate_path, is_latest_crate_route)
-                    .await;
+            let badge_tab_mode =
+                resolve_badge_tab_mode(&engine, format, &crate_path, is_latest_crate_route).await;
 
             let analysis_outcome = engine
                 .analyze_crate_dependencies(crate_path.clone())
@@ -292,8 +296,7 @@ async fn crate_status(
                 format,
                 SubjectPath::Crate(crate_path),
                 badge_knobs,
-                show_latest_badge_ui,
-                is_latest_crate_route,
+                badge_tab_mode,
             );
 
             Ok(response)
@@ -301,18 +304,18 @@ async fn crate_status(
     }
 }
 
-async fn should_show_latest_badge_ui(
+async fn resolve_badge_tab_mode(
     engine: &Engine,
     format: StatusFormat,
     crate_path: &CratePath,
     is_latest_crate_route: bool,
-) -> bool {
+) -> BadgeTabMode {
     if format != StatusFormat::Html {
-        return false;
+        return BadgeTabMode::Hidden;
     }
 
     if is_latest_crate_route {
-        return true;
+        return BadgeTabMode::LatestDefault;
     }
 
     let latest_release = engine
@@ -320,11 +323,17 @@ async fn should_show_latest_badge_ui(
         .await;
 
     match latest_release {
-        Ok(Some(latest_rel)) => latest_rel.version == crate_path.version,
-        Ok(None) => false,
+        Ok(Some(latest_rel)) => {
+            if latest_rel.version == crate_path.version {
+                BadgeTabMode::PinnedDefault
+            } else {
+                BadgeTabMode::Hidden
+            }
+        }
+        Ok(None) => BadgeTabMode::Hidden,
         Err(err) => {
             tracing::error!(%err);
-            false
+            BadgeTabMode::Hidden
         }
     }
 }
@@ -334,8 +343,7 @@ fn status_format_analysis(
     format: StatusFormat,
     subject_path: SubjectPath,
     badge_knobs: ExtraConfig,
-    show_latest_badge_ui: bool,
-    prefer_latest_badge_tab: bool,
+    badge_tab_mode: BadgeTabMode,
 ) -> impl Responder {
     match format {
         StatusFormat::Svg => Either::Left(views::badge::response(
@@ -347,8 +355,7 @@ fn status_format_analysis(
             analysis_outcome,
             subject_path,
             badge_knobs,
-            show_latest_badge_ui,
-            prefer_latest_badge_tab,
+            badge_tab_mode,
         )),
         StatusFormat::ShieldJson => Either::Left(views::badge::shield_json_response(
             analysis_outcome.as_ref(),

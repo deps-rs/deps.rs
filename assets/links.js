@@ -48,9 +48,9 @@ function buildCrateLink() {
     return false;
 }
 
-function activateBadgeTab(container, target) {
-    let tabs = container.querySelectorAll("[data-badge-target]");
-    let panels = container.parentElement.querySelectorAll("[data-badge-panel]");
+function activateBadgeTab(root, target) {
+    let tabs = root.querySelectorAll("[data-badge-target]");
+    let panels = root.querySelectorAll("[data-badge-panel]");
 
     tabs.forEach(function(tab) {
         let li = tab.closest("li");
@@ -67,11 +67,16 @@ function activateBadgeTab(container, target) {
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-    document.querySelectorAll("[data-badge-tabs]").forEach(function(container) {
+    document.querySelectorAll("[data-badge-root]").forEach(function(root) {
+        let container = root.querySelector("[data-badge-tabs]");
+        if (!container) {
+            return;
+        }
+
         container.querySelectorAll("[data-badge-target]").forEach(function(tab) {
             tab.addEventListener("click", function(event) {
                 event.preventDefault();
-                activateBadgeTab(container, tab.dataset.badgeTarget);
+                activateBadgeTab(root, tab.dataset.badgeTarget);
             });
         });
     });
