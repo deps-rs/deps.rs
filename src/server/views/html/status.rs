@@ -415,28 +415,15 @@ fn render_badge_panel(target: &str, markdown: &str, hidden: bool) -> Markup {
     let panel_id = format!("badge-panel-{target}");
     let tab_id = format!("badge-tab-{target}");
 
-    if hidden {
-        html! {
-            pre
-                class="is-size-7 badge-code"
-                id=(panel_id)
-                role="tabpanel"
-                aria-labelledby=(tab_id)
-                data-badge-panel=(target)
-                hidden
-            {
-                (markdown)
-            }
-        }
-    } else {
-        html! {
-            pre
-                class="is-size-7 badge-code"
-                id=(panel_id)
-                role="tabpanel"
-                aria-labelledby=(tab_id)
-                data-badge-panel=(target)
-            {
+    html! {
+        div
+            id=(panel_id)
+            role="tabpanel"
+            aria-labelledby=(tab_id)
+            data-badge-panel=(target)
+            hidden?=(hidden)
+        {
+            pre class="is-size-7 badge-code" {
                 (markdown)
             }
         }
