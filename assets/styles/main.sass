@@ -49,15 +49,15 @@ $family-monospace: "Source Serif Pro", monospace
   border-radius: 0
   display: flex
   flex-direction: column
-  overflow: visible // Allow tabs to potentially overlap if needed, though here we stack
+  overflow: visible
 
   .tabs
-    align-self: flex-end // Push to the right
+    align-self: flex-end
     border-bottom: none
     flex-shrink: 0
-    margin-bottom: 0.5rem // Space between tabs and panel
-    padding: 0
-    width: auto // Don't take full width
+    margin-bottom: 0 // No gap, sit directly on panel
+    padding: 0 1rem 0 0 // Align with panel padding
+    width: auto
 
     ul
       border-bottom: none
@@ -69,45 +69,55 @@ $family-monospace: "Source Serif Pro", monospace
 
       button
         align-items: center
-        background-color: rgba(255, 255, 255, 0.4) // Semi-translucent for readability on any background
-        border: 1px solid rgba(0, 0, 0, 0.05) // Very subtle border
-        border-radius: $radius-rounded // Pill shape
-        color: rgba(0, 0, 0, 0.7) // Darker text for contrast
+        background-color: rgba(255, 255, 255, 0.4) // Semi-translucent inactive state
+        border: 1px solid rgba(0, 0, 0, 0.1)
+        border-bottom: none // Connect to panel
+        border-radius: $radius $radius 0 0 // Top rounded, bottom square
+        color: rgba(0, 0, 0, 0.6)
         cursor: pointer
         display: flex
-        font-size: 0.75rem // Smaller font
+        font-size: 0.75rem
         font-weight: $weight-medium
         justify-content: center
         line-height: 1
-        padding: 0.4rem 0.75rem
-        transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s
+        margin-bottom: 0
+        padding: 0.5rem 1rem
+        position: relative
+        transition: background-color 0.2s, color 0.2s
+        z-index: 1
 
         &:hover
           background-color: rgba(255, 255, 255, 0.6)
           color: $text-strong
 
-        // Active state styling as a prominent white pill
+        // Active state: merge with panel
         &[aria-selected="true"]
           background-color: $scheme-main // White
           color: $text-strong
-          border-color: transparent
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) // Lift it up
+          border-color: $border // Match panel border
+          border-bottom: 1px solid $scheme-main // Hide panel border
+          margin-bottom: -1px // Overlap panel border
+          padding-bottom: calc(0.5rem + 1px) //Compensate for overlap
+          z-index: 2 // Sit above panel
+          box-shadow: none // Remove shadow to look flat/attached
 
       // Focus styles for accessibility
       button:focus-visible
         outline: 2px solid $link
-        outline-offset: 1px
+        outline-offset: -2px
 
   // The content panel
   .badge-panel
     background-color: $scheme-main
     border: 1px solid $border
     border-radius: $radius
+    // If the rightmost tab is active, we might want to flatten the top-right corner of the panel,
+    // but standard radius usually looks fine.
     margin: 0
     padding: 1rem
     position: relative
     z-index: 1
-    width: 100% // Ensure full width for code block
+    width: 100%
 
     pre
       background-color: transparent
