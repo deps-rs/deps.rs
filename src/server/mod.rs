@@ -323,14 +323,10 @@ async fn resolve_badge_tab_mode(
         .await;
 
     match latest_release {
-        Ok(Some(latest_rel)) => {
-            if latest_rel.version == crate_path.version {
-                BadgeTabMode::PinnedDefault
-            } else {
-                BadgeTabMode::Hidden
-            }
+        Ok(Some(latest_rel)) if latest_rel.version == crate_path.version => {
+            BadgeTabMode::PinnedDefault
         }
-        Ok(None) => BadgeTabMode::Hidden,
+        Ok(Some(_)) | Ok(None) => BadgeTabMode::Hidden,
         Err(err) => {
             tracing::error!(%err);
             BadgeTabMode::Hidden
