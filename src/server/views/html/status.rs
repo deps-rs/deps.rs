@@ -417,27 +417,31 @@ fn render_badge_panel(target: &str, markdown: &str, hidden: bool) -> Markup {
 
     if hidden {
         html! {
-            pre
-                class="is-size-7"
+            div
                 id=(panel_id)
+                class="badge-panel"
                 role="tabpanel"
                 aria-labelledby=(tab_id)
                 data-badge-panel=(target)
                 hidden
             {
-                (markdown)
+                pre class="is-size-7" {
+                    (markdown)
+                }
             }
         }
     } else {
         html! {
-            pre
-                class="is-size-7"
+            div
                 id=(panel_id)
+                class="badge-panel"
                 role="tabpanel"
                 aria-labelledby=(tab_id)
                 data-badge-panel=(target)
             {
-                (markdown)
+                pre class="is-size-7" {
+                    (markdown)
+                }
             }
         }
     }
@@ -531,7 +535,7 @@ fn render_success(
             }
             div class="hero-footer" {
                 div class="container" {
-                    div data-badge-root="" {
+                    div class="badge-card" data-badge-root="" {
                     @if show_badge_tabs {
                         div class="tabs is-small" data-badge-tabs="" role="tablist" aria-label="Badge style variants" {
                             ul {
@@ -546,7 +550,9 @@ fn render_success(
                         ))
                         (render_badge_panel("pinned", &pinned_badge_markdown, pinned_panel_hidden))
                     } @else {
-                        pre class="is-size-7" { (pinned_badge_markdown) }
+                        div class="badge-panel" {
+                            pre class="is-size-7" { (pinned_badge_markdown) }
+                        }
                     }
                     }
                 }
