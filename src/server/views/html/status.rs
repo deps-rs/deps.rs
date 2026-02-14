@@ -417,31 +417,27 @@ fn render_badge_panel(target: &str, markdown: &str, hidden: bool) -> Markup {
 
     if hidden {
         html! {
-            div
+            pre
+                class="is-size-7 badge-code"
                 id=(panel_id)
-                class="badge-panel"
                 role="tabpanel"
                 aria-labelledby=(tab_id)
                 data-badge-panel=(target)
                 hidden
             {
-                pre class="is-size-7" {
-                    (markdown)
-                }
+                (markdown)
             }
         }
     } else {
         html! {
-            div
+            pre
+                class="is-size-7 badge-code"
                 id=(panel_id)
-                class="badge-panel"
                 role="tabpanel"
                 aria-labelledby=(tab_id)
                 data-badge-panel=(target)
             {
-                pre class="is-size-7" {
-                    (markdown)
-                }
+                (markdown)
             }
         }
     }
@@ -535,7 +531,7 @@ fn render_success(
             }
             div class="hero-footer" {
                 div class="container" {
-                    div class="badge-card" data-badge-root="" {
+                    div class="badge-group" data-badge-root="" {
                         @if show_badge_tabs {
                             div class="tabs is-small" data-badge-tabs="" role="tablist" aria-label="Badge style variants" {
                                 ul {
@@ -550,9 +546,7 @@ fn render_success(
                             ))
                             (render_badge_panel("pinned", &pinned_badge_markdown, pinned_panel_hidden))
                         } @else {
-                            div class="badge-panel" {
-                                pre class="is-size-7" { (pinned_badge_markdown) }
-                            }
+                            pre class="is-size-7 badge-code" { (pinned_badge_markdown) }
                         }
                     }
                 }
