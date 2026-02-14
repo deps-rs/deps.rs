@@ -14,7 +14,7 @@ use crate::{
         crates::{AnalyzedDependencies, AnalyzedDependency, CrateName},
         repo::RepoSite,
     },
-    server::{ExtraConfig, error::ServerError, views::badge},
+    server::{ExtraConfig, assets::STATIC_LINKS_JS_PATH, error::ServerError, views::badge},
 };
 
 fn get_crates_url(name: impl AsRef<str>) -> String {
@@ -347,6 +347,30 @@ fn render_failure(subject_path: SubjectPath) -> Markup {
             }
         }
         (super::render_footer(None))
+        script src=(STATIC_LINKS_JS_PATH) {}
+    }
+}
+
+fn render_badge_markdown(status_base_url: &str, options: &str, has_path: bool) -> String {
+    if has_path {
+        format!(
+            "[![dependency status]({status_base_url}/status.svg?{options})]({status_base_url}?{options})"
+        )
+    } else {
+        format!("[![dependency status]({status_base_url}/status.svg)]({status_base_url})")
+    }
+}
+
+fn render_badge_markdown_with_link(
+    status_base_url: &str,
+    link_base_url: &str,
+    options: &str,
+    has_path: bool,
+) -> String {
+    if has_path {
+        format!("[![dependency status]({status_base_url}/status.svg?{options})]({link_base_url}?{options})")
+    } else {
+        format!("[![dependency status]({status_base_url}/status.svg)]({link_base_url})")
     }
 }
 
@@ -354,6 +378,7 @@ fn render_success(
     analysis_outcome: AnalyzeDependenciesOutcome,
     subject_path: SubjectPath,
     extra_config: ExtraConfig,
+    show_latest_badge_ui: bool,
 ) -> Markup {
     let self_path = match subject_path {
         SubjectPath::Repo(ref repo_path) => format!(
@@ -387,6 +412,30 @@ fn render_success(
         extra_config.path.clone().unwrap_or_default().as_str(),
     )])
     .unwrap();
+    let path_is_set = extra_config.path.is_some();
+    let pinned_badge_markdown = render_badge_markdown(&status_base_url, &options, path_is_set);
+    let latest_badge_urls = match &subject_path {
+        SubjectPath::Crate(crate_path) => Some((
+            format!(
+                "{}/crate/{}/latest",
+                &super::SELF_BASE_URL as &str,
+                crate_path.name.as_ref()
+            ),
+            format!(
+                "{}/crate/{}",
+                &super::SELF_BASE_URL as &str,
+                crate_path.name.as_ref()
+            ),
+        )),
+        SubjectPath::Repo(_) => None,
+    };
+    let latest_badge_markdown = latest_badge_urls
+        .as_ref()
+        .map(|(status_url, link_url)| {
+            render_badge_markdown_with_link(status_url, link_url, &options, path_is_set)
+        })
+        .unwrap_or_default();
+    let show_badge_tabs = show_latest_badge_ui && latest_badge_urls.is_some();
 
     html! {
         section class=(format!("hero {hero_class}")) {
@@ -408,12 +457,21 @@ fn render_success(
             }
             div class="hero-footer" {
                 div class="container" {
-                    pre class="is-size-7" {
-                        @if extra_config.path.is_some() {
-                            (format!("[![dependency status]({status_base_url}/status.svg?{options})]({status_base_url}?{options})"))
-                        } @else {
-                            (format!("[![dependency status]({status_base_url}/status.svg)]({status_base_url})"))
+                    @if show_badge_tabs {
+                        div class="tabs is-toggle is-small" data-badge-tabs="" {
+                            ul {
+                                li {
+                                    a href="#" data-badge-target="latest" { "Latest release" }
+                                }
+                                li class="is-active" {
+                                    a href="#" data-badge-target="pinned" { "Pinned version" }
+                                }
+                            }
                         }
+                        pre class="is-size-7" data-badge-panel="latest" hidden { (latest_badge_markdown) }
+                        pre class="is-size-7" data-badge-panel="pinned" { (pinned_badge_markdown) }
+                    } @else {
+                        pre class="is-size-7" { (pinned_badge_markdown) }
                     }
                 }
             }
@@ -451,6 +509,7 @@ fn render_success(
             }
         }
         (super::render_footer(Some(analysis_outcome.duration)))
+        script src=(STATIC_LINKS_JS_PATH) {}
     }
 }
 
@@ -458,6 +517,7 @@ pub fn response(
     analysis_outcome: Option<AnalyzeDependenciesOutcome>,
     subject_path: SubjectPath,
     extra_config: ExtraConfig,
+    show_latest_badge_ui: bool,
 ) -> actix_web::Result<impl Responder> {
     let title = match subject_path {
         SubjectPath::Repo(ref repo_path) => {
@@ -471,7 +531,7 @@ pub fn response(
     if let Some(outcome) = analysis_outcome {
         Ok(Html::new(render_html(
             &title,
-            render_success(outcome, subject_path, extra_config),
+            render_success(outcome, subject_path, extra_config, show_latest_badge_ui),
         )))
     } else {
         let html = render_html(&title, render_failure(subject_path));

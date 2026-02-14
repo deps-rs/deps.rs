@@ -116,8 +116,13 @@ async fn repo_status(
     match analyze_result {
         Err(err) => {
             tracing::error!(%err);
-            let response =
-                status_format_analysis(None, format, SubjectPath::Repo(repo_path), extra_knobs);
+            let response = status_format_analysis(
+                None,
+                format,
+                SubjectPath::Repo(repo_path),
+                extra_knobs,
+                false,
+            );
 
             Ok(response)
         }
@@ -128,6 +133,7 @@ async fn repo_status(
                 format,
                 SubjectPath::Repo(repo_path),
                 extra_knobs,
+                false,
             );
 
             Ok(response)
@@ -222,6 +228,8 @@ async fn crate_status(
     (name, version): (String, Option<String>),
     format: StatusFormat,
 ) -> actix_web::Result<impl Responder> {
+    let is_latest_crate_route = version.is_none();
+
     let version = match version {
         Some(ver) => ver.to_owned(),
         None => {
@@ -256,6 +264,10 @@ async fn crate_status(
         }
 
         Ok(crate_path) => {
+            let show_latest_badge_ui =
+                should_show_latest_badge_ui(&engine, format, &crate_path, is_latest_crate_route)
+                    .await;
+
             let analysis_outcome = engine
                 .analyze_crate_dependencies(crate_path.clone())
                 .await
@@ -269,9 +281,38 @@ async fn crate_status(
                 format,
                 SubjectPath::Crate(crate_path),
                 badge_knobs,
+                show_latest_badge_ui,
             );
 
             Ok(response)
+        }
+    }
+}
+
+async fn should_show_latest_badge_ui(
+    engine: &Engine,
+    format: StatusFormat,
+    crate_path: &CratePath,
+    is_latest_crate_route: bool,
+) -> bool {
+    if format != StatusFormat::Html {
+        return false;
+    }
+
+    if is_latest_crate_route {
+        return true;
+    }
+
+    let latest_release = engine
+        .find_latest_stable_crate_release(crate_path.name.clone(), VersionReq::STAR)
+        .await;
+
+    match latest_release {
+        Ok(Some(latest_rel)) => latest_rel.version == crate_path.version,
+        Ok(None) => false,
+        Err(err) => {
+            tracing::error!(%err);
+            false
         }
     }
 }
@@ -281,6 +322,7 @@ fn status_format_analysis(
     format: StatusFormat,
     subject_path: SubjectPath,
     badge_knobs: ExtraConfig,
+    show_latest_badge_ui: bool,
 ) -> impl Responder {
     match format {
         StatusFormat::Svg => Either::Left(views::badge::response(
@@ -292,6 +334,7 @@ fn status_format_analysis(
             analysis_outcome,
             subject_path,
             badge_knobs,
+            show_latest_badge_ui,
         )),
         StatusFormat::ShieldJson => Either::Left(views::badge::shield_json_response(
             analysis_outcome.as_ref(),

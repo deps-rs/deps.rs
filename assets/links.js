@@ -47,3 +47,32 @@ function buildCrateLink() {
 
     return false;
 }
+
+function activateBadgeTab(container, target) {
+    let tabs = container.querySelectorAll("[data-badge-target]");
+    let panels = container.parentElement.querySelectorAll("[data-badge-panel]");
+
+    tabs.forEach(function(tab) {
+        let li = tab.closest("li");
+        if (!li) {
+            return;
+        }
+
+        li.classList.toggle("is-active", tab.dataset.badgeTarget === target);
+    });
+
+    panels.forEach(function(panel) {
+        panel.hidden = panel.dataset.badgePanel !== target;
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll("[data-badge-tabs]").forEach(function(container) {
+        container.querySelectorAll("[data-badge-target]").forEach(function(tab) {
+            tab.addEventListener("click", function(event) {
+                event.preventDefault();
+                activateBadgeTab(container, tab.dataset.badgeTarget);
+            });
+        });
+    });
+});
