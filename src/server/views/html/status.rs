@@ -1,8 +1,8 @@
-use actix_web::{Responder, web::Html};
-use font_awesome_as_a_crate::{Type as FaType, svg as fa};
+use actix_web::{web::Html, Responder};
+use font_awesome_as_a_crate::{svg as fa, Type as FaType};
 use indexmap::IndexMap;
-use maud::{Markup, PreEscaped, html};
-use pulldown_cmark::{Parser, html};
+use maud::{html, Markup, PreEscaped};
+use pulldown_cmark::{html, Parser};
 use rustsec::advisory::Advisory;
 use semver::Version;
 
@@ -10,12 +10,12 @@ use super::render_html;
 use crate::{
     engine::AnalyzeDependenciesOutcome,
     models::{
-        SubjectPath,
         crates::{AnalyzedDependencies, AnalyzedDependency, CrateName},
         repo::RepoSite,
+        SubjectPath,
     },
     server::{
-        BadgeTabMode, ExtraConfig, assets::STATIC_LINKS_JS_PATH, error::ServerError, views::badge,
+        assets::STATIC_LINKS_JS_PATH, error::ServerError, views::badge, BadgeTabMode, ExtraConfig,
     },
 };
 
@@ -376,36 +376,18 @@ fn render_badge_tab(target: &str, label: &str, is_active: bool) -> Markup {
     let aria_selected = if is_active { "true" } else { "false" };
     let tab_index = if is_active { "0" } else { "-1" };
 
-    if is_active {
-        html! {
-            li class="is-active" {
-                button
-                    type="button"
-                    id=(tab_id)
-                    role="tab"
-                    aria-controls=(panel_id)
-                    aria-selected=(aria_selected)
-                    tabindex=(tab_index)
-                    data-badge-target=(target)
-                {
-                    (label)
-                }
-            }
-        }
-    } else {
-        html! {
-            li {
-                button
-                    type="button"
-                    id=(tab_id)
-                    role="tab"
-                    aria-controls=(panel_id)
-                    aria-selected=(aria_selected)
-                    tabindex=(tab_index)
-                    data-badge-target=(target)
-                {
-                    (label)
-                }
+    html! {
+        li class=[if is_active { "is-active" }] {
+            button
+                type="button"
+                id=(tab_id)
+                role="tab"
+                aria-controls=(panel_id)
+                aria-selected=(aria_selected)
+                tabindex=(tab_index)
+                data-badge-target=(target)
+            {
+                (label)
             }
         }
     }
