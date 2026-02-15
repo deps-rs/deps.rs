@@ -1,8 +1,8 @@
-use actix_web::{web::Html, Responder};
-use font_awesome_as_a_crate::{svg as fa, Type as FaType};
+use actix_web::{Responder, web::Html};
+use font_awesome_as_a_crate::{Type as FaType, svg as fa};
 use indexmap::IndexMap;
-use maud::{html, Markup, PreEscaped};
-use pulldown_cmark::{html, Parser};
+use maud::{Markup, PreEscaped, html};
+use pulldown_cmark::{Parser, html};
 use rustsec::advisory::Advisory;
 use semver::Version;
 
@@ -10,12 +10,12 @@ use super::render_html;
 use crate::{
     engine::AnalyzeDependenciesOutcome,
     models::{
+        SubjectPath,
         crates::{AnalyzedDependencies, AnalyzedDependency, CrateName},
         repo::RepoSite,
-        SubjectPath,
     },
     server::{
-        assets::STATIC_LINKS_JS_PATH, error::ServerError, views::badge, BadgeTabMode, ExtraConfig,
+        BadgeTabMode, ExtraConfig, assets::STATIC_LINKS_JS_PATH, error::ServerError, views::badge,
     },
 };
 
@@ -356,17 +356,33 @@ fn render_failure(subject_path: SubjectPath) -> Markup {
 fn render_badge_markdown(
     status_base_url: &str,
     link_base_url: Option<&str>,
-    options: &str,
-    has_path: bool,
+    options: &BadgeMarkdownOptions<'_>,
 ) -> String {
     let link_base_url = link_base_url.unwrap_or(status_base_url);
+    let query = options.query_string();
+    let status_svg_url = with_query_url(&format!("{status_base_url}/status.svg"), query.as_deref());
+    let link_url = with_query_url(link_base_url, query.as_deref());
 
-    if has_path {
-        format!(
-            "[![dependency status]({status_base_url}/status.svg?{options})]({link_base_url}?{options})"
-        )
-    } else {
-        format!("[![dependency status]({status_base_url}/status.svg)]({link_base_url})")
+    format!("[![dependency status]({status_svg_url})]({link_url})")
+}
+
+struct BadgeMarkdownOptions<'a> {
+    path: Option<&'a str>,
+}
+
+impl<'a> BadgeMarkdownOptions<'a> {
+    fn query_string(&self) -> Option<String> {
+        self.path
+            .map(|path| serde_urlencoded::to_string([("path", path)]).unwrap())
+    }
+}
+
+fn with_query_url(base_url: &str, query: Option<&str>) -> String {
+    // TODO: Consider accepting a strongly typed `url::Url` here to avoid ad-hoc
+    // string concatenation and provide stronger URL safety guarantees.
+    match query {
+        Some(query) => format!("{base_url}?{query}"),
+        None => base_url.to_string(),
     }
 }
 
@@ -377,7 +393,7 @@ fn render_badge_tab(target: &str, label: &str, is_active: bool) -> Markup {
     let tab_index = if is_active { "0" } else { "-1" };
 
     html! {
-        li class=[if is_active { "is-active" }] {
+        li class=[if is_active { Some("is-active") } else { None }] {
             button
                 type="button"
                 id=(tab_id)
@@ -442,17 +458,10 @@ fn render_success(
         "is-success"
     };
 
-    // NOTE(feliix42): While we could encode the whole `ExtraConfig` struct here, I've decided
-    // against doing so as this would always append the defaults for badge style and compactness
-    // settings to the URL, bloating it unnecessarily, we can do that once it's needed.
-    let options = serde_urlencoded::to_string([(
-        "path",
-        extra_config.path.clone().unwrap_or_default().as_str(),
-    )])
-    .unwrap();
-    let path_is_set = extra_config.path.is_some();
-    let pinned_badge_markdown =
-        render_badge_markdown(&status_base_url, None, &options, path_is_set);
+    let markdown_options = BadgeMarkdownOptions {
+        path: extra_config.path.as_deref(),
+    };
+    let pinned_badge_markdown = render_badge_markdown(&status_base_url, None, &markdown_options);
     let latest_badge_markdown = match &subject_path {
         SubjectPath::Crate(crate_path) => {
             let latest_status_base_url = format!(
@@ -464,8 +473,7 @@ fn render_success(
             render_badge_markdown(
                 &latest_status_base_url,
                 Some(&latest_status_base_url),
-                &options,
-                path_is_set,
+                &markdown_options,
             )
         }
         SubjectPath::Repo(_) => String::new(),
