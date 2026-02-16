@@ -19,7 +19,7 @@ actix-web-lab = { version = "0.24", default-features = false }
 anyhow = "1"
 crates-index = { version = "3", default-features = false, features = ["git", "git-https-reqwest"] }
 # to be kept in sync with the version used by `crates-index`
-gix = { version = "0.73", default-features = false }
+gix = { version = "0.79", default-features = false }
 derive_more = { version = "2", features = ["display", "error", "from"] }
 dotenvy = "0.15"
 either = "1.12"
