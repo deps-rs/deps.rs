@@ -33,13 +33,13 @@ parking_lot = "0.12"
 pulldown-cmark = "0.13"
 relative-path = { version = "2", features = ["serde"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "http2", "json"] }
-rustsec = "0.31"
+rustsec = "0.32"
 semver = { version = "1", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_urlencoded = "0.7"
 serde_with = "3"
 tokio = { version = "1.44.2", features = ["rt", "macros", "sync", "time"] }
-toml = { version = "0.9", default-features = false, features = ["parse", "serde", "preserve_order"] }
+toml = { version = "1", default-features = false, features = ["parse", "serde", "preserve_order"] }
 tracing = "0.1.30"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
