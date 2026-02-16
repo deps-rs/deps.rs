@@ -14,7 +14,9 @@ use crate::{
         crates::{AnalyzedDependencies, AnalyzedDependency, CrateName},
         repo::RepoSite,
     },
-    server::{ExtraConfig, error::ServerError, views::badge},
+    server::{
+        BadgeTabMode, ExtraConfig, assets::STATIC_LINKS_JS_PATH, error::ServerError, views::badge,
+    },
 };
 
 fn get_crates_url(name: impl AsRef<str>) -> String {
@@ -347,6 +349,82 @@ fn render_failure(subject_path: SubjectPath) -> Markup {
             }
         }
         (super::render_footer(None))
+        script src=(STATIC_LINKS_JS_PATH) {}
+    }
+}
+
+fn render_badge_markdown(
+    status_base_url: &str,
+    link_base_url: Option<&str>,
+    options: &BadgeMarkdownOptions<'_>,
+) -> String {
+    let link_base_url = link_base_url.unwrap_or(status_base_url);
+    let query = options.query_string();
+    let status_svg_url = with_query_url(&format!("{status_base_url}/status.svg"), query.as_deref());
+    let link_url = with_query_url(link_base_url, query.as_deref());
+
+    format!("[![dependency status]({status_svg_url})]({link_url})")
+}
+
+struct BadgeMarkdownOptions<'a> {
+    path: Option<&'a str>,
+}
+
+impl<'a> BadgeMarkdownOptions<'a> {
+    fn query_string(&self) -> Option<String> {
+        self.path
+            .map(|path| serde_urlencoded::to_string([("path", path)]).unwrap())
+    }
+}
+
+fn with_query_url(base_url: &str, query: Option<&str>) -> String {
+    // TODO: Consider accepting a strongly typed `url::Url` here to avoid ad-hoc
+    // string concatenation and provide stronger URL safety guarantees.
+    match query {
+        Some(query) => format!("{base_url}?{query}"),
+        None => base_url.to_string(),
+    }
+}
+
+fn render_badge_tab(target: &str, label: &str, is_active: bool) -> Markup {
+    let tab_id = format!("badge-tab-{target}");
+    let panel_id = format!("badge-panel-{target}");
+    let aria_selected = if is_active { "true" } else { "false" };
+    let tab_index = if is_active { "0" } else { "-1" };
+
+    html! {
+        li class=[if is_active { Some("is-active") } else { None }] {
+            button
+                type="button"
+                id=(tab_id)
+                role="tab"
+                aria-controls=(panel_id)
+                aria-selected=(aria_selected)
+                tabindex=(tab_index)
+                data-badge-target=(target)
+            {
+                (label)
+            }
+        }
+    }
+}
+
+fn render_badge_panel(target: &str, markdown: &str, hidden: bool) -> Markup {
+    let panel_id = format!("badge-panel-{target}");
+    let tab_id = format!("badge-tab-{target}");
+
+    html! {
+        div
+            id=(panel_id)
+            role="tabpanel"
+            aria-labelledby=(tab_id)
+            data-badge-panel=(target)
+            hidden?=(hidden)
+        {
+            pre class="is-size-7 badge-code" {
+                (markdown)
+            }
+        }
     }
 }
 
@@ -354,6 +432,7 @@ fn render_success(
     analysis_outcome: AnalyzeDependenciesOutcome,
     subject_path: SubjectPath,
     extra_config: ExtraConfig,
+    badge_tab_mode: BadgeTabMode,
 ) -> Markup {
     let self_path = match subject_path {
         SubjectPath::Repo(ref repo_path) => format!(
@@ -379,14 +458,35 @@ fn render_success(
         "is-success"
     };
 
-    // NOTE(feliix42): While we could encode the whole `ExtraConfig` struct here, I've decided
-    // against doing so as this would always append the defaults for badge style and compactness
-    // settings to the URL, bloating it unnecessarily, we can do that once it's needed.
-    let options = serde_urlencoded::to_string([(
-        "path",
-        extra_config.path.clone().unwrap_or_default().as_str(),
-    )])
-    .unwrap();
+    let markdown_options = BadgeMarkdownOptions {
+        path: extra_config.path.as_deref(),
+    };
+    let pinned_badge_markdown = render_badge_markdown(&status_base_url, None, &markdown_options);
+    let latest_badge_markdown = match &subject_path {
+        SubjectPath::Crate(crate_path) => {
+            let latest_status_base_url = format!(
+                "{}/crate/{}/latest",
+                &super::SELF_BASE_URL as &str,
+                crate_path.name.as_ref()
+            );
+
+            render_badge_markdown(
+                &latest_status_base_url,
+                Some(&latest_status_base_url),
+                &markdown_options,
+            )
+        }
+        SubjectPath::Repo(_) => String::new(),
+    };
+    let show_badge_tabs =
+        !matches!(&subject_path, SubjectPath::Repo(_)) && badge_tab_mode != BadgeTabMode::Hidden;
+    let active_badge_tab = if badge_tab_mode == BadgeTabMode::LatestDefault {
+        "latest"
+    } else {
+        "pinned"
+    };
+    let latest_panel_hidden = active_badge_tab != "latest";
+    let pinned_panel_hidden = active_badge_tab != "pinned";
 
     html! {
         section class=(format!("hero {hero_class}")) {
@@ -408,11 +508,22 @@ fn render_success(
             }
             div class="hero-footer" {
                 div class="container" {
-                    pre class="is-size-7" {
-                        @if extra_config.path.is_some() {
-                            (format!("[![dependency status]({status_base_url}/status.svg?{options})]({status_base_url}?{options})"))
+                    div class="badge-group" data-badge-root="" {
+                        @if show_badge_tabs {
+                            div class="tabs is-small" data-badge-tabs="" role="tablist" aria-label="Badge style variants" {
+                                ul {
+                                    (render_badge_tab("latest", "Latest release", active_badge_tab == "latest"))
+                                    (render_badge_tab("pinned", "Pinned version", active_badge_tab == "pinned"))
+                                }
+                            }
+                            (render_badge_panel(
+                                "latest",
+                                &latest_badge_markdown,
+                                latest_panel_hidden,
+                            ))
+                            (render_badge_panel("pinned", &pinned_badge_markdown, pinned_panel_hidden))
                         } @else {
-                            (format!("[![dependency status]({status_base_url}/status.svg)]({status_base_url})"))
+                            pre class="is-size-7 badge-code" { (pinned_badge_markdown) }
                         }
                     }
                 }
@@ -451,6 +562,7 @@ fn render_success(
             }
         }
         (super::render_footer(Some(analysis_outcome.duration)))
+        script src=(STATIC_LINKS_JS_PATH) {}
     }
 }
 
@@ -458,6 +570,7 @@ pub fn response(
     analysis_outcome: Option<AnalyzeDependenciesOutcome>,
     subject_path: SubjectPath,
     extra_config: ExtraConfig,
+    badge_tab_mode: BadgeTabMode,
 ) -> actix_web::Result<impl Responder> {
     let title = match subject_path {
         SubjectPath::Repo(ref repo_path) => {
@@ -471,7 +584,7 @@ pub fn response(
     if let Some(outcome) = analysis_outcome {
         Ok(Html::new(render_html(
             &title,
-            render_success(outcome, subject_path, extra_config),
+            render_success(outcome, subject_path, extra_config, badge_tab_mode),
         )))
     } else {
         let html = render_html(&title, render_failure(subject_path));
