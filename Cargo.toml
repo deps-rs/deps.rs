@@ -15,7 +15,7 @@ edition = "2024"
 badge = { path = "./libs/badge" }
 
 actix-web = { version = "4", default-features = false, features = ["macros", "compress-gzip", "compress-zstd", "http2", "unicode", "compat"] }
-actix-web-lab = { version = "0.24", default-features = false }
+actix-web-lab = { version = "0.26", default-features = false }
 anyhow = "1"
 crates-index = { version = "3", default-features = false, features = ["git", "git-https-reqwest"] }
 # to be kept in sync with the version used by `crates-index`
