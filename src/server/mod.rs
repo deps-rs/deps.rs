@@ -49,6 +49,13 @@ enum StatusFormat {
     ShieldJson,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum BadgeTabMode {
+    Hidden,
+    PinnedDefault,
+    LatestDefault,
+}
+
 #[get("/")]
 pub(crate) async fn index(ThinData(engine): ThinData<Engine>) -> actix_web::Result<impl Responder> {
     let popular = future::try_join(engine.get_popular_repos(), engine.get_popular_crates()).await;
@@ -116,8 +123,13 @@ async fn repo_status(
     match analyze_result {
         Err(err) => {
             tracing::error!(%err);
-            let response =
-                status_format_analysis(None, format, SubjectPath::Repo(repo_path), extra_knobs);
+            let response = status_format_analysis(
+                None,
+                format,
+                SubjectPath::Repo(repo_path),
+                extra_knobs,
+                BadgeTabMode::Hidden,
+            );
 
             Ok(response)
         }
@@ -128,6 +140,7 @@ async fn repo_status(
                 format,
                 SubjectPath::Repo(repo_path),
                 extra_knobs,
+                BadgeTabMode::Hidden,
             );
 
             Ok(response)
@@ -180,6 +193,15 @@ async fn crate_status_html(
     crate_status(engine, uri, (name, Some(version)), StatusFormat::Html).await
 }
 
+#[get("/crate/{name}/latest")]
+async fn crate_latest_status_html(
+    ThinData(engine): ThinData<Engine>,
+    uri: Uri,
+    Path((name,)): Path<(String,)>,
+) -> actix_web::Result<impl Responder> {
+    crate_status(engine, uri, (name, None), StatusFormat::Html).await
+}
+
 #[get("/crate/{name}/latest/status.svg")]
 async fn crate_latest_status_svg(
     ThinData(engine): ThinData<Engine>,
@@ -222,6 +244,8 @@ async fn crate_status(
     (name, version): (String, Option<String>),
     format: StatusFormat,
 ) -> actix_web::Result<impl Responder> {
+    let is_latest_crate_route = version.is_none();
+
     let version = match version {
         Some(ver) => ver.to_owned(),
         None => {
@@ -256,6 +280,9 @@ async fn crate_status(
         }
 
         Ok(crate_path) => {
+            let badge_tab_mode =
+                resolve_badge_tab_mode(&engine, format, &crate_path, is_latest_crate_route).await;
+
             let analysis_outcome = engine
                 .analyze_crate_dependencies(crate_path.clone())
                 .await
@@ -269,9 +296,40 @@ async fn crate_status(
                 format,
                 SubjectPath::Crate(crate_path),
                 badge_knobs,
+                badge_tab_mode,
             );
 
             Ok(response)
+        }
+    }
+}
+
+async fn resolve_badge_tab_mode(
+    engine: &Engine,
+    format: StatusFormat,
+    crate_path: &CratePath,
+    is_latest_crate_route: bool,
+) -> BadgeTabMode {
+    if format != StatusFormat::Html {
+        return BadgeTabMode::Hidden;
+    }
+
+    if is_latest_crate_route {
+        return BadgeTabMode::LatestDefault;
+    }
+
+    let latest_release = engine
+        .find_latest_stable_crate_release(crate_path.name.clone(), VersionReq::STAR)
+        .await;
+
+    match latest_release {
+        Ok(Some(latest_rel)) if latest_rel.version == crate_path.version => {
+            BadgeTabMode::PinnedDefault
+        }
+        Ok(Some(_)) | Ok(None) => BadgeTabMode::Hidden,
+        Err(err) => {
+            tracing::error!(%err);
+            BadgeTabMode::Hidden
         }
     }
 }
@@ -281,6 +339,7 @@ fn status_format_analysis(
     format: StatusFormat,
     subject_path: SubjectPath,
     badge_knobs: ExtraConfig,
+    badge_tab_mode: BadgeTabMode,
 ) -> impl Responder {
     match format {
         StatusFormat::Svg => Either::Left(views::badge::response(
@@ -292,6 +351,7 @@ fn status_format_analysis(
             analysis_outcome,
             subject_path,
             badge_knobs,
+            badge_tab_mode,
         )),
         StatusFormat::ShieldJson => Either::Left(views::badge::shield_json_response(
             analysis_outcome.as_ref(),
