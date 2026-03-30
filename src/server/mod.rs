@@ -13,7 +13,7 @@ use actix_web_lab::{
     header::{CacheControl, CacheDirective},
 };
 use assets::STATIC_FAVICON_PATH;
-use badge::BadgeStyle;
+use badge_maker_rs::Style;
 use futures_util::future;
 use semver::VersionReq;
 use serde::Deserialize;
@@ -403,10 +403,10 @@ static SELF_BASE_URL: LazyLock<String> =
     LazyLock::new(|| env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string()));
 
 /// Configuration options supplied through Get Parameters
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct ExtraConfig {
     /// Badge style to show
-    style: BadgeStyle,
+    style: Style,
 
     /// Whether the inscription _"dependencies"_ should be abbreviated as _"deps"_ in the badge.
     compact: bool,
@@ -416,6 +416,17 @@ pub struct ExtraConfig {
 
     /// Path in which the crate resides within the repository
     path: Option<String>,
+}
+
+impl Default for ExtraConfig {
+    fn default() -> Self {
+        Self {
+            style: BadgeStyleParam::default().into(),
+            compact: false,
+            subject: None,
+            path: None,
+        }
+    }
 }
 
 impl ExtraConfig {
@@ -433,7 +444,7 @@ impl ExtraConfig {
 
         #[derive(Debug, Clone, Default, Deserialize)]
         struct ExtraConfigPartial {
-            style: Option<QueryParam<BadgeStyle>>,
+            style: Option<QueryParam<BadgeStyleParam>>,
             compact: Option<QueryParam<WrappedBool>>,
             subject: Option<String>,
             path: Option<String>,
@@ -447,7 +458,8 @@ impl ExtraConfig {
             style: extra_config
                 .style
                 .and_then(|qp| qp.opt())
-                .unwrap_or_default(),
+                .unwrap_or_default()
+                .into(),
             compact: extra_config
                 .compact
                 .and_then(|qp| qp.opt())
@@ -471,6 +483,29 @@ impl ExtraConfig {
             "deps"
         } else {
             "dependencies"
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+enum BadgeStyleParam {
+    Plastic,
+    #[default]
+    Flat,
+    FlatSquare,
+    ForTheBadge,
+    Social,
+}
+
+impl From<BadgeStyleParam> for Style {
+    fn from(value: BadgeStyleParam) -> Self {
+        match value {
+            BadgeStyleParam::Plastic => Self::Plastic,
+            BadgeStyleParam::Flat => Self::Flat,
+            BadgeStyleParam::FlatSquare => Self::FlatSquare,
+            BadgeStyleParam::ForTheBadge => Self::ForTheBadge,
+            BadgeStyleParam::Social => Self::Social,
         }
     }
 }
