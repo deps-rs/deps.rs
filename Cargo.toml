@@ -2,7 +2,6 @@
 resolver = "2"
 members = [
     ".",
-    "./libs/badge",
 ]
 
 [package]
@@ -12,7 +11,6 @@ authors = ["Sam Rijs <srijs@airpost.net>"]
 edition = "2024"
 
 [dependencies]
-badge = { path = "./libs/badge" }
 
 actix-web = { version = "4", default-features = false, features = ["macros", "compress-gzip", "compress-zstd", "http2", "unicode", "compat"] }
 actix-web-lab = { version = "0.26", default-features = false }
@@ -42,6 +40,8 @@ tokio = { version = "1.44.2", features = ["rt", "macros", "sync", "time"] }
 toml = { version = "1", default-features = false, features = ["parse", "serde", "preserve_order"] }
 tracing = "0.1.30"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+badge-maker-rs = "0.1.0"
+base64 = "0.22.1"
 
 [build-dependencies]
 grass = { version = "0.13", default-features = false }
