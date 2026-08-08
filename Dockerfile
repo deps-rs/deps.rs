@@ -1,7 +1,12 @@
+# syntax=docker/dockerfile:1
+
 FROM rust:slim-bookworm AS build
 
 COPY . /src
-RUN cargo install --path /src --locked
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,target=/src/target,sharing=locked \
+    CARGO_TARGET_DIR=/src/target cargo install --path /src --locked
 
 FROM debian:bookworm-slim
 
