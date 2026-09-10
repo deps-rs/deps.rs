@@ -447,8 +447,7 @@ fn render_success(
     };
     let status_base_url = format!("{}/{}", &super::SELF_BASE_URL as &str, self_path);
 
-    let status_data_uri =
-        badge::badge(Some(&analysis_outcome), extra_config.clone()).to_svg_data_uri();
+    let status_data_uri = badge::svg_data_uri(Some(&analysis_outcome), extra_config.clone());
 
     let hero_class = if analysis_outcome.any_always_insecure() {
         "is-danger"

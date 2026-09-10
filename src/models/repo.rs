@@ -215,10 +215,10 @@ mod tests {
         let paths = [
             ("Cargo.toml", "Cargo.toml"),
             ("/Cargo.toml", "Cargo.toml"),
-            ("libs/badge/Cargo.toml", "libs/badge/Cargo.toml"),
-            ("/libs/badge/Cargo.toml", "libs/badge/Cargo.toml"),
-            ("src/../libs/badge/Cargo.toml", "libs/badge/Cargo.toml"),
-            ("/src/../libs/badge/Cargo.toml", "libs/badge/Cargo.toml"),
+            ("src/main.rs", "src/main.rs"),
+            ("/src/main.rs", "src/main.rs"),
+            ("src/server/../main.rs", "src/main.rs"),
+            ("/src/server/../main.rs", "src/main.rs"),
         ];
 
         for (input, expected) in &paths {

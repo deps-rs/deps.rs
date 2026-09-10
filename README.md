@@ -27,9 +27,11 @@ Use `latest` for a moving badge, or `<VERSION>` for a fixed release.
 
 Badges have a few options, specified with query parameters:
 - `style`: which matches the styles from `shields.io`:
+  - `?style=plastic`
   - `?style=flat` (default)
   - `?style=flat-square`
   - `?style=for-the-badge`
+  - `?style=social`
 - `subject`: customize the text on the left (which is the same concept as `label` in `shields.io`, and [URL-Encoding](https://developer.mozilla.org/en-US/docs/Glossary/percent-encoding) is needed for spaces or special characters!). e.g.:
   - `?subject=yourdeps`
   - `?subject=git%20deps`
