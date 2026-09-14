@@ -1,34 +1,19 @@
-use std::sync::Arc;
-
-use rustsec::{
-    cargo_lock,
-    database::{self, Database},
-};
 use semver::Version;
 
-use crate::models::crates::{
-    AnalyzedDependencies, AnalyzedDependency, CrateDeps, CrateName, CrateRelease,
-};
+use crate::models::crates::{AnalyzedDependencies, AnalyzedDependency, CrateDeps, CrateRelease};
 
 pub struct DependencyAnalyzer {
     deps: AnalyzedDependencies,
-    advisory_db: Option<Arc<Database>>,
 }
 
 impl DependencyAnalyzer {
-    pub fn new(deps: &CrateDeps, advisory_db: Option<Arc<Database>>) -> DependencyAnalyzer {
+    pub fn new(deps: &CrateDeps) -> DependencyAnalyzer {
         DependencyAnalyzer {
             deps: AnalyzedDependencies::new(deps),
-            advisory_db,
         }
     }
 
-    fn process_single(
-        name: &CrateName,
-        dep: &mut AnalyzedDependency,
-        ver: &Version,
-        advisory_db: Option<&Database>,
-    ) {
+    fn process_single(dep: &mut AnalyzedDependency, ver: &Version) {
         if dep.required.matches(ver) {
             if let Some(ref mut current_latest_that_matches) = dep.latest_that_matches {
                 if *current_latest_that_matches < *ver {
@@ -37,21 +22,8 @@ impl DependencyAnalyzer {
             } else {
                 dep.latest_that_matches = Some(ver.clone());
             }
-
-            let name: cargo_lock::Name = name.as_ref().parse().unwrap();
-            let version: cargo_lock::Version = ver.to_string().parse().unwrap();
-            let query = database::Query::crate_scope()
-                .package_name(name)
-                .package_version(version);
-
-            if let Some(db) = advisory_db {
-                let vulnerabilities: Vec<_> =
-                    db.query(&query).into_iter().map(|v| v.to_owned()).collect();
-                if !vulnerabilities.is_empty() {
-                    dep.vulnerabilities = vulnerabilities;
-                }
-            }
         }
+
         if ver.pre.is_empty() {
             if let Some(ref mut current_latest) = dep.latest {
                 if *current_latest < *ver {
@@ -64,32 +36,15 @@ impl DependencyAnalyzer {
     }
 
     pub fn process<I: IntoIterator<Item = CrateRelease>>(&mut self, releases: I) {
-        let advisory_db = self.advisory_db.as_deref();
-
         for release in releases.into_iter().filter(|r| !r.yanked) {
             if let Some(main_dep) = self.deps.main.get_mut(&release.name) {
-                DependencyAnalyzer::process_single(
-                    &release.name,
-                    main_dep,
-                    &release.version,
-                    advisory_db,
-                )
+                DependencyAnalyzer::process_single(main_dep, &release.version)
             }
             if let Some(dev_dep) = self.deps.dev.get_mut(&release.name) {
-                DependencyAnalyzer::process_single(
-                    &release.name,
-                    dev_dep,
-                    &release.version,
-                    advisory_db,
-                )
+                DependencyAnalyzer::process_single(dev_dep, &release.version)
             }
             if let Some(build_dep) = self.deps.build.get_mut(&release.name) {
-                DependencyAnalyzer::process_single(
-                    &release.name,
-                    build_dep,
-                    &release.version,
-                    advisory_db,
-                )
+                DependencyAnalyzer::process_single(build_dep, &release.version)
             }
         }
     }
@@ -112,7 +67,7 @@ mod tests {
             CrateDep::External("^0.11.0".parse().unwrap()),
         );
 
-        let mut analyzer = DependencyAnalyzer::new(&deps, None);
+        let mut analyzer = DependencyAnalyzer::new(&deps);
         analyzer.process(vec![
             CrateRelease {
                 name: "hyper".parse().unwrap(),
@@ -148,7 +103,7 @@ mod tests {
             CrateDep::External("^0.10.0".parse().unwrap()),
         );
 
-        let mut analyzer = DependencyAnalyzer::new(&deps, None);
+        let mut analyzer = DependencyAnalyzer::new(&deps);
         analyzer.process(vec![
             CrateRelease {
                 name: "hyper".parse().unwrap(),
@@ -190,7 +145,7 @@ mod tests {
             CrateDep::External("^0.10.0".parse().unwrap()),
         );
 
-        let mut analyzer = DependencyAnalyzer::new(&deps, None);
+        let mut analyzer = DependencyAnalyzer::new(&deps);
         analyzer.process(vec![
             CrateRelease {
                 name: "hyper".parse().unwrap(),
@@ -226,7 +181,7 @@ mod tests {
             CrateDep::External("^0.10.0".parse().unwrap()),
         );
 
-        let mut analyzer = DependencyAnalyzer::new(&deps, None);
+        let mut analyzer = DependencyAnalyzer::new(&deps);
         analyzer.process(vec![
             CrateRelease {
                 name: "hyper".parse().unwrap(),

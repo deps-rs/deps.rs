@@ -1,6 +1,6 @@
 use std::{
     collections::HashSet,
-    sync::{Arc, LazyLock},
+    sync::LazyLock,
     time::{Duration, Instant},
 };
 
@@ -12,7 +12,6 @@ use futures_util::{
     stream::{self, LocalBoxStream},
 };
 use relative_path::{RelativePath, RelativePathBuf};
-use rustsec::database::Database;
 use semver::VersionReq;
 
 use crate::{
@@ -21,7 +20,6 @@ use crate::{
         RetrieveFileAtPath,
         crates::{GetPopularCrates, QueryCrate},
         github::GetPopularRepos,
-        rustsec::FetchAdvisoryDatabase,
     },
     models::{
         crates::{AnalyzedDependencies, CrateName, CratePath, CrateRelease},
@@ -41,7 +39,6 @@ pub struct Engine {
     get_popular_crates: Cache<GetPopularCrates, ()>,
     get_popular_repos: Cache<GetPopularRepos, ()>,
     retrieve_file_at_path: RetrieveFileAtPath,
-    fetch_advisory_db: Cache<FetchAdvisoryDatabase, ()>,
 }
 
 impl Engine {
@@ -57,19 +54,13 @@ impl Engine {
             Duration::from_secs(5 * 60),
             1,
         );
-        let retrieve_file_at_path = RetrieveFileAtPath::new(client.clone());
-        let fetch_advisory_db = Cache::new(
-            FetchAdvisoryDatabase::new(client),
-            Duration::from_secs(30 * 60),
-            1,
-        );
+        let retrieve_file_at_path = RetrieveFileAtPath::new(client);
 
         Engine {
             query_crate,
             get_popular_crates,
             get_popular_repos,
             retrieve_file_at_path,
-            fetch_advisory_db,
         }
     }
 }
@@ -85,21 +76,6 @@ impl AnalyzeDependenciesOutcome {
         self.crates.iter().any(|(_, deps)| deps.any_outdated())
     }
 
-    // TODO(feliix42): Why is this different from the any_outdated() function above?
-    /// Checks if any insecure main or build dependencies exist in the scanned crates
-    pub fn any_insecure(&self) -> bool {
-        self.crates
-            .iter()
-            .any(|(_, deps)| deps.count_insecure() > 0)
-    }
-
-    /// Checks if any always insecure main or build dependencies exist in the scanned crates
-    pub fn any_always_insecure(&self) -> bool {
-        self.crates
-            .iter()
-            .any(|(_, deps)| deps.count_always_insecure() > 0)
-    }
-
     /// Returns the number of outdated main and dev dependencies
     pub fn count_outdated(&self) -> usize {
         self.crates
@@ -113,14 +89,6 @@ impl AnalyzeDependenciesOutcome {
         self.crates
             .iter()
             .map(|(_, deps)| deps.count_dev_outdated())
-            .sum()
-    }
-
-    /// Returns the number of insecure dev-dependencies
-    pub fn count_dev_insecure(&self) -> usize {
-        self.crates
-            .iter()
-            .map(|(_, deps)| deps.count_dev_insecure())
             .sum()
     }
 
@@ -272,10 +240,6 @@ impl Engine {
 
         let service = self.retrieve_file_at_path.clone();
         service.call((repo_path.clone(), manifest_path)).await
-    }
-
-    async fn fetch_advisory_db(&self) -> Result<Arc<Database>, Error> {
-        self.fetch_advisory_db.cached_query(()).await
     }
 }
 

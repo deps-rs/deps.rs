@@ -5,9 +5,8 @@
 
 ![A screenshot showing the deps.rs status of the libc crate](resources/banner.png)
 
-Deps.rs is a service that shows you at a glance if any of your dependencies are out of date or insecure.
+Deps.rs is a service that shows you at a glance if any of your dependencies are out of date.
 This works by comparing the dependencies in a project's `Cargo.toml` to the latest versions in the crates.io database.
-For security-related information, we query the RustSec Security Advisory Database.
 
 We currently support projects and crates hosted on crates.io, Github, Gitlab, Bitbucket, and SourceHut.
 To analyze the state of your dependencies you can use the following URLs:

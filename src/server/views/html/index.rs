@@ -170,7 +170,7 @@ pub fn render(popular_repos: Vec<Repository>, popular_crates: Vec<CratePath>) ->
                     div class="container" {
                         p class="title is-1" { "Keep your dependencies up-to-date" }
                         p {
-                            "Deps.rs uses semantic versioning to detect outdated or insecure dependencies in your project's"
+                            "Deps.rs uses semantic versioning to detect outdated dependencies in your project's"
                             code { "Cargo.toml" }
                             "."
                         }

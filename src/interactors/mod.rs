@@ -9,7 +9,6 @@ use crate::models::repo::RepoPath;
 
 pub mod crates;
 pub mod github;
-pub mod rustsec;
 
 #[derive(Clone)]
 pub struct RetrieveFileAtPath {
