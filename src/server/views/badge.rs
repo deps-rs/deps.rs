@@ -12,7 +12,7 @@ pub fn badge(
 
     let opts = match analysis_outcome {
         Some(outcome) => {
-            if outcome.any_always_insecure() {
+            if outcome.any_insecure() {
                 BadgeOptions {
                     subject,
                     status: "insecure".into(),
@@ -30,20 +30,11 @@ pub fn badge(
                         style: badge_knobs.style,
                     }
                 } else if total > 0 {
-                    if outcome.any_insecure() {
-                        BadgeOptions {
-                            subject,
-                            status: "maybe insecure".into(),
-                            color: "#8b1".into(),
-                            style: badge_knobs.style,
-                        }
-                    } else {
-                        BadgeOptions {
-                            subject,
-                            status: "up to date".into(),
-                            color: "#4c1".into(),
-                            style: badge_knobs.style,
-                        }
+                    BadgeOptions {
+                        subject,
+                        status: "up to date".into(),
+                        color: "#4c1".into(),
+                        style: badge_knobs.style,
                     }
                 } else {
                     BadgeOptions {
@@ -83,7 +74,7 @@ pub fn shield_json_response(
 
     let (status, color_hex) = match analysis_outcome {
         Some(outcome) => {
-            if outcome.any_always_insecure() {
+            if outcome.any_insecure() {
                 ("insecure".to_string(), "#e05d44".to_string())
             } else {
                 let (outdated, total) = outcome.outdated_ratio();
@@ -93,11 +84,7 @@ pub fn shield_json_response(
                         "#dfb317".to_string(),
                     )
                 } else if total > 0 {
-                    if outcome.any_insecure() {
-                        ("maybe insecure".to_string(), "#8b1".to_string())
-                    } else {
-                        ("up to date".to_string(), "#4c1".to_string())
-                    }
+                    ("up to date".to_string(), "#4c1".to_string())
                 } else {
                     ("none".to_string(), "#4c1".to_string())
                 }

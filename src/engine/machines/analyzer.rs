@@ -47,7 +47,9 @@ impl DependencyAnalyzer {
             if let Some(db) = advisory_db {
                 let vulnerabilities: Vec<_> =
                     db.query(&query).into_iter().map(|v| v.to_owned()).collect();
-                if !vulnerabilities.is_empty() {
+                if vulnerabilities.is_empty() {
+                    dep.has_safe_matching_release = true;
+                } else {
                     dep.vulnerabilities = vulnerabilities;
                 }
             }
@@ -101,8 +103,68 @@ impl DependencyAnalyzer {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use super::*;
     use crate::models::crates::{CrateDep, CrateDeps, CrateRelease};
+
+    fn analyze_security(required: &str, releases: &[(&str, bool)]) -> AnalyzedDependencies {
+        let mut deps = CrateDeps::default();
+        deps.main.insert(
+            "example".parse().unwrap(),
+            CrateDep::External(required.parse().unwrap()),
+        );
+
+        let db = Database::open(
+            &Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test-advisories"),
+        )
+        .unwrap();
+        let mut analyzer = DependencyAnalyzer::new(&deps, Some(Arc::new(db)));
+
+        for &(version, yanked) in releases {
+            analyzer.process([CrateRelease {
+                name: "example".parse().unwrap(),
+                version: version.parse().unwrap(),
+                deps: CrateDeps::default(),
+                yanked,
+            }]);
+        }
+
+        analyzer.finalize()
+    }
+
+    #[test]
+    fn safe_release_in_range_prevents_insecure_status_in_any_order() {
+        for releases in [
+            [("1.0.0", false), ("1.1.0", false), ("1.2.0", false)],
+            [("1.2.0", false), ("1.1.0", false), ("1.0.0", false)],
+        ] {
+            let analyzed = analyze_security("1", &releases);
+
+            assert_eq!(analyzed.count_insecure(), 0);
+        }
+    }
+
+    #[test]
+    fn safe_release_outside_range_does_not_prevent_insecure_status() {
+        let analyzed = analyze_security("1", &[("1.0.0", false), ("2.0.0", false)]);
+
+        assert_eq!(analyzed.count_insecure(), 1);
+    }
+
+    #[test]
+    fn yanked_safe_release_does_not_prevent_insecure_status() {
+        let analyzed = analyze_security("1", &[("1.0.0", false), ("1.1.0", true)]);
+
+        assert_eq!(analyzed.count_insecure(), 1);
+    }
+
+    #[test]
+    fn no_matching_releases_are_not_insecure() {
+        let analyzed = analyze_security("3", &[("1.0.0", false)]);
+
+        assert_eq!(analyzed.count_insecure(), 0);
+    }
 
     #[test]
     fn tracks_latest_without_matching() {
