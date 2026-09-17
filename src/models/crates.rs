@@ -91,6 +91,7 @@ pub struct AnalyzedDependency {
     pub latest_that_matches: Option<Version>,
     pub latest: Option<Version>,
     pub vulnerabilities: Vec<Advisory>,
+    pub has_safe_matching_release: bool,
 }
 
 impl AnalyzedDependency {
@@ -100,28 +101,13 @@ impl AnalyzedDependency {
             latest_that_matches: None,
             latest: None,
             vulnerabilities: Vec::new(),
+            has_safe_matching_release: false,
         }
     }
 
-    /// Check whether this dependency has at least one known vulnerability
-    /// in any version in the required version range.
-    ///
-    /// Note that the vulnerability may (or not) already be patched
-    /// in the latest version(s) in the range.
+    /// Check whether every non-yanked release in the required range has a known vulnerability.
     pub fn is_insecure(&self) -> bool {
-        !self.vulnerabilities.is_empty()
-    }
-
-    /// Check whether this dependency has at laest one known vulnerability
-    /// even when the latest version in the required range is used.
-    pub fn is_always_insecure(&self) -> bool {
-        if let Some(latest) = &self.latest {
-            self.vulnerabilities
-                .iter()
-                .any(|a| a.versions.is_vulnerable(latest))
-        } else {
-            self.is_insecure()
-        }
+        !self.vulnerabilities.is_empty() && !self.has_safe_matching_release
     }
 
     pub fn is_outdated(&self) -> bool {
@@ -212,23 +198,6 @@ impl AnalyzedDependencies {
             .build
             .iter()
             .filter(|&(_, dep)| dep.is_insecure())
-            .count();
-        main_insecure + build_insecure
-    }
-
-    /// Returns the number of main and build dependencies
-    /// which are vulnerable to security issues,
-    /// even they are updated to the latest version in the required range.
-    pub fn count_always_insecure(&self) -> usize {
-        let main_insecure = self
-            .main
-            .iter()
-            .filter(|&(_, dep)| dep.is_always_insecure())
-            .count();
-        let build_insecure = self
-            .build
-            .iter()
-            .filter(|&(_, dep)| dep.is_always_insecure())
             .count();
         main_insecure + build_insecure
     }
