@@ -12,7 +12,7 @@ edition = "2024"
 path = "badge.rs"
 
 [dependencies]
-base64 = "0.22"
+base64 = "0.23"
 rusttype = "0.9"
 serde = { version = "1", features = ["derive"] }
 
