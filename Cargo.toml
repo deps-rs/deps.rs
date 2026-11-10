@@ -29,7 +29,7 @@ indexmap = { version = "2", features = ["serde"] }
 lru_time_cache = "0.11"
 maud = "0.27"
 mime = "0.3"
-parking_lot = "0.12"
+parking_lot = "0.13"
 pulldown-cmark = "0.13"
 relative-path = { version = "2", features = ["serde"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "http2", "json"] }
