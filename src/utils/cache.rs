@@ -41,9 +41,11 @@ where
 
     pub async fn cached_query(&self, req: Req) -> Result<S::Response, S::Error> {
         {
-            let mut cache = self.cache.lock().await;
+            let cache = self.cache.lock().await;
 
-            if let Some(cached_response) = cache.get(&req) {
+            // `peek` doesn't refresh the entry's TTL, unlike `get`, so
+            // frequently requested entries still expire and get refreshed.
+            if let Some(cached_response) = cache.peek(&req) {
                 tracing::debug!(
                     svc = ?self.inner,
                     req = ?req,
