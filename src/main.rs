@@ -88,7 +88,7 @@ async fn main() {
             .wrap(NormalizePath::trim())
             .wrap(Logger::default())
     })
-    .bind_auto_h2c((Ipv4Addr::UNSPECIFIED, port))
+    .bind((Ipv4Addr::UNSPECIFIED, port))
     .unwrap()
     .run();
 
