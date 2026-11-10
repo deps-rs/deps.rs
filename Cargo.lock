@@ -337,7 +337,7 @@ dependencies = [
 name = "badge"
 version = "0.2.0"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "rusttype",
  "serde",
  "serde_urlencoded",
