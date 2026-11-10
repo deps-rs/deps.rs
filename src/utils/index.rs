@@ -113,26 +113,51 @@ impl ManagedIndex {
 }
 
 fn current_entries(err: &crates_index::Error) -> Option<usize> {
-    let crates_index::Error::Git(err) = err else {
-        return None;
-    };
-    let crates_index::error::GixError::Fetch(err) = err else {
-        return None;
-    };
-    let gix::remote::fetch::Error::UpdateRefs(err) = err else {
-        return None;
-    };
-    let gix::remote::fetch::refs::update::Error::FindObject(gix::object::find::Error(err)) = err
-    else {
-        return None;
-    };
-    let err = err.downcast_ref::<gix::odb::store::find::Error>()?;
-    let gix::odb::store::find::Error::LoadIndex(err) = err else {
-        return None;
-    };
-    let gix::odb::store::load_index::Error::InsufficientSlots { current, needed } = err else {
+    let crates_index::Error::Git(crates_index::error::GixError::Gix(err)) = err else {
         return None;
     };
 
-    Some(*current + *needed)
+    // gix reports running out of object database index slots
+    // as a message carrying the `current` and `needed` slot counts
+    err.metadata().find_map(|metadata| {
+        let gix::error::MetadataValue::U64(current) = metadata.get("current")? else {
+            return None;
+        };
+        let gix::error::MetadataValue::U64(needed) = metadata.get("needed")? else {
+            return None;
+        };
+
+        usize::try_from(current.checked_add(*needed)?).ok()
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use gix::error::{ErrorExt as _, Message};
+
+    use super::current_entries;
+
+    fn index_error(err: gix::Error) -> crates_index::Error {
+        crates_index::Error::Git(crates_index::error::GixError::Gix(err))
+    }
+
+    #[test]
+    fn current_entries_of_insufficient_slots() {
+        let insufficient_slots = Message::new("The object database has too few index slots")
+            .with("current", 1024_usize)
+            .with("needed", 3_usize)
+            .raise_typed();
+        let err = Message::new("Failed to update references")
+            .raise_typed()
+            .chain(insufficient_slots);
+
+        assert_eq!(current_entries(&index_error(err.into())), Some(1027));
+    }
+
+    #[test]
+    fn current_entries_of_other_errors() {
+        let err = Message::new("Could not connect to remote").raise();
+
+        assert_eq!(current_entries(&index_error(err)), None);
+    }
 }
